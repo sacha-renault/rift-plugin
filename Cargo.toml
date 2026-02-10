@@ -1,0 +1,23 @@
+[package]
+name = "clack-hug"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bon = "3.8.2"
+clack-plugin = { git = "https://github.com/prokopyl/clack"}
+clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
+  "audio-ports",
+  "clack-plugin",
+  "gui",
+  "note-ports",
+  "params",
+  "raw-window-handle_05",
+  "state",
+] }
+
+[workspace]
+resolver = "2"
+members = [
+    "examples/dev"
+]
