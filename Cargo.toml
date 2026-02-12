@@ -19,5 +19,5 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
 [workspace]
 resolver = "2"
 members = [
-    "examples/dev"
+  "examples/dev"
 ]

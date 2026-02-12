@@ -4,18 +4,20 @@ pub use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::prelude::*;
 
+use crate::params::param_trait::Params;
 use crate::wrapper::{ClapPlugin, shared::WrapperShared};
 
-pub struct WrapperMainThread<P: ClapPlugin> {
+pub struct WrapperMainThread<'a, P: ClapPlugin> {
     pub(crate) shared: WrapperShared<P>,
     pub(crate) gui: Option<f32>, // TODO an actual gui thing here
+    pub(crate) host: HostMainThreadHandle<'a>,
 }
 
-impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainThread<P> {}
+impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainThread<'a, P> {}
 
-impl<P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<P> {
+impl<'a, P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<'a, P> {
     fn count(&mut self, is_input: bool) -> u32 {
-        if is_input { 1 } else { 1 }
+        todo!()
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
@@ -23,7 +25,7 @@ impl<P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<P> {
     }
 }
 
-impl<P: ClapPlugin> PluginStateImpl for WrapperMainThread<P> {
+impl<'a, P: ClapPlugin> PluginStateImpl for WrapperMainThread<'a, P> {
     fn load(&mut self, input: &mut clack_plugin::stream::InputStream) -> Result<(), PluginError> {
         todo!()
     }
@@ -33,29 +35,27 @@ impl<P: ClapPlugin> PluginStateImpl for WrapperMainThread<P> {
     }
 }
 
-impl<P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<P> {
+impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     fn count(&mut self) -> u32 {
-        todo!()
+        self.shared.params.count()
     }
 
-    fn flush(
-        &mut self,
-        input_parameter_changes: &InputEvents,
-        output_parameter_changes: &mut OutputEvents,
-    ) {
+    fn flush(&mut self, intput_events: &InputEvents, output_events: &mut OutputEvents) {
         todo!()
     }
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
-        todo!()
+        if let Some(inf) = self.shared.params.get_param_info(param_index) {
+            info.set(&inf);
+        }
     }
 
     fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
-        todo!()
+        self.shared.params.get_value(param_id)
     }
 
     fn text_to_value(&mut self, param_id: ClapId, text: &std::ffi::CStr) -> Option<f64> {
-        todo!()
+        self.shared.params.text_to_value(param_id, text)
     }
 
     fn value_to_text(
@@ -64,11 +64,11 @@ impl<P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<P> {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> core::fmt::Result {
-        todo!()
+        self.shared.params.value_to_text(param_id, value, writer)
     }
 }
 
-impl<P: ClapPlugin> PluginGuiImpl for WrapperMainThread<P> {
+impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
     fn is_api_supported(&mut self, configuration: clack_extensions::gui::GuiConfiguration) -> bool {
         configuration.api_type
             == GuiApiType::default_for_current_platform().expect("Unsupported platform")
@@ -105,7 +105,7 @@ impl<P: ClapPlugin> PluginGuiImpl for WrapperMainThread<P> {
         todo!()
     }
 
-    fn set_parent(&mut self, window: clack_extensions::gui::Window) -> Result<(), PluginError> {
+    fn set_parent(&mut self, _window: clack_extensions::gui::Window) -> Result<(), PluginError> {
         todo!()
     }
 

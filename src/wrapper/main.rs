@@ -12,9 +12,9 @@ use crate::wrapper::{
 pub struct Wrapper<P: ClapPlugin>(PhantomData<P>);
 
 impl<P: ClapPlugin> Plugin for Wrapper<P> {
-    type AudioProcessor<'a> = WrapperProcessor<P>;
+    type AudioProcessor<'a> = WrapperProcessor<'a, P>;
     type Shared<'a> = WrapperShared<P>;
-    type MainThread<'a> = WrapperMainThread<P>;
+    type MainThread<'a> = WrapperMainThread<'a, P>;
 
     fn declare_extensions(
         builder: &mut PluginExtensions<Self>,
@@ -38,12 +38,13 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
     }
 
     fn new_main_thread<'a>(
-        _host: HostMainThreadHandle<'a>,
+        host: HostMainThreadHandle<'a>,
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
         Ok(WrapperMainThread {
             shared: shared.clone(),
-            gui: None,
+            gui: None, // Change later ?
+            host,
         })
     }
 }

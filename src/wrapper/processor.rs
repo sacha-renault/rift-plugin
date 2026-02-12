@@ -7,33 +7,35 @@ use crate::{
     wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared},
 };
 
-pub struct WrapperProcessor<P: ClapPlugin> {
+pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,
     plugin: P,
+    host: HostAudioProcessorHandle<'a>,
 }
 
-impl<P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<P> {
+impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
     fn flush(&mut self, input_events: &InputEvents, _output_events: &mut OutputEvents) {
         for event in input_events.iter() {
-            if let Some(param_event) = event.as_event::<ParamValueEvent>() {
-                let Some(id) = param_event.param_id() else {
-                    continue;
-                };
-                let value = param_event.value();
-                self.shared.params.set_value(id, value);
-            }
+            let Some(param_event) = event.as_event::<ParamValueEvent>() else {
+                continue;
+            };
+            let Some(id) = param_event.param_id() else {
+                continue;
+            };
+            let value = param_event.value();
+            self.shared.params.set_value(id, value);
         }
 
         todo!()
     }
 }
 
-impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainThread<P>>
-    for WrapperProcessor<P>
+impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainThread<'a, P>>
+    for WrapperProcessor<'a, P>
 {
     fn activate(
-        _host: HostAudioProcessorHandle<'a>,
-        _main_thread: &mut WrapperMainThread<P>,
+        host: HostAudioProcessorHandle<'a>,
+        main_thread: &mut WrapperMainThread<P>,
         shared: &'a WrapperShared<P>,
         audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
@@ -44,6 +46,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         Ok(Self {
             shared: shared.clone(),
             plugin,
+            host,
         })
     }
 
@@ -82,6 +85,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         self.flush(events.input, events.output);
 
         todo!()
+
         // self.plugin.process()
     }
 }

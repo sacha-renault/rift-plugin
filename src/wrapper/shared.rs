@@ -6,7 +6,7 @@ use crate::wrapper::ClapPlugin;
 
 pub struct WrapperShared<P: ClapPlugin> {
     pub(crate) params: Arc<P::ParamType>,
-    pub(crate) other: Arc<P::Shared>,
+    pub(crate) other: Arc<P::SharedType>,
 }
 
 impl<P: ClapPlugin> Clone for WrapperShared<P> {
@@ -22,7 +22,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
     fn default() -> Self {
         Self {
             params: Arc::new(P::ParamType::default()),
-            other: Arc::new(P::Shared::default()),
+            other: Arc::new(P::SharedType::default()),
         }
     }
 }
