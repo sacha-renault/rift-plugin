@@ -1,6 +1,18 @@
 mod params;
 mod wrapper;
 
+#[macro_export]
+macro_rules! export_clap_plugin {
+    ($PluginType:ty) => {
+        use clack_hug::prelude::Wrapper;
+        use clack_plugin::clack_export_entry;
+
+        clack_export_entry! {
+            clack_plugin::prelude::SinglePluginEntry<Wrapper<$PluginType>>
+        }
+    };
+}
+
 pub mod prelude {
     use super::*;
 
@@ -8,22 +20,8 @@ pub mod prelude {
     pub use clack_plugin;
 
     pub use params::param_float::FloatParam;
-    pub use params::param_trait::Param;
+    pub use params::param_trait::Params;
 
-    pub use wrapper::ClapPlugin;
-
-    #[allow(unused)]
-    macro_rules! export_clap_plugin {
-        (PluginType) => {
-            clack_plugin::export_clap_plugin!(
-                clack_plugin::prelude::SinglePluginEntry<crate::wrapper::main::Wrapper<PluginType>>
-            )
-        };
-    }
-}
-
-// TODO
-// Handle wrapper somewhere
-pub mod _internal {
     pub use super::wrapper::main::Wrapper;
+    pub use wrapper::ClapPlugin;
 }

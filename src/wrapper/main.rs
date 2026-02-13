@@ -20,11 +20,12 @@ impl<P: ClapPlugin> Plugin for Wrapper<P> {
         builder: &mut PluginExtensions<Self>,
         _shared: Option<&Self::Shared<'_>>,
     ) {
-        builder
-            .register::<PluginAudioPorts>()
-            .register::<PluginParams>()
-            .register::<PluginState>()
-            .register::<PluginGui>();
+        builder.register::<PluginAudioPorts>();
+        // builder
+        //     .register::<PluginAudioPorts>()
+        //     .register::<PluginParams>()
+        //     .register::<PluginState>() // todo!()
+        //     .register::<PluginGui>(); // todo!()
     }
 }
 
@@ -43,7 +44,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
     ) -> Result<Self::MainThread<'a>, PluginError> {
         Ok(WrapperMainThread {
             shared: shared.clone(),
-            gui: None, // Change later ?
+            gui: None, // todo!()
             host,
         })
     }

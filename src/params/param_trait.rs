@@ -35,7 +35,7 @@ pub trait Param {
 
 pub trait Params: Default + Sync + Send + 'static {
     fn count(&self) -> u32;
-    fn get_param_info(&self, index: u32) -> Option<ParamInfo>;
+    fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>>;
     fn get_value(&self, id: ClapId) -> Option<f64>;
     fn set_value(&self, id: ClapId, value: f64);
     fn text_to_value(&self, id: ClapId, text: &CStr) -> Option<f64>;

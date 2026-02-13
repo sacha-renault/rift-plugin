@@ -26,7 +26,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
             self.shared.params.set_value(id, value);
         }
 
-        todo!()
+        // todo!()
     }
 }
 
@@ -84,8 +84,8 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
 
         self.flush(events.input, events.output);
 
-        todo!()
-
+        // todo!()
         // self.plugin.process()
+        Ok(ProcessStatus::Continue)
     }
 }

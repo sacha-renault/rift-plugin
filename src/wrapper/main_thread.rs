@@ -1,4 +1,5 @@
 pub use clack_extensions::audio_ports::*;
+use clack_extensions::gui;
 pub use clack_extensions::gui::{GuiApiType, GuiConfiguration, PluginGuiImpl};
 pub use clack_extensions::params::*;
 use clack_extensions::state::PluginStateImpl;
@@ -17,21 +18,21 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
 
 impl<'a, P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<'a, P> {
     fn count(&mut self, is_input: bool) -> u32 {
-        todo!()
+        1 // todo!()
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
-        todo!()
+        // todo!()
     }
 }
 
 impl<'a, P: ClapPlugin> PluginStateImpl for WrapperMainThread<'a, P> {
     fn load(&mut self, input: &mut clack_plugin::stream::InputStream) -> Result<(), PluginError> {
-        todo!()
+        Ok(()) // todo!()
     }
 
     fn save(&mut self, output: &mut clack_plugin::stream::OutputStream) -> Result<(), PluginError> {
-        todo!()
+        Ok(()) // todo!()
     }
 }
 
@@ -41,7 +42,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     }
 
     fn flush(&mut self, intput_events: &InputEvents, output_events: &mut OutputEvents) {
-        todo!()
+        // todo!()
     }
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
@@ -68,56 +69,53 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     }
 }
 
-impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
-    fn is_api_supported(&mut self, configuration: clack_extensions::gui::GuiConfiguration) -> bool {
-        configuration.api_type
-            == GuiApiType::default_for_current_platform().expect("Unsupported platform")
-            && !configuration.is_floating
-    }
+// impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
+//     fn is_api_supported(&mut self, configuration: gui::GuiConfiguration) -> bool {
+//         configuration.api_type
+//             == GuiApiType::default_for_current_platform().expect("Unsupported platform")
+//             && !configuration.is_floating
+//     }
 
-    fn get_preferred_api(&'_ mut self) -> Option<clack_extensions::gui::GuiConfiguration<'_>> {
-        Some(GuiConfiguration {
-            api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
-            is_floating: false,
-        })
-    }
+//     fn get_preferred_api(&'_ mut self) -> Option<gui::GuiConfiguration<'_>> {
+//         Some(GuiConfiguration {
+//             api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
+//             is_floating: false,
+//         })
+//     }
 
-    fn create(
-        &mut self,
-        _configuration: clack_extensions::gui::GuiConfiguration,
-    ) -> Result<(), PluginError> {
-        Ok(())
-    }
+//     fn create(&mut self, _configuration: gui::GuiConfiguration) -> Result<(), PluginError> {
+//         Ok(())
+//     }
 
-    fn destroy(&mut self) {
-        todo!()
-    }
+//     fn destroy(&mut self) {
+//         // todo!()
+//     }
 
-    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
-        todo!()
-    }
+//     fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
+//         Err(PluginError::Message(":(")) // todo!()
+//     }
 
-    fn get_size(&mut self) -> Option<clack_extensions::gui::GuiSize> {
-        todo!()
-    }
+//     fn get_size(&mut self) -> Option<gui::GuiSize> {
+//         None // todo!()
+//     }
 
-    fn set_size(&mut self, _size: clack_extensions::gui::GuiSize) -> Result<(), PluginError> {
-        todo!()
-    }
+//     fn set_size(&mut self, _size: gui::GuiSize) -> Result<(), PluginError> {
+//         Err(PluginError::Message(":(")) // todo!()
+//     }
 
-    fn set_parent(&mut self, _window: clack_extensions::gui::Window) -> Result<(), PluginError> {
-        todo!()
-    }
+//     fn set_parent(&mut self, _window: gui::Window) -> Result<(), PluginError> {
+//         Err(PluginError::Message(":(")) // todo!()
+//     }
 
-    fn set_transient(&mut self, _window: clack_extensions::gui::Window) -> Result<(), PluginError> {
-        todo!()
-    }
+//     fn set_transient(&mut self, _window: gui::Window) -> Result<(), PluginError> {
+//         Err(PluginError::Message(":(")) // todo!()
+//     }
 
-    fn show(&mut self) -> Result<(), PluginError> {
-        todo!()
-    }
+//     fn show(&mut self) -> Result<(), PluginError> {
+//         Ok(()) // todo!()
+//     }
 
-    fn hide(&mut self) -> Result<(), PluginError> {
-        todo!()
-    }
-}
+//     fn hide(&mut self) -> Result<(), PluginError> {
+//         Ok(()) // todo!()
+//     }
+// }

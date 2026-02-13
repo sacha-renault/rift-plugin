@@ -59,7 +59,7 @@ impl Param for FloatParam {
     }
 
     fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f64> {
-        todo!()
+        None // todo!()
     }
 
     fn value_to_text(
@@ -68,10 +68,10 @@ impl Param for FloatParam {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result {
-        todo!()
+        std::fmt::Result::Ok(()) // todo!()
     }
 
     fn flags(&self) -> clack_extensions::params::ParamInfoFlags {
-        todo!()
+        clack_extensions::params::ParamInfoFlags::empty() // todo!()
     }
 }
