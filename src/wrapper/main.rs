@@ -20,7 +20,11 @@ impl<P: ClapPlugin> Plugin for Wrapper<P> {
         builder: &mut PluginExtensions<Self>,
         _shared: Option<&Self::Shared<'_>>,
     ) {
-        builder.register::<PluginAudioPorts>();
+        builder
+            .register::<PluginAudioPorts>()
+            .register::<PluginAudioPorts>()
+            .register::<PluginState>()
+            .register::<PluginGui>();
         // builder
         //     .register::<PluginAudioPorts>()
         //     .register::<PluginParams>()

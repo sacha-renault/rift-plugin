@@ -18,7 +18,7 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
 
 impl<'a, P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<'a, P> {
     fn count(&mut self, is_input: bool) -> u32 {
-        1 // todo!()
+        0 // todo!()
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
@@ -69,53 +69,53 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     }
 }
 
-// impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
-//     fn is_api_supported(&mut self, configuration: gui::GuiConfiguration) -> bool {
-//         configuration.api_type
-//             == GuiApiType::default_for_current_platform().expect("Unsupported platform")
-//             && !configuration.is_floating
-//     }
+impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
+    fn is_api_supported(&mut self, configuration: gui::GuiConfiguration) -> bool {
+        configuration.api_type
+            == GuiApiType::default_for_current_platform().expect("Unsupported platform")
+            && !configuration.is_floating
+    }
 
-//     fn get_preferred_api(&'_ mut self) -> Option<gui::GuiConfiguration<'_>> {
-//         Some(GuiConfiguration {
-//             api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
-//             is_floating: false,
-//         })
-//     }
+    fn get_preferred_api(&'_ mut self) -> Option<gui::GuiConfiguration<'_>> {
+        Some(GuiConfiguration {
+            api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
+            is_floating: false,
+        })
+    }
 
-//     fn create(&mut self, _configuration: gui::GuiConfiguration) -> Result<(), PluginError> {
-//         Ok(())
-//     }
+    fn create(&mut self, _configuration: gui::GuiConfiguration) -> Result<(), PluginError> {
+        Ok(())
+    }
 
-//     fn destroy(&mut self) {
-//         // todo!()
-//     }
+    fn destroy(&mut self) {
+        // todo!()
+    }
 
-//     fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
-//         Err(PluginError::Message(":(")) // todo!()
-//     }
+    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
+        Err(PluginError::Message(":(")) // todo!()
+    }
 
-//     fn get_size(&mut self) -> Option<gui::GuiSize> {
-//         None // todo!()
-//     }
+    fn get_size(&mut self) -> Option<gui::GuiSize> {
+        None // todo!()
+    }
 
-//     fn set_size(&mut self, _size: gui::GuiSize) -> Result<(), PluginError> {
-//         Err(PluginError::Message(":(")) // todo!()
-//     }
+    fn set_size(&mut self, _size: gui::GuiSize) -> Result<(), PluginError> {
+        Err(PluginError::Message(":(")) // todo!()
+    }
 
-//     fn set_parent(&mut self, _window: gui::Window) -> Result<(), PluginError> {
-//         Err(PluginError::Message(":(")) // todo!()
-//     }
+    fn set_parent(&mut self, _window: gui::Window) -> Result<(), PluginError> {
+        Err(PluginError::Message(":(")) // todo!()
+    }
 
-//     fn set_transient(&mut self, _window: gui::Window) -> Result<(), PluginError> {
-//         Err(PluginError::Message(":(")) // todo!()
-//     }
+    fn set_transient(&mut self, _window: gui::Window) -> Result<(), PluginError> {
+        Err(PluginError::Message(":(")) // todo!()
+    }
 
-//     fn show(&mut self) -> Result<(), PluginError> {
-//         Ok(()) // todo!()
-//     }
+    fn show(&mut self) -> Result<(), PluginError> {
+        Ok(()) // todo!()
+    }
 
-//     fn hide(&mut self) -> Result<(), PluginError> {
-//         Ok(()) // todo!()
-//     }
-// }
+    fn hide(&mut self) -> Result<(), PluginError> {
+        Ok(()) // todo!()
+    }
+}
