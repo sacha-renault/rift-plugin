@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
@@ -20,9 +20,17 @@ pub trait ClapPlugin: Send + Sync + 'static {
     // type GuiType: Gui + Send + Sync + Default + 'static;
 
     fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
-    fn info() -> PluginDescriptor;
     fn process(&mut self, audio: &mut [&mut [f32]]) -> Result<ProcessStatus, PluginError>;
     fn activate(&mut self, audio_config: PluginAudioConfiguration);
 
     // ... Later more methods :)
+    const ID: &str;
+    const NAME: &str;
+    const FEATURES: &[&CStr];
+    const VERSION: &str;
+    const DESCRIPTION: &str = "";
+    const URL: &str = "";
+    const VENDOR: &str = "";
+    const SUPPORT_URL: &str = "";
+    const MANUAL_URL: &str = "";
 }
