@@ -1,5 +1,6 @@
 use std::{ffi::CStr, sync::Arc};
 
+use clack_extensions::audio_ports::AudioPortInfo;
 pub use clack_plugin::prelude::*;
 
 use crate::params::param_trait::Params;
@@ -33,4 +34,7 @@ pub trait ClapPlugin: Send + Sync + 'static {
     const VENDOR: &str = "";
     const SUPPORT_URL: &str = "";
     const MANUAL_URL: &str = "";
+
+    const INPUT_AUDIO_CONFIG: &[AudioPortInfo<'_>] = &[];
+    const OUTPUT_AUDIO_CONFIG: &[AudioPortInfo<'_>] = &[];
 }
