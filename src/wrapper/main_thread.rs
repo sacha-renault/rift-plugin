@@ -18,21 +18,29 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
 
 impl<'a, P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<'a, P> {
     fn count(&mut self, is_input: bool) -> u32 {
-        0 // todo!()
+        if is_input {
+            P::INPUT_AUDIO_CONFIG.len() as u32
+        } else {
+            P::OUTPUT_AUDIO_CONFIG.len() as u32
+        }
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
-        // todo!()
+        if is_input {
+            writer.set(&P::INPUT_AUDIO_CONFIG[index as usize])
+        } else {
+            writer.set(&P::OUTPUT_AUDIO_CONFIG[index as usize])
+        }
     }
 }
 
 impl<'a, P: ClapPlugin> PluginStateImpl for WrapperMainThread<'a, P> {
     fn load(&mut self, input: &mut clack_plugin::stream::InputStream) -> Result<(), PluginError> {
-        Ok(()) // todo!()
+        Err(PluginError::Message("()")) // todo!()
     }
 
     fn save(&mut self, output: &mut clack_plugin::stream::OutputStream) -> Result<(), PluginError> {
-        Ok(()) // todo!()
+        Err(PluginError::Message("()")) // todo!()
     }
 }
 
