@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 pub use clack_extensions::audio_ports::*;
 use clack_extensions::gui;
 pub use clack_extensions::gui::{GuiApiType, GuiConfiguration, PluginGuiImpl};
@@ -6,11 +8,12 @@ use clack_extensions::state::PluginStateImpl;
 use clack_plugin::prelude::*;
 
 use crate::params::param_trait::Params;
+use crate::prelude::ClapGui;
 use crate::wrapper::{ClapPlugin, shared::WrapperShared};
 
 pub struct WrapperMainThread<'a, P: ClapPlugin> {
     pub(crate) shared: WrapperShared<P>,
-    pub(crate) gui: Option<f32>, // TODO an actual gui thing here
+    pub(crate) gui: Option<Arc<dyn ClapGui>>, // TODO an actual gui thing here
     pub(crate) host: HostMainThreadHandle<'a>,
 }
 
@@ -99,6 +102,7 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
     }
 
     fn create(&mut self, _configuration: gui::GuiConfiguration) -> Result<(), PluginError> {
+        //todo!()
         Ok(())
     }
 
@@ -111,7 +115,11 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
     }
 
     fn get_size(&mut self) -> Option<gui::GuiSize> {
-        None // todo!()
+        // todo!()
+        Some(gui::GuiSize {
+            width: 300,
+            height: 200,
+        })
     }
 
     fn set_size(&mut self, _size: gui::GuiSize) -> Result<(), PluginError> {
