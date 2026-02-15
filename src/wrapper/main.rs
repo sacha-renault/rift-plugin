@@ -71,7 +71,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
         log::debug!("Create new MainThread<'a>");
         Ok(WrapperMainThread {
             shared: shared.clone(),
-            gui: None, // This must be instancied inside of main thread
+            gui: P::gui(shared.params.clone(), shared.other.clone()),
             host,
         })
     }
