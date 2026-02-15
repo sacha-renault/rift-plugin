@@ -18,28 +18,35 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
 
 impl<'a, P: ClapPlugin> PluginAudioPortsImpl for WrapperMainThread<'a, P> {
     fn count(&mut self, is_input: bool) -> u32 {
-        if is_input {
-            P::INPUT_AUDIO_CONFIG.len() as u32
-        } else {
-            P::OUTPUT_AUDIO_CONFIG.len() as u32
-        }
+        P::AUDIO_PORTS
+            .iter()
+            .filter(|port| port.is_input == is_input)
+            .count() as u32
     }
 
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
-        if is_input {
-            writer.set(&P::INPUT_AUDIO_CONFIG[index as usize])
+        let port_info_opt = &P::AUDIO_PORTS
+            .iter()
+            .filter(|port| port.is_input == is_input)
+            .nth(index as usize);
+
+        if let Some(port_info) = port_info_opt {
+            writer.set(&port_info.into_audio_port_info(index))
         } else {
-            writer.set(&P::OUTPUT_AUDIO_CONFIG[index as usize])
+            panic!("Invalid port index")
         }
     }
 }
 
 impl<'a, P: ClapPlugin> PluginStateImpl for WrapperMainThread<'a, P> {
-    fn load(&mut self, input: &mut clack_plugin::stream::InputStream) -> Result<(), PluginError> {
+    fn load(&mut self, _input: &mut clack_plugin::stream::InputStream) -> Result<(), PluginError> {
         Err(PluginError::Message("()")) // todo!()
     }
 
-    fn save(&mut self, output: &mut clack_plugin::stream::OutputStream) -> Result<(), PluginError> {
+    fn save(
+        &mut self,
+        _output: &mut clack_plugin::stream::OutputStream,
+    ) -> Result<(), PluginError> {
         Err(PluginError::Message("()")) // todo!()
     }
 }
@@ -49,7 +56,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
         self.shared.params.count()
     }
 
-    fn flush(&mut self, intput_events: &InputEvents, output_events: &mut OutputEvents) {
+    fn flush(&mut self, _intput_events: &InputEvents, _output_events: &mut OutputEvents) {
         // todo!()
     }
 

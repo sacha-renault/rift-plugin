@@ -1,4 +1,5 @@
 mod params;
+mod type_wrapper;
 mod wrapper;
 
 #[macro_export]
@@ -19,9 +20,13 @@ pub mod prelude {
     pub use clack_extensions;
     pub use clack_plugin;
 
+    pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
+
     pub use params::param_float::FloatParam;
     pub use params::param_trait::Params;
 
     pub use super::wrapper::main::Wrapper;
     pub use wrapper::ClapPlugin;
+
+    pub use type_wrapper::AudioPort;
 }

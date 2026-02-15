@@ -25,11 +25,6 @@ impl<P: ClapPlugin> Plugin for Wrapper<P> {
             .register::<PluginAudioPorts>()
             .register::<PluginState>()
             .register::<PluginGui>();
-        // builder
-        //     .register::<PluginAudioPorts>()
-        //     .register::<PluginParams>()
-        //     .register::<PluginState>() // todo!()
-        //     .register::<PluginGui>(); // todo!()
     }
 }
 
