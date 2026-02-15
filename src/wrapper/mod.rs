@@ -35,4 +35,7 @@ pub trait ClapPlugin: Send + Sync + 'static {
     const MANUAL_URL: &str = "";
 
     const AUDIO_PORTS: &[AudioPort<'_>] = &[];
+
+    // DEBUG RN
+    const INIT_LOG_FN: Option<fn() -> Result<(), Box<dyn std::error::Error>>> = None;
 }

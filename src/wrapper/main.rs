@@ -1,4 +1,5 @@
 use std::marker::PhantomData;
+use std::sync::Once;
 
 use clack_extensions::{
     audio_ports::PluginAudioPorts, gui::PluginGui, params::PluginParams, state::PluginState,
@@ -8,6 +9,8 @@ use clack_plugin::prelude::*;
 use crate::wrapper::{
     ClapPlugin, main_thread::WrapperMainThread, processor::WrapperProcessor, shared::WrapperShared,
 };
+
+static INIT: Once = Once::new();
 
 pub struct Wrapper<P: ClapPlugin>(PhantomData<P>);
 
@@ -20,6 +23,13 @@ impl<P: ClapPlugin> Plugin for Wrapper<P> {
         builder: &mut PluginExtensions<Self>,
         _shared: Option<&Self::Shared<'_>>,
     ) {
+        INIT.call_once(|| {
+            if let Some(func) = P::INIT_LOG_FN {
+                let _ = func();
+                log::info!("Plugin::declare_extensions Log was initialized");
+            }
+        });
+
         builder
             .register::<PluginAudioPorts>()
             .register::<PluginAudioPorts>()
@@ -54,6 +64,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
     }
 
     fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
+        log::debug!("Create new WrapperShared");
         Ok(WrapperShared::default())
     }
 
@@ -61,6 +72,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
         host: HostMainThreadHandle<'a>,
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
+        log::debug!("Create new MainThread<'a>");
         Ok(WrapperMainThread {
             shared: shared.clone(),
             gui: None, // todo!()

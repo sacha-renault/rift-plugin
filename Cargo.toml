@@ -15,6 +15,7 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "raw-window-handle_05",
   "state",
 ] }
+log = "0.4"
 
 [workspace]
 resolver = "2"
