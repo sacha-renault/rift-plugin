@@ -2,7 +2,10 @@ use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
-use crate::{params::param_trait::Params, type_wrapper::AudioPort};
+use crate::{
+    params::param_trait::Params,
+    type_wrapper::{AudioPort, ClapGui},
+};
 
 pub mod main;
 pub mod main_thread;
@@ -15,6 +18,10 @@ pub trait ClapPlugin: Send + Sync + 'static {
 
     /// Anything else that should be shared, must just be thread safe
     type SharedType: Send + Sync + Default + 'static;
+
+    /// The GUI type
+    type GuiType: ClapGui + Send + Sync + Default + 'static;
+    const HAS_GUI: bool;
 
     // LATER, define the gui here ...
     // type GuiType: Gui + Send + Sync + Default + 'static;

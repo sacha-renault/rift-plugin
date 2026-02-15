@@ -1,9 +1,7 @@
 use std::marker::PhantomData;
 use std::sync::Once;
 
-use clack_extensions::{
-    audio_ports::PluginAudioPorts, gui::PluginGui, params::PluginParams, state::PluginState,
-};
+use clack_extensions::{audio_ports::PluginAudioPorts, gui::PluginGui, state::PluginState};
 use clack_plugin::prelude::*;
 
 use crate::wrapper::{
@@ -30,11 +28,9 @@ impl<P: ClapPlugin> Plugin for Wrapper<P> {
             }
         });
 
-        builder
-            .register::<PluginAudioPorts>()
-            .register::<PluginAudioPorts>()
-            .register::<PluginState>()
-            .register::<PluginGui>();
+        builder.register::<PluginAudioPorts>();
+        builder.register::<PluginState>();
+        builder.register::<PluginGui>();
     }
 }
 
@@ -75,7 +71,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
         log::debug!("Create new MainThread<'a>");
         Ok(WrapperMainThread {
             shared: shared.clone(),
-            gui: None, // todo!()
+            gui: None, // This must be instancied inside of main thread
             host,
         })
     }
