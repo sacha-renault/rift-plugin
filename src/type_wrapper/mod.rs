@@ -1,8 +1,5 @@
-use clack_extensions::{
-    audio_ports::{AudioPortFlags, AudioPortInfo, AudioPortType},
-    gui::{GuiConfiguration, GuiResizeHints, GuiSize, Window},
-};
-use clack_plugin::{plugin::PluginError, utils::ClapId};
+use clack_extensions::audio_ports::{AudioPortFlags, AudioPortInfo, AudioPortType};
+use clack_plugin::utils::ClapId;
 
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPort<'a> {
@@ -57,70 +54,4 @@ impl<'a> AudioPort<'a> {
             in_place_pair: None,
         }
     }
-}
-
-pub trait ClapGui {
-    /// Create and allocate all resources needed for the GUI
-    ///
-    /// If `is_floating` is true, the window will not be managed by the host. The plugin can set
-    /// its window to stay above the parent window via [`Self::set_transient`].
-    ///
-    /// If `is_floating` is false, the plugin must embed its window in the parent (host).
-    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), PluginError>;
-
-    /// Free all resources associated with the GUI
-    fn destroy(&mut self);
-
-    /// Set absolute scaling factor for GUI
-    ///
-    /// Overrides OS settings, and should not be used if the windowing API uses logical pixels. Can
-    /// be ignored if the plugin will query the OS directly and perform its own calculations.
-    fn set_scale(&mut self, scale: f64) -> Result<(), PluginError>;
-
-    /// Get current size of GUI
-    fn get_size(&mut self) -> Option<GuiSize>;
-
-    /// Tell host if GUI can be resized
-    ///
-    /// Only applies to embedded windows.
-    fn can_resize(&mut self) -> bool {
-        false
-    }
-
-    /// Provide hints on the resize-ability of the GUI
-    fn get_resize_hints(&mut self) -> Option<GuiResizeHints> {
-        None
-    }
-
-    /// Calculate the closest possible size for the GUI
-    ///
-    /// Only applies if the GUI is resizable and embedded in a parent window. Must return
-    /// dimensions smaller than or equal to the requested dimensions.
-    fn adjust_size(&mut self, size: GuiSize) -> Option<GuiSize> {
-        None
-    }
-
-    /// Set the size of an embedded window
-    fn set_size(&mut self, size: GuiSize) -> Result<(), PluginError>;
-
-    /// Embed UI into the given parent window
-    fn set_parent(&mut self, window: Window) -> Result<(), PluginError>;
-
-    /// Receive instruction to stay above the given window
-    ///
-    /// Only applies to floating windows.
-    fn set_transient(&mut self, window: Window) -> Result<(), PluginError>;
-
-    /// Receive a suggested window title from the host
-    ///
-    /// Only applies to floating windows.
-    fn suggest_title(&mut self, title: &str) {}
-
-    /// Show the window
-    fn show(&mut self) -> Result<(), PluginError>;
-
-    /// Hide the window
-    ///
-    /// This should not free the resources associated with the GUI, just hide it.
-    fn hide(&mut self) -> Result<(), PluginError>;
 }

@@ -1,3 +1,4 @@
+mod gui;
 mod params;
 mod type_wrapper;
 mod wrapper;
@@ -28,5 +29,7 @@ pub mod prelude {
     pub use super::wrapper::main::Wrapper;
     pub use wrapper::ClapPlugin;
 
-    pub use type_wrapper::{AudioPort, ClapGui};
+    pub use type_wrapper::AudioPort;
+
+    pub use gui::ClapGui;
 }

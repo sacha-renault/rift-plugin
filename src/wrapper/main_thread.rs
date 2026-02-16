@@ -13,7 +13,7 @@ use crate::wrapper::{ClapPlugin, shared::WrapperShared};
 
 pub struct WrapperMainThread<'a, P: ClapPlugin> {
     pub(crate) shared: WrapperShared<P>,
-    pub(crate) gui: Option<Arc<dyn ClapGui>>, // TODO an actual gui thing here
+    pub(crate) gui: Box<dyn ClapGui>, // TODO an actual gui thing here
     pub(crate) host: HostMainThreadHandle<'a>,
 }
 
@@ -110,35 +110,31 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
         // todo!()
     }
 
-    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
-        Err(PluginError::Message(":(")) // todo!()
+    fn set_scale(&mut self, scale: f64) -> Result<(), PluginError> {
+        self.gui.set_scale(scale)
     }
 
     fn get_size(&mut self) -> Option<gui::GuiSize> {
-        // todo!()
-        Some(gui::GuiSize {
-            width: 300,
-            height: 200,
-        })
+        self.gui.get_size()
     }
 
-    fn set_size(&mut self, _size: gui::GuiSize) -> Result<(), PluginError> {
-        Err(PluginError::Message(":(")) // todo!()
+    fn set_size(&mut self, size: gui::GuiSize) -> Result<(), PluginError> {
+        self.gui.set_size(size)
     }
 
-    fn set_parent(&mut self, _window: gui::Window) -> Result<(), PluginError> {
-        Err(PluginError::Message(":(")) // todo!()
+    fn set_parent(&mut self, window: gui::Window) -> Result<(), PluginError> {
+        self.gui.set_parent(window)
     }
 
-    fn set_transient(&mut self, _window: gui::Window) -> Result<(), PluginError> {
-        Err(PluginError::Message(":(")) // todo!()
+    fn set_transient(&mut self, window: gui::Window) -> Result<(), PluginError> {
+        self.gui.set_transient(window)
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
-        Ok(()) // todo!()
+        self.gui.show()
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
-        Ok(()) // todo!()
+        self.gui.hide()
     }
 }
