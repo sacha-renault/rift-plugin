@@ -13,7 +13,6 @@ use vizia::prelude::*;
 
 use crate::gui::ClapGui;
 
-#[derive(Default)]
 pub struct ViziaGui<F> {
     /// Holds raw handle to parent window.
     parent: Option<RawWindowHandle>,
@@ -61,18 +60,18 @@ where
         let app_fn = self.app_fn.clone();
         let application = vizia_baseview::Application::new(move |cx| app_fn(cx))
             .inner_size(self.size)
-            .on_idle(|cx| log::warn!("COUCOU"));
+            .on_idle(|cx| {});
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Release);
         log::warn!("spawn was called")
     }
 
-    fn set_size(&mut self, size: GuiSize) -> Result<(), PluginError> {
-        Ok(())
+    fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
+        Err(PluginError::Message("Not Supported"))
     }
 
-    fn adjust_size(&mut self, size: GuiSize) -> Option<GuiSize> {
+    fn adjust_size(&mut self, _size: GuiSize) -> Option<GuiSize> {
         None
     }
 
@@ -81,10 +80,12 @@ where
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
+        self.opened.store(true, Ordering::SeqCst);
         Ok(())
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
+        self.opened.store(false, Ordering::SeqCst);
         Ok(())
     }
 
@@ -99,11 +100,11 @@ where
         Ok(())
     }
 
-    fn set_transient(&mut self, window: Window) -> Result<(), PluginError> {
+    fn set_transient(&mut self, _window: Window) -> Result<(), PluginError> {
         Ok(())
     }
 
-    fn set_scale(&mut self, scale: f64) -> Result<(), PluginError> {
+    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
         Err(PluginError::Message("Unsupported"))
     }
 }
