@@ -69,9 +69,11 @@ impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
         log::debug!("Create new MainThread<'a>");
+        let gui = P::gui(shared.params.clone(), shared.other.clone());
+
         Ok(WrapperMainThread {
             shared: shared.clone(),
-            gui: P::gui(shared.params.clone(), shared.other.clone()),
+            gui,
             host,
         })
     }

@@ -22,6 +22,7 @@ pub mod prelude {
     pub use clack_plugin;
 
     pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
+    pub use clack_plugin::prelude::PluginError;
 
     pub use params::param_float::FloatParam;
     pub use params::param_trait::Params;
@@ -31,5 +32,5 @@ pub mod prelude {
 
     pub use type_wrapper::AudioPort;
 
-    pub use gui::ClapGui;
+    pub use gui::{ClapGui, ViziaGui};
 }

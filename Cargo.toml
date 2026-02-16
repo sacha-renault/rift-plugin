@@ -15,7 +15,13 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "raw-window-handle_05",
   "state",
 ] }
+baseview = { git = "https://github.com/vizia/baseview.git", rev = "bd7774294ebd6a4ea497e9c02655a4abd0408137", features = ["opengl"] }
+vizia = { git = "https://github.com/vizia/vizia" }
+vizia_baseview = { git = "https://github.com/vizia/vizia" }
+raw-window-handle = "0.5.0"
 log = "0.4"
+
+
 
 [workspace]
 resolver = "2"
