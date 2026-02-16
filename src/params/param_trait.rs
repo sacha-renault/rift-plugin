@@ -1,4 +1,5 @@
 use std::ffi::CStr;
+use std::fmt::Write;
 
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
 use clack_plugin::prelude::*;
@@ -8,8 +9,10 @@ pub trait Param {
 
     // Identity
     fn name(&self) -> &str;
+    fn unit<'a>(&'a self) -> &'a str;
 
     // Current value
+    fn value(&self) -> Self::Value;
     fn get(&self) -> f64;
     fn set(&self, value: f64);
 
@@ -22,14 +25,21 @@ pub trait Param {
     fn set_normalized(&self, normalized: f64);
 
     // Display formatting
-    fn value_to_text(
-        &mut self,
-        param_id: ClapId,
-        value: f64,
-        writer: &mut ParamDisplayWriter,
-    ) -> std::fmt::Result;
+    fn value_to_text(&self, value: f64, writer: &mut ParamDisplayWriter) -> std::fmt::Result {
+        write!(writer, "{}{}", value, self.unit())
+    }
 
-    fn text_to_value(&self, value: &CStr) -> Option<f64>;
+    fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f64> {
+        let str_val = value.to_str().ok()?.trim();
+        let unit = self.unit();
+        if !str_val.ends_with(unit) {
+            None
+        } else {
+            let no_unit_val = str_val.strip_suffix(unit).unwrap_or(str_val);
+            no_unit_val.trim().parse::<f64>().ok()
+        }
+    }
+
     fn flags(&self) -> ParamInfoFlags;
 }
 
