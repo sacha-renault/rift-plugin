@@ -6,11 +6,11 @@ mod wrapper;
 #[macro_export]
 macro_rules! export_clap_plugin {
     ($PluginType:ty) => {
-        use clack_hug::prelude::Wrapper;
+        use clack_hug::prelude::PluginWrapper;
         use clack_plugin::clack_export_entry;
 
         clack_export_entry! {
-            clack_plugin::prelude::SinglePluginEntry<Wrapper<$PluginType>>
+            clack_plugin::prelude::SinglePluginEntry<PluginWrapper<$PluginType>>
         }
     };
 }
@@ -25,12 +25,13 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     pub use params::param_float::FloatParam;
-    pub use params::param_trait::Params;
+    pub use params::param_trait::{Param, Params};
 
-    pub use super::wrapper::main::Wrapper;
+    pub use super::wrapper::main::PluginWrapper;
     pub use wrapper::ClapPlugin;
 
     pub use type_wrapper::AudioPort;
 
     pub use gui::{ClapGui, ViziaGui};
+    pub use vizia;
 }

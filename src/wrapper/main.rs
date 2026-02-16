@@ -10,9 +10,9 @@ use crate::wrapper::{
 
 static INIT: Once = Once::new();
 
-pub struct Wrapper<P: ClapPlugin>(PhantomData<P>);
+pub struct PluginWrapper<P: ClapPlugin>(PhantomData<P>);
 
-impl<P: ClapPlugin> Plugin for Wrapper<P> {
+impl<P: ClapPlugin> Plugin for PluginWrapper<P> {
     type AudioProcessor<'a> = WrapperProcessor<'a, P>;
     type Shared<'a> = WrapperShared<P>;
     type MainThread<'a> = WrapperMainThread<'a, P>;
@@ -34,7 +34,7 @@ impl<P: ClapPlugin> Plugin for Wrapper<P> {
     }
 }
 
-impl<P: ClapPlugin> DefaultPluginFactory for Wrapper<P> {
+impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
     fn get_descriptor() -> PluginDescriptor {
         // Add some compile time panics!
         const {

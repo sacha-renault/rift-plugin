@@ -2,16 +2,16 @@ use std::sync::atomic::Ordering;
 
 use clack_extensions::params::ParamDisplayWriter;
 
-use super::atomic_f64::AtomicF64;
+use super::atomic_f32::AtomicF32;
 use super::param_trait::Param;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
     /// Default value for the param
-    default: f64,
+    default: f32,
 
-    #[builder(default = AtomicF64::new(default))]
-    value: AtomicF64,
+    #[builder(default = AtomicF32::new(default))]
+    value: AtomicF32,
     name: String,
 
     #[builder(default = "")]
@@ -32,11 +32,11 @@ impl Param for FloatParam {
     }
 
     fn get(&self) -> f64 {
-        self.value.load(Ordering::SeqCst)
+        self.value.load(Ordering::SeqCst) as f64
     }
 
     fn set(&self, value: f64) {
-        self.value.store(value, Ordering::SeqCst);
+        self.value.store(value as f32, Ordering::SeqCst);
     }
 
     fn normalize(&self, value: Self::Value) -> f64 {
