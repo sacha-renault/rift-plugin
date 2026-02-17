@@ -1,7 +1,9 @@
 use std::marker::PhantomData;
 use std::sync::Once;
 
-use clack_extensions::{audio_ports::PluginAudioPorts, gui::PluginGui, state::PluginState};
+use clack_extensions::{
+    audio_ports::PluginAudioPorts, gui::PluginGui, params::PluginParams, state::PluginState,
+};
 use clack_plugin::prelude::*;
 
 use crate::wrapper::{
@@ -31,6 +33,7 @@ impl<P: ClapPlugin> Plugin for PluginWrapper<P> {
         builder.register::<PluginAudioPorts>();
         builder.register::<PluginState>();
         builder.register::<PluginGui>();
+        builder.register::<PluginParams>();
     }
 }
 
