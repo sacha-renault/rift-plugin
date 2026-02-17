@@ -30,8 +30,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
             // if let Some(some_event) = event.as_event::<SomeEvent>() { ... }
         }
 
-        // todo!()
-        // Put in the outputs event queue what happened ? in the gui ?
         self.shared.params.process_event(|event| {
             if let err @ Err(..) = outputs.try_push(event) {
                 log::error!("There was an error push event {err:?}")

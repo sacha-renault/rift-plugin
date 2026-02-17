@@ -6,7 +6,7 @@ use clack_plugin::prelude::*;
 
 use crate::gui::ParamGuiEvent;
 
-pub trait Param {
+pub trait InnerParam {
     type Value;
 
     // Identity
@@ -18,7 +18,7 @@ pub trait Param {
     fn get(&self) -> f64;
     fn set(&self, value: f64);
 
-    // Normalization (CLAP often wants [0.0, 1.0])
+    // Normalization
     fn normalize(&self, value: Self::Value) -> f64;
     fn denormalize(&self, normalized: f64) -> Self::Value;
 

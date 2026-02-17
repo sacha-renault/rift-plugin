@@ -3,7 +3,7 @@ use std::sync::atomic::Ordering;
 use clack_extensions::params::*;
 
 use super::atomic_f32::AtomicF32;
-use super::param_trait::Param;
+use super::param_trait::InnerParam;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
@@ -24,11 +24,11 @@ pub struct FloatParam {
     #[builder(default = 1.0)]
     max_value: f64,
 
-    #[builder(default = ParamInfoFlags::empty())]
+    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 }
 
-impl Param for FloatParam {
+impl InnerParam for FloatParam {
     type Value = f32;
 
     fn name(&self) -> &str {
