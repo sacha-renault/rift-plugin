@@ -56,6 +56,7 @@ impl<'a, P: ClapPlugin> PluginStateImpl for WrapperMainThread<'a, P> {
 
 impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     fn count(&mut self) -> u32 {
+        log::warn!("NEW PARAM COUNT {}", self.shared.params.count());
         self.shared.params.count()
     }
 
@@ -64,6 +65,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     }
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
+        log::warn!("NEW PARAM INFO {param_index}");
         if let Some(inf) = self.shared.params.get_param_info(param_index) {
             info.set(&inf);
         }
