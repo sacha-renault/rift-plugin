@@ -674,7 +674,6 @@ dependencies = [
 name = "clack-hug"
 version = "0.1.0"
 dependencies = [
- "baseview",
  "bon",
  "clack-extensions",
  "clack-plugin",
@@ -2972,9 +2971,9 @@ dependencies = [
 
 [[package]]
 name = "toml_parser"
-version = "1.0.8+spec-1.1.0"
+version = "1.0.9+spec-1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0742ff5ff03ea7e67c8ae6c93cac239e0d9784833362da3f9a9c1da8dfefcbdc"
+checksum = "702d4415e08923e7e1ef96cd5727c0dfed80b4d2fa25db9647fe5eb6f7c5a4c4"
 dependencies = [
  "winnow",
 ]
@@ -3154,7 +3153,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vizia"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "vizia_core",
  "vizia_winit",
@@ -3163,7 +3162,7 @@ dependencies = [
 [[package]]
 name = "vizia_baseview"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "baseview",
  "gl",
@@ -3177,7 +3176,7 @@ dependencies = [
 [[package]]
 name = "vizia_core"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "accesskit",
  "bitflags 2.10.0",
@@ -3209,7 +3208,7 @@ dependencies = [
 [[package]]
 name = "vizia_derive"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3219,12 +3218,12 @@ dependencies = [
 [[package]]
 name = "vizia_id"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 
 [[package]]
 name = "vizia_input"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "bitflags 2.10.0",
  "keyboard-types",
@@ -3234,7 +3233,7 @@ dependencies = [
 [[package]]
 name = "vizia_storage"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "vizia_id",
 ]
@@ -3242,7 +3241,7 @@ dependencies = [
 [[package]]
 name = "vizia_style"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "bitflags 2.10.0",
  "cssparser",
@@ -3257,7 +3256,7 @@ dependencies = [
 [[package]]
 name = "vizia_window"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "bitflags 2.10.0",
  "vizia_input",
@@ -3266,7 +3265,7 @@ dependencies = [
 [[package]]
 name = "vizia_winit"
 version = "0.3.0"
-source = "git+https://github.com/vizia/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
+source = "git+https://github.com/sacha-renault/vizia#c0ada337a12f3b132d8f41203f6c0eda56ef33d7"
 dependencies = [
  "accesskit",
  "accesskit_winit",

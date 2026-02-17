@@ -1,6 +1,5 @@
 //! Contains all types and implementations related to Gui window managementb
 
-use baseview::WindowHandle;
 use clack_extensions::gui::{GuiSize, Window};
 use clack_plugin::plugin::PluginError;
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -8,6 +7,7 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
+use vizia_baseview::WindowHandle;
 
 use vizia::prelude::*;
 
@@ -60,7 +60,9 @@ where
         let app_fn = self.app_fn.clone();
         let application = vizia_baseview::Application::new(move |cx| app_fn(cx))
             .inner_size(self.size)
-            .on_idle(|cx| {});
+            .on_idle(|cx| {
+                let proxy = cx.get_proxy();
+            });
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Release);
