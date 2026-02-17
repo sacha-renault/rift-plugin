@@ -25,7 +25,7 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     pub use params::param_float::FloatParam;
-    pub use params::param_trait::{Param, Params};
+    pub use params::param_trait::{GuiEvent, Param, Params};
 
     pub use super::wrapper::main::PluginWrapper;
     pub use wrapper::ClapPlugin;

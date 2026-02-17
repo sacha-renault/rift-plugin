@@ -2,7 +2,10 @@ use std::ffi::CStr;
 use std::fmt::Write;
 
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
-use clack_plugin::prelude::*;
+use clack_plugin::{
+    events::event_types::{ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent},
+    prelude::*,
+};
 
 pub trait Param {
     type Value;
@@ -43,6 +46,22 @@ pub trait Param {
     fn flags(&self) -> ParamInfoFlags;
 }
 
+pub enum GuiEvent {
+    ParamValueEvent(ParamValueEvent),
+    ParamGestureStart(ParamGestureBeginEvent),
+    ParamGestureEnd(ParamGestureEndEvent),
+}
+
+impl AsRef<UnknownEvent> for GuiEvent {
+    fn as_ref(&self) -> &UnknownEvent {
+        match self {
+            GuiEvent::ParamValueEvent(v) => v.as_ref(),
+            GuiEvent::ParamGestureStart(v) => v.as_ref(),
+            GuiEvent::ParamGestureEnd(v) => v.as_ref(),
+        }
+    }
+}
+
 pub trait Params: Default + Sync + Send + 'static {
     fn count(&self) -> u32;
     fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>>;
@@ -55,4 +74,8 @@ pub trait Params: Default + Sync + Send + 'static {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result;
+    fn add_gui_event(&self, event: GuiEvent);
+    fn process_event<F>(&self, func: F)
+    where
+        F: FnMut(GuiEvent);
 }

@@ -15,19 +15,28 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
 }
 
 impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
-    fn flush(&mut self, input_events: &InputEvents, _output_events: &mut OutputEvents) {
-        for event in input_events.iter() {
-            let Some(param_event) = event.as_event::<ParamValueEvent>() else {
-                continue;
+    fn flush(&mut self, inputs: &InputEvents, outputs: &mut OutputEvents) {
+        for event in inputs.iter() {
+            if let Some(param_event) = event.as_event::<ParamValueEvent>() {
+                let Some(id) = param_event.param_id() else {
+                    continue;
+                };
+                let value = param_event.value();
+                self.shared.params.set_value(id, value);
             };
-            let Some(id) = param_event.param_id() else {
-                continue;
-            };
-            let value = param_event.value();
-            self.shared.params.set_value(id, value);
+
+            // todo!() ?
+            // maybe handle other kind of events ?
+            // if let Some(some_event) = event.as_event::<SomeEvent>() { ... }
         }
 
         // todo!()
+        // Put in the outputs event queue what happened ? in the gui ?
+        self.shared.params.process_event(|event| {
+            if let err @ Err(..) = outputs.try_push(event) {
+                log::error!("There was an error push event {err:?}")
+            }
+        });
     }
 }
 
@@ -67,10 +76,13 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         mut audio: Audio,
         events: Events,
     ) -> Result<ProcessStatus, PluginError> {
+        // TODO
+        // Get more than only main port_pair
+        // This requires ClapPlugin::process change of interface
+        // with a new Option<AuxInput> / Option<AuxOutput> ?
         let mut port_pair = audio
             .port_pair(0)
             .ok_or(PluginError::Message("No input/output ports found"))?;
-
         let mut output_channels = port_pair
             .channels()?
             .into_f32()
