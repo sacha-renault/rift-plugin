@@ -8,6 +8,7 @@ use super::param_trait::Param;
 #[derive(bon::Builder)]
 pub struct FloatParam {
     /// Default value for the param
+    #[allow(unused)] // This is actually used for init value
     default: f32,
 
     #[builder(default = AtomicF32::new(default))]

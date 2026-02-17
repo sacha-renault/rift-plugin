@@ -46,7 +46,7 @@ where
         }
     }
 
-    fn handle(&self) -> &WindowHandle {
+    fn _handle(&self) -> &WindowHandle {
         // this should be set anyway
         self.handle.as_ref().expect("No window handle")
     }
@@ -60,13 +60,11 @@ where
         let app_fn = self.app_fn.clone();
         let application = vizia_baseview::Application::new(move |cx| app_fn(cx))
             .inner_size(self.size)
-            .on_idle(|cx| {
-                let proxy = cx.get_proxy();
-            });
+            .on_idle(|_cx| {});
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Release);
-        log::warn!("spawn was called")
+        log::info!("ClapGui::spawn was called")
     }
 
     fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
