@@ -12,7 +12,12 @@ pub enum ParamGuiEvent {
 }
 
 impl ParamGuiEvent {
-    pub fn value(param_id: ClapId, pckn: Pckn, value: f64) -> Self {
+    pub fn value(param_id: ClapId, value: f64) -> Self {
+        let event = ParamValueEvent::new(0, param_id, Pckn::match_all(), value, Cookie::empty());
+        Self::ValueEvent(event)
+    }
+
+    pub fn value_with_pckn(param_id: ClapId, value: f64, pckn: Pckn) -> Self {
         let event = ParamValueEvent::new(0, param_id, pckn, value, Cookie::empty());
         Self::ValueEvent(event)
     }

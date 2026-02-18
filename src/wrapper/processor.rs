@@ -1,8 +1,10 @@
 use clack_extensions::params::*;
-use clack_plugin::events::event_types::ParamValueEvent;
+use clack_plugin::extensions::HostExtensionSide;
 use clack_plugin::prelude::*;
+use clack_plugin::{events::event_types::ParamValueEvent, extensions::Extension};
 
 use crate::{
+    gui::ParamGuiEvent,
     params::param_trait::Params,
     prelude::Buffers,
     wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared},
@@ -12,6 +14,22 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,
     plugin: P,
     host: HostAudioProcessorHandle<'a>,
+}
+
+impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
+    #[inline]
+    fn with_extension<E, F, R>(&self, func: F) -> Option<R>
+    where
+        E: Extension<ExtensionSide = HostExtensionSide>,
+        F: FnOnce(&E) -> R,
+    {
+        self.host.get_extension::<E>().map(|ext| func(&ext))
+    }
+
+    fn request_flush(&self) -> bool {
+        self.with_extension::<HostParams, _, _>(|host| host.request_flush(self.host.as_shared()))
+            .is_some()
+    }
 }
 
 impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
@@ -31,8 +49,17 @@ impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
         }
 
         self.shared.params.process_event(|event| {
-            if let err @ Err(..) = outputs.try_push(event) {
+            if let err @ Err(..) = outputs.try_push(&event) {
                 log::error!("There was an error push event {err:?}")
+            }
+
+            match event {
+                ParamGuiEvent::GestureStart(_) | ParamGuiEvent::GestureEnd(_) => {
+                    if !self.request_flush() {
+                        log::error!("Flush failed");
+                    }
+                }
+                ParamGuiEvent::ValueEvent(_) => {}
             }
         });
     }

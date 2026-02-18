@@ -58,8 +58,11 @@ pub trait Params: Default + Sync + Send + 'static {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result;
+
+    /// Add an event into the queue that says the user has made parameter events
+    /// This must be add from GUI and read from audio thread
     fn add_gui_event(&self, event: ParamGuiEvent);
-    fn process_event<F>(&self, func: F)
+    fn process_event<F>(&self, func: F) -> usize
     where
         F: FnMut(ParamGuiEvent);
 }
