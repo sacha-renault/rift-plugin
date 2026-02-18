@@ -11,6 +11,7 @@ pub trait InnerParam {
 
     // Identity
     fn name(&self) -> &str;
+    fn id(&self) -> ClapId;
     fn unit<'a>(&'a self) -> &'a str;
 
     // Current value

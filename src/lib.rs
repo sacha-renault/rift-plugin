@@ -1,6 +1,7 @@
 mod gui;
 mod params;
 mod type_wrapper;
+mod utils;
 mod wrapper;
 
 #[macro_export]

@@ -1,6 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use clack_extensions::params::*;
+use clack_plugin::utils::ClapId;
 
 use super::atomic_f32::AtomicF32;
 use super::param_trait::InnerParam;
@@ -11,9 +12,11 @@ pub struct FloatParam {
     #[allow(unused)] // This is actually used for init value
     default: f32,
 
-    #[builder(default = AtomicF32::new(default))]
+    #[builder(skip = AtomicF32::new(default))]
     value: AtomicF32,
-    name: String,
+
+    /// Name of the param
+    name: &'static str,
 
     #[builder(default = "")]
     unit: &'static str,
@@ -26,6 +29,9 @@ pub struct FloatParam {
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
+
+    #[builder(with = |id: u32| ClapId::new(id))]
+    id: ClapId,
 }
 
 impl InnerParam for FloatParam {
@@ -33,6 +39,10 @@ impl InnerParam for FloatParam {
 
     fn name(&self) -> &str {
         &self.name
+    }
+
+    fn id(&self) -> ClapId {
+        self.id
     }
 
     fn unit<'a>(&'a self) -> &'a str {
