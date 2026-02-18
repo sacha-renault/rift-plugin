@@ -32,7 +32,7 @@ pub mod prelude {
     pub use super::wrapper::main::PluginWrapper;
     pub use wrapper::ClapPlugin;
 
-    pub use type_wrapper::AudioPort;
+    pub use type_wrapper::{AudioPort, MainAudioPort};
 
     pub use gui::{ClapGui, ParamGuiEvent, ViziaGui};
     pub use vizia;

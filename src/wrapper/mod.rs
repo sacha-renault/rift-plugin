@@ -4,7 +4,7 @@ pub use clack_plugin::prelude::*;
 
 use crate::gui::ClapGui;
 use crate::params::param_trait::Params;
-use crate::prelude::Buffers;
+use crate::prelude::{Buffers, MainAudioPort};
 use crate::type_wrapper::AudioPort;
 
 pub mod main;
@@ -23,7 +23,7 @@ pub trait ClapPlugin: Send + Sync + 'static {
     // type GuiType: Gui + Send + Sync + Default + 'static;
 
     fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
-    fn process(&mut self, audio: Buffers) -> Result<ProcessStatus, PluginError>;
+    fn process<'a>(&mut self, audio: Buffers<'a>) -> Result<ProcessStatus, PluginError>;
     fn activate(&mut self, audio_config: PluginAudioConfiguration);
     fn gui(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Box<dyn ClapGui>;
 
@@ -38,7 +38,8 @@ pub trait ClapPlugin: Send + Sync + 'static {
     const SUPPORT_URL: &str = "";
     const MANUAL_URL: &str = "";
 
-    const AUDIO_PORTS: &[AudioPort<'_>] = &[];
+    const MAIN_AUDIO_PORTS: MainAudioPort;
+    const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
 
     // DEBUG RN
     const INIT_LOG_FN: Option<fn() -> Result<(), Box<dyn std::error::Error>>> = None;

@@ -1,6 +1,8 @@
 use clack_extensions::audio_ports::{AudioPortFlags, AudioPortInfo, AudioPortType};
 use clack_plugin::utils::ClapId;
 
+pub const PAIR_PORT_ID: ClapId = ClapId::new(0);
+
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPort<'a> {
     pub(crate) name: &'a [u8],
@@ -12,35 +14,37 @@ pub struct AudioPort<'a> {
 }
 
 impl<'a> AudioPort<'a> {
-    pub const fn input(name: &'a [u8], channel_count: u32) -> Self {
-        AudioPort {
+    pub(crate) const fn new(name: &'a [u8], channel_count: u32, is_input: bool) -> Self {
+        Self {
             name,
             channel_count,
-            flags: AudioPortFlags::IS_MAIN,
+            flags: AudioPortFlags::empty(),
             port_type: None,
             in_place_pair: None,
-            is_input: true,
+            is_input,
         }
+    }
+
+    pub const fn input(name: &'a [u8], channel_count: u32) -> Self {
+        Self::new(name, channel_count, true)
     }
 
     pub const fn output(name: &'a [u8], channel_count: u32) -> Self {
-        AudioPort {
-            name,
-            channel_count,
-            flags: AudioPortFlags::IS_MAIN,
-            port_type: None,
-            in_place_pair: None,
-            is_input: false,
-        }
+        Self::new(name, channel_count, false)
     }
 
     pub const fn set_port_flags(mut self, flags: AudioPortFlags) -> Self {
-        self.flags = flags;
+        self.flags = self.flags.union(flags);
         self
     }
 
     pub const fn set_port_type(mut self, port_type: AudioPortType<'a>) -> Self {
         self.port_type = Some(port_type);
+        self
+    }
+
+    pub const fn set_in_place(mut self, in_place_id: ClapId) -> Self {
+        self.in_place_pair = Some(in_place_id);
         self
     }
 
@@ -51,7 +55,24 @@ impl<'a> AudioPort<'a> {
             channel_count: self.channel_count,
             flags: self.flags,
             port_type: self.port_type,
-            in_place_pair: None,
+            in_place_pair: self.in_place_pair,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MainAudioPort {
+    InputOnly(u32),
+    OutputOnly(u32),
+    InputOutput(u32),
+}
+
+impl MainAudioPort {
+    pub fn capacity(&self) -> u32 {
+        match self {
+            &MainAudioPort::InputOnly(capacity) => capacity,
+            &MainAudioPort::OutputOnly(capacity) => capacity,
+            &MainAudioPort::InputOutput(capacity) => capacity,
         }
     }
 }
