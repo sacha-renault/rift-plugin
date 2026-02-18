@@ -23,10 +23,10 @@ impl<'a> Buffers<'a> {
         let data = self
             .audio
             .input_port(index)
-            .ok_or(PluginError::Message("No output ports found"))?
+            .ok_or(PluginError::Message("No input ports found"))?
             .channels()?
             .into_f32()
-            .ok_or(PluginError::Message("Expected f32 input/output"))?;
+            .ok_or(PluginError::Message("Expected f32 input"))?;
 
         Ok(Buffer::input(data))
     }
@@ -38,7 +38,7 @@ impl<'a> Buffers<'a> {
             .ok_or(PluginError::Message("No output ports found"))?
             .channels()?
             .into_f32()
-            .ok_or(PluginError::Message("Expected f32 input/output"))?;
+            .ok_or(PluginError::Message("Expected f32 output"))?;
 
         Ok(Buffer::output(data))
     }
@@ -83,6 +83,10 @@ impl<'a> Buffers<'a> {
         }
     }
 
+    pub fn main_unchecked(&mut self) -> Buffer<'_> {
+        self.main().unwrap()
+    }
+
     pub fn input_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::OutputOnly(_) => 0,
@@ -92,6 +96,10 @@ impl<'a> Buffers<'a> {
         self.get_input(start_idx + index)
     }
 
+    pub fn input_aux_unchecked(&mut self, index: usize) -> Buffer<'_> {
+        self.input_aux(index).unwrap()
+    }
+
     pub fn output_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::InputOnly(_) => 0,
@@ -99,6 +107,10 @@ impl<'a> Buffers<'a> {
         };
 
         self.get_output(start_idx + index)
+    }
+
+    pub fn output_aux_unchecked(&mut self, index: usize) -> Buffer<'_> {
+        self.output_aux(index).unwrap()
     }
 }
 
