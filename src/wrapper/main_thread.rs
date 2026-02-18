@@ -97,7 +97,7 @@ impl<'a, P: ClapPlugin> PluginStateImpl for WrapperMainThread<'a, P> {
 
 impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     fn count(&mut self) -> u32 {
-        log::info!(
+        log::debug!(
             "PluginMainThreadParams::count {}",
             self.shared.params.count()
         );
@@ -105,12 +105,12 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
     }
 
     fn flush(&mut self, _intputs: &InputEvents, _outputs: &mut OutputEvents) {
-        log::info!("PluginMainThreadParams::flush");
+        log::debug!("PluginMainThreadParams::flush");
         // todo!()
     }
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
-        log::info!("PluginMainThreadParams::get_info {param_index}");
+        log::debug!("PluginMainThreadParams::get_info {param_index}");
         if let Some(inf) = self.shared.params.get_param_info(param_index) {
             info.set(&inf);
         }
@@ -139,12 +139,13 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for WrapperMainThread<'a, P> {
 
 impl<'a, P: ClapPlugin> PluginGuiImpl for WrapperMainThread<'a, P> {
     fn is_api_supported(&mut self, configuration: gui::GuiConfiguration) -> bool {
+        log::debug!("PluginGuiImpl::is_api_supported({configuration:?})");
         configuration.api_type
             == GuiApiType::default_for_current_platform().expect("Unsupported platform")
             && !configuration.is_floating
     }
 
-    fn get_preferred_api(&'_ mut self) -> Option<gui::GuiConfiguration<'_>> {
+    fn get_preferred_api(&mut self) -> Option<gui::GuiConfiguration<'_>> {
         Some(GuiConfiguration {
             api_type: GuiApiType::default_for_current_platform().expect("Unsupported platform"),
             is_floating: false,
