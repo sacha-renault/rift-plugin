@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 pub use clack_extensions::audio_ports::*;
 use clack_extensions::gui;
 pub use clack_extensions::gui::{GuiApiType, GuiConfiguration, PluginGuiImpl};
