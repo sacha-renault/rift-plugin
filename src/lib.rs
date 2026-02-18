@@ -1,5 +1,6 @@
 mod gui;
 mod params;
+mod processing;
 mod type_wrapper;
 mod utils;
 mod wrapper;
@@ -35,4 +36,6 @@ pub mod prelude {
 
     pub use gui::{ClapGui, ParamGuiEvent, ViziaGui};
     pub use vizia;
+
+    pub use processing::*;
 }

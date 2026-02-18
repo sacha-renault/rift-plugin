@@ -4,6 +4,7 @@ use clack_plugin::prelude::*;
 
 use crate::{
     params::param_trait::Params,
+    prelude::Buffers,
     wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared},
 };
 
@@ -111,7 +112,9 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         }
 
         self.flush(events.input, events.output);
-        let output_status = self.plugin.process(self.output_scratch.as_mut_slice());
+
+        let buffers = Buffers::new(&self.output_scratch);
+        let output_status = self.plugin.process(buffers);
 
         // MANDATORY
         // WITH transmute CALL WE HAVE TO CLEAR output_scratch
