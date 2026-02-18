@@ -12,7 +12,6 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,
     plugin: P,
     host: HostAudioProcessorHandle<'a>,
-    output_scratch: Vec<&'a mut [f32]>,
 }
 
 impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
@@ -48,14 +47,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         shared: &'a WrapperShared<P>,
         audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
-        // Count number of port for
-        let total_output = P::AUDIO_PORTS
-            .iter()
-            .filter(|port| !port.is_input)
-            .fold(0, |acc, port| acc + port.channel_count);
-
-        log::debug!("PluginAudioProcessor::activate with {total_output} ports");
-
         // Create the plugin instance & activate right away
         let mut plugin = P::create(shared.params.clone(), shared.other.clone());
         plugin.activate(audio_config);
@@ -65,61 +56,17 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             shared: shared.clone(),
             plugin,
             host,
-            output_scratch: Vec::with_capacity(total_output as usize),
         })
     }
 
     fn process(
         &mut self,
         _process: Process,
-        mut audio: Audio,
+        audio: Audio,
         events: Events,
     ) -> Result<ProcessStatus, PluginError> {
-        // TODO
-        // Get more than only main port_pair
-        // This requires ClapPlugin::process change of interface
-        // with a new Option<AuxInput> / Option<AuxOutput> ?
-        let mut port_pair = audio
-            .port_pair(0)
-            .ok_or(PluginError::Message("No input/output ports found"))?;
-        let mut output_channels = port_pair
-            .channels()?
-            .into_f32()
-            .ok_or(PluginError::Message("Expected f32 input/output"))?;
-
-        // Clear but buffer will not have to reallocate :)
-        self.output_scratch.clear();
-
-        // Extract the buffer slices that we need, while making sure they are paired correctly and
-        // check for either in-place or separate buffers.
-        for pair in output_channels.iter_mut() {
-            let slice = match pair {
-                ChannelPair::InputOnly(_) => {
-                    panic!("TODO: plugin doesn't expect any InputOnly")
-                }
-                ChannelPair::OutputOnly(o) => o,
-                ChannelPair::InPlace(b) => b,
-                ChannelPair::InputOutput(i, o) => {
-                    o.copy_from_slice(i);
-                    o
-                }
-            };
-
-            // We lie to the rust compiler because that's simpler for now ...
-            // TODO
-            let wrong_lifetime_slice: &'a mut [f32] = unsafe { std::mem::transmute(slice) };
-            self.output_scratch.push(wrong_lifetime_slice);
-        }
-
         self.flush(events.input, events.output);
-
-        let buffers = Buffers::new(&self.output_scratch);
-        let output_status = self.plugin.process(buffers);
-
-        // MANDATORY
-        // WITH transmute CALL WE HAVE TO CLEAR output_scratch
-        // OTHERWISE UNDEF BEHAVIOR !!!!
-        self.output_scratch.clear();
-        output_status
+        let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
+        self.plugin.process(buffers)
     }
 }
