@@ -247,9 +247,8 @@ impl<'a> Iterator for ChannelIterator<'a> {
             let position = self.position;
             self.position += 1;
             let ptr = self.vec[position];
-            todo!()
-            // let mut slice = unsafe { std::slice::from_raw_parts_mut(ptr, self.samples) };
-            // unsafe { Some(&mut slice) }
+            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, self.samples) };
+            Some(slice)
         } else {
             None
         }
