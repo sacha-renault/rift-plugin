@@ -70,9 +70,9 @@ pub enum MainAudioPort {
 impl MainAudioPort {
     pub fn capacity(&self) -> u32 {
         match self {
-            &MainAudioPort::InputOnly(capacity) => capacity,
-            &MainAudioPort::OutputOnly(capacity) => capacity,
-            &MainAudioPort::InputOutput(capacity) => capacity,
+            MainAudioPort::InputOnly(c)
+            | MainAudioPort::OutputOnly(c)
+            | MainAudioPort::InputOutput(c) => *c,
         }
     }
 }

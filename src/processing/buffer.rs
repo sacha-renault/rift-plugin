@@ -3,7 +3,7 @@ use clack_plugin::{
     prelude::ChannelPair,
     process::{
         Audio,
-        audio::{InputChannels, OutputChannels, PairedChannels},
+        audio::{InputChannels, OutputChannels},
     },
 };
 
@@ -19,10 +19,10 @@ impl<'a> Buffers<'a> {
         Self { audio, main_config }
     }
 
-    fn get_main_input(&mut self) -> Result<Buffer<'_>, PluginError> {
+    fn get_input(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let data = self
             .audio
-            .input_port(0)
+            .input_port(index)
             .ok_or(PluginError::Message("No output ports found"))?
             .channels()?
             .into_f32()
@@ -31,10 +31,10 @@ impl<'a> Buffers<'a> {
         Ok(Buffer::input(data))
     }
 
-    fn get_main_output(&mut self) -> Result<Buffer<'_>, PluginError> {
+    fn get_output(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let data = self
             .audio
-            .output_port(0)
+            .output_port(index)
             .ok_or(PluginError::Message("No output ports found"))?
             .channels()?
             .into_f32()
@@ -43,7 +43,7 @@ impl<'a> Buffers<'a> {
         Ok(Buffer::output(data))
     }
 
-    fn get_main_io(&mut self) -> Result<Buffer<'_>, PluginError> {
+    fn copy_input_into_output(&mut self) -> Result<(), PluginError> {
         let mut port_pair = self
             .audio
             .port_pair(0)
@@ -55,21 +55,50 @@ impl<'a> Buffers<'a> {
             .ok_or(PluginError::Message("Expected f32 input/output"))?;
 
         for paired in paired_channels.iter_mut() {
+            // There is 4 cases
+            // either InputOutput => handled with copy
+            // Input only, should never happens
+            // Output only, should never happens
+            // Inplace ... In that case the output bfr
+            // is already correct
             match paired {
-                // ChannelPair::InputOutput(i, o) => o.copy_from_slice(i),
-                _ => unreachable!(),
+                ChannelPair::InputOutput(i, o) => o.copy_from_slice(i),
+                _ => {}
             }
         }
 
-        Err(PluginError::Message("()"))
+        Ok(())
+    }
+
+    fn get_main_io(&mut self) -> Result<Buffer<'_>, PluginError> {
+        self.copy_input_into_output()?;
+        self.get_output(0)
     }
 
     pub fn main(&mut self) -> Result<Buffer<'_>, PluginError> {
         match self.main_config {
-            MainAudioPort::InputOnly(_) => self.get_main_input(),
-            MainAudioPort::OutputOnly(_) => self.get_main_output(),
+            MainAudioPort::InputOnly(_) => self.get_input(0),
+            MainAudioPort::OutputOnly(_) => self.get_output(0),
             MainAudioPort::InputOutput(_) => self.get_main_io(),
         }
+    }
+
+    pub fn input_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
+        let start_idx = match self.main_config {
+            MainAudioPort::OutputOnly(_) => 0,
+            _ => 1,
+        };
+
+        self.get_input(start_idx + index)
+    }
+
+    pub fn output_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
+        let start_idx = match self.main_config {
+            MainAudioPort::InputOnly(_) => 0,
+            _ => 1,
+        };
+
+        self.get_output(start_idx + index)
     }
 }
 
