@@ -21,7 +21,7 @@ impl<'a> ProcessContext<'a> {
     }
 
     pub fn request_latency_update(&self, latency: u32) {
-        self.host_messages.set_latency_changed(latency);
+        self.host_messages.set_latency(latency);
         self.host.request_callback();
     }
 }
