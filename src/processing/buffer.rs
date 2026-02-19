@@ -15,10 +15,12 @@ pub struct Buffers<'a> {
 }
 
 impl<'a> Buffers<'a> {
+    /// Create a new view on [`clack_plugin::process::Audio`] struct.
     pub(crate) fn new(audio: Audio<'a>, main_config: MainAudioPort) -> Self {
         Self { audio, main_config }
     }
 
+    /// Get the (not shifted by main port) input at `index`.
     fn get_input(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let data = self
             .audio
@@ -31,6 +33,7 @@ impl<'a> Buffers<'a> {
         Ok(Buffer::input(data))
     }
 
+    /// Get the (not shifted by main port) output at `index`.
     fn get_output(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let data = self
             .audio
@@ -43,7 +46,8 @@ impl<'a> Buffers<'a> {
         Ok(Buffer::output(data))
     }
 
-    fn copy_input_into_output(&mut self) -> Result<(), PluginError> {
+    /// Retrieve port pair 0 and copy, if needed, input into output.
+    fn main_input_into_output(&mut self) -> Result<(), PluginError> {
         let mut port_pair = self
             .audio
             .port_pair(0)
@@ -70,11 +74,25 @@ impl<'a> Buffers<'a> {
         Ok(())
     }
 
+    /// First copy input into output and return the main output.
+    ///
+    /// This function must be called only in the case of [`MainAudioPort::InputOutput`].
     fn get_main_io(&mut self) -> Result<Buffer<'_>, PluginError> {
-        self.copy_input_into_output()?;
+        self.main_input_into_output()?;
         self.get_output(0)
     }
 
+    /// Get the declared main buffer.
+    ///
+    /// Depeding on [`MainAudioPort`], it can return different kinds of buffers. Wrapped in a
+    /// convinient struct for consistant api calls.
+    /// - [`MainAudioPort::InputOnly`]: the input channels.
+    /// - [`MainAudioPort::OutputOnly`]: the output channels. This channels has no
+    /// certainty to be empty, so if you don't process it, you might want to set 0s at least
+    /// to avoid noizy output.
+    /// - [`MainAudioPort::InputOutput`]: copies input into output then returns
+    ///   the output buffer. If the host provides an in-place buffer, no copy
+    ///   is performed and the single buffer is returned directly.
     pub fn main(&mut self) -> Result<Buffer<'_>, PluginError> {
         match self.main_config {
             MainAudioPort::InputOnly(_) => self.get_input(0),
@@ -83,10 +101,14 @@ impl<'a> Buffers<'a> {
         }
     }
 
+    /// Same as [`Buffers::main`], but will panic if it returns a [`Result::Err`].
     pub fn main_unchecked(&mut self) -> Buffer<'_> {
         self.main().unwrap()
     }
 
+    /// Returns the auxiliary input at `index`.
+    ///
+    /// As main ports are always 0, index may be shifted by one.
     pub fn input_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::OutputOnly(_) => 0,
@@ -96,10 +118,14 @@ impl<'a> Buffers<'a> {
         self.get_input(start_idx + index)
     }
 
+    /// Same as [`Buffers::input_aux`], but will panic if it returns a [`Result::Err`].
     pub fn input_aux_unchecked(&mut self, index: usize) -> Buffer<'_> {
         self.input_aux(index).unwrap()
     }
 
+    /// Returns the auxiliary output at `index`.
+    ///
+    /// As main ports are always 0, index may be shifted by one.
     pub fn output_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::InputOnly(_) => 0,
@@ -109,6 +135,7 @@ impl<'a> Buffers<'a> {
         self.get_output(start_idx + index)
     }
 
+    /// Same as [`Buffers::output_aux`], but will panic if it returns a [`Result::Err`].
     pub fn output_aux_unchecked(&mut self, index: usize) -> Buffer<'_> {
         self.output_aux(index).unwrap()
     }
@@ -117,6 +144,10 @@ impl<'a> Buffers<'a> {
 pub enum Buffer<'a> {
     OutputChannels(OutputChannels<'a, f32>),
     InputChannels(InputChannels<'a, f32>),
+    RawData {
+        raw_data: &'a [*mut f32],
+        frames_count: u32,
+    },
 }
 
 impl<'a> Buffer<'a> {
@@ -131,29 +162,49 @@ impl<'a> Buffer<'a> {
     }
 
     #[inline]
+    pub(crate) fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
+        Self::RawData {
+            raw_data,
+            frames_count,
+        }
+    }
+
+    /// Return the number of channels in this buffer.
+    #[inline]
     pub fn channels(&self) -> usize {
         match self {
             Self::OutputChannels(data) => data.channel_count() as usize,
             Self::InputChannels(data) => data.channel_count() as usize,
+            Self::RawData { raw_data, .. } => raw_data.len(),
         }
     }
 
+    /// Return the number of samples per channel in this buffer
     #[inline]
     pub fn samples(&self) -> usize {
         match self {
             Self::OutputChannels(data) => data.frames_count() as usize,
             Self::InputChannels(data) => data.frames_count() as usize,
+            Self::RawData { frames_count, .. } => *frames_count as usize,
         }
     }
 
     #[inline]
-    pub fn raw_data(&'a self) -> &'a [*mut f32] {
+    pub(crate) fn raw_data(&'a self) -> &'a [*mut f32] {
         match self {
             Self::OutputChannels(data) => data.raw_data(),
             Self::InputChannels(data) => data.raw_data(),
+            Self::RawData { raw_data, .. } => raw_data,
         }
     }
 
+    /// Iterates sample-by-sample, yielding all channels at each time position.
+    ///
+    /// Note: because audio is stored in planar format (one contiguous buffer per
+    /// channel), this iterator accesses non-contiguous memory at each step. The
+    /// compiler cannot auto-vectorize this pattern. For pure per-channel processing
+    /// (gain, EQ, distortion), prefer [`Buffer::iter_channels`] which gives the
+    /// compiler a straight contiguous slice to work with.
     pub fn iter_samples(&'a self) -> SamplesIterator<'a> {
         let samples = self.samples();
         let channels = self.channels();
@@ -165,6 +216,11 @@ impl<'a> Buffer<'a> {
         }
     }
 
+    /// Iterates channel-by-channel, yielding a contiguous `&mut [f32]` for each channel.
+    ///
+    /// Preferred for per-channel DSP (gain, filters, saturation) — the compiler
+    /// can auto-vectorize over the contiguous slice. For inter-channel processing,
+    /// see [`Buffer::iter_samples`].
     pub fn iter_channels(&'a self) -> ChannelIterator<'a> {
         ChannelIterator {
             vec: self.raw_data(),
