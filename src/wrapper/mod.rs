@@ -2,11 +2,13 @@ use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
+use crate::context::ProcessContext;
 use crate::gui::ClapGui;
 use crate::params::param_trait::Params;
 use crate::prelude::{Buffers, MainAudioPort};
 use crate::type_wrapper::AudioPort;
 
+pub mod hosts_messages;
 pub mod main;
 pub mod main_thread;
 pub mod processor;
@@ -23,7 +25,11 @@ pub trait ClapPlugin: Send + Sync + 'static {
     // type GuiType: Gui + Send + Sync + Default + 'static;
 
     fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
-    fn process<'a>(&mut self, audio: Buffers<'a>) -> Result<ProcessStatus, PluginError>;
+    fn process<'a>(
+        &mut self,
+        buffers: Buffers<'a>,
+        context: ProcessContext<'a>,
+    ) -> Result<ProcessStatus, PluginError>;
     fn activate(&mut self, audio_config: PluginAudioConfiguration);
     fn gui(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Box<dyn ClapGui>;
 

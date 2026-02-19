@@ -14,6 +14,7 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "params",
   "raw-window-handle_05",
   "state",
+  "latency"
 ] }
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}

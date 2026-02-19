@@ -1,3 +1,4 @@
+mod context;
 mod gui;
 mod params;
 mod processing;
@@ -20,8 +21,10 @@ macro_rules! export_clap_plugin {
 pub mod prelude {
     use super::*;
 
+    // Reexport
     pub use clack_extensions;
     pub use clack_plugin;
+    pub use vizia;
 
     pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
     pub use clack_plugin::prelude::PluginError;
@@ -35,7 +38,7 @@ pub mod prelude {
     pub use type_wrapper::{AudioPort, MainAudioPort};
 
     pub use gui::{ClapGui, ParamGuiEvent, ViziaGui};
-    pub use vizia;
 
+    pub use context::ProcessContext;
     pub use processing::*;
 }
