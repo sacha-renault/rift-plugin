@@ -39,6 +39,7 @@ pub mod prelude {
 
     pub use gui::{ClapGui, ParamGuiEvent, ViziaGui};
 
-    pub use context::ProcessContext;
     pub use processing::*;
+
+    pub use context::{ChangeLatency, InitContext, ProcessContext};
 }

@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use clack_extensions::latency::HostLatency;
 use clack_plugin::prelude::*;
 
 use crate::prelude::*;
@@ -22,7 +21,7 @@ pub struct WrapperMainThread<'a, P: ClapPlugin> {
 impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
     #[inline]
     fn states(&self) -> Arc<PluginSharedState> {
-        self.shared.host_messages.clone()
+        self.shared.states.clone()
     }
 }
 
