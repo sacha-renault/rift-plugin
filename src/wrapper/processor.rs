@@ -3,7 +3,7 @@ use clack_plugin::extensions::HostExtensionSide;
 use clack_plugin::prelude::*;
 use clack_plugin::{events::event_types::ParamValueEvent, extensions::Extension};
 
-use crate::context::ProcessContext;
+use crate::context::{InitContext, ProcessContext};
 use crate::{
     gui::ParamGuiEvent,
     params::param_trait::Params,
@@ -71,13 +71,18 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
 {
     fn activate(
         host: HostAudioProcessorHandle<'a>,
-        _main_thread: &mut WrapperMainThread<P>,
+        main_thread: &mut WrapperMainThread<P>,
         shared: &'a WrapperShared<P>,
         audio_config: PluginAudioConfiguration,
     ) -> Result<Self, PluginError> {
         // Create the plugin instance & activate right away
         let mut plugin = P::create(shared.params.clone(), shared.other.clone());
-        plugin.activate(audio_config);
+
+        let init_context = InitContext::new(
+            unsafe { main_thread.host.as_main_thread_unchecked() },
+            shared.states.clone(),
+        );
+        plugin.activate(audio_config, init_context);
 
         // Allocate a scratch buffer ONCE
         Ok(Self {
@@ -95,7 +100,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<ProcessStatus, PluginError> {
         self.flush(events.input, events.output);
         let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
-        let context = ProcessContext::new(&self.host, self.shared.host_messages.clone());
+        let context = ProcessContext::new(&self.host, self.shared.states.clone());
         self.plugin.process(buffers, context)
     }
 }

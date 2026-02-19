@@ -6,7 +6,7 @@ use crate::wrapper::shared_states::PluginSharedState;
 
 pub struct ProcessContext<'a> {
     host: &'a HostAudioProcessorHandle<'a>,
-    host_messages: Arc<PluginSharedState>,
+    states: Arc<PluginSharedState>,
 }
 
 impl<'a> ProcessContext<'a> {
@@ -16,12 +16,12 @@ impl<'a> ProcessContext<'a> {
     ) -> Self {
         Self {
             host,
-            host_messages,
+            states: host_messages,
         }
     }
 
     pub fn request_restart(&self) {
-        self.host_messages.request_restart();
+        self.states.request_restart();
         self.host.request_callback();
     }
 }
