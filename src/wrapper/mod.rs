@@ -8,11 +8,11 @@ use crate::params::param_trait::Params;
 use crate::prelude::{Buffers, MainAudioPort};
 use crate::type_wrapper::AudioPort;
 
-pub mod hosts_messages;
 pub mod main;
 pub mod main_thread;
 pub mod processor;
 pub mod shared;
+pub mod shared_states;
 
 pub trait ClapPlugin: Send + Sync + 'static {
     /// Params for the plugin

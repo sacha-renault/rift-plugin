@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use clack_plugin::plugin::PluginShared;
 
-use crate::wrapper::{ClapPlugin, hosts_messages::HostsMessages};
+use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 
 pub struct WrapperShared<P: ClapPlugin> {
     /// Params of the plugin, defined by the user
@@ -10,7 +10,7 @@ pub struct WrapperShared<P: ClapPlugin> {
     /// Any shared data, defined also by the user
     pub(crate) other: Arc<P::SharedType>,
     /// Internal messaging system between Audio and Main(GUI) thread
-    pub(crate) host_messages: Arc<HostsMessages>,
+    pub(crate) host_messages: Arc<PluginSharedState>,
 }
 
 impl<P: ClapPlugin> Clone for WrapperShared<P> {
@@ -28,7 +28,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
         Self {
             params: Arc::new(P::ParamType::default()),
             other: Arc::new(P::SharedType::default()),
-            host_messages: Arc::new(HostsMessages::default()),
+            host_messages: Arc::new(PluginSharedState::default()),
         }
     }
 }

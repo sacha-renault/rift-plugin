@@ -2,17 +2,17 @@ use std::sync::Arc;
 
 use clack_plugin::host::HostAudioProcessorHandle;
 
-use crate::wrapper::hosts_messages::HostsMessages;
+use crate::wrapper::shared_states::PluginSharedState;
 
 pub struct ProcessContext<'a> {
     host: &'a HostAudioProcessorHandle<'a>,
-    host_messages: Arc<HostsMessages>,
+    host_messages: Arc<PluginSharedState>,
 }
 
 impl<'a> ProcessContext<'a> {
     pub(crate) fn new(
         host: &'a HostAudioProcessorHandle<'a>,
-        host_messages: Arc<HostsMessages>,
+        host_messages: Arc<PluginSharedState>,
     ) -> Self {
         Self {
             host,
@@ -20,8 +20,8 @@ impl<'a> ProcessContext<'a> {
         }
     }
 
-    pub fn request_latency_update(&self, latency: u32) {
-        self.host_messages.set_latency(latency);
+    pub fn request_restart(&self) {
+        self.host_messages.request_restart();
         self.host.request_callback();
     }
 }
