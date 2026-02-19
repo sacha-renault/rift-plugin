@@ -3,6 +3,7 @@ use clack_plugin::extensions::HostExtensionSide;
 use clack_plugin::prelude::*;
 use clack_plugin::{events::event_types::ParamValueEvent, extensions::Extension};
 
+use crate::context::ProcessContext;
 use crate::{
     gui::ParamGuiEvent,
     params::param_trait::Params,
@@ -94,6 +95,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<ProcessStatus, PluginError> {
         self.flush(events.input, events.output);
         let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
-        self.plugin.process(buffers)
+        let context = ProcessContext::new(&self.host, self.shared.host_messages.clone());
+        self.plugin.process(buffers, context)
     }
 }
