@@ -20,6 +20,7 @@ vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 raw-window-handle = "0.5.0"
 log = "0.4"
+paste = "1.0.15"
 
 
 

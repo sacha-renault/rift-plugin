@@ -1,22 +1,27 @@
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use crate::utils::value_watcher::ValueWatcherU32;
 
-#[derive(Default)]
 pub(crate) struct HostsMessages {
-    latency_changed: AtomicBool,
-    current_latency: AtomicU32,
+    latency: ValueWatcherU32,
+}
+
+impl Default for HostsMessages {
+    fn default() -> Self {
+        Self {
+            latency: ValueWatcherU32::new(0),
+        }
+    }
 }
 
 impl HostsMessages {
-    pub fn set_latency_changed(&self, latency: u32) {
-        self.current_latency.store(latency, Ordering::Relaxed);
-        self.latency_changed.store(true, Ordering::Relaxed);
+    pub fn set_latency(&self, latency: u32) {
+        self.latency.set_value(latency);
     }
 
     pub fn take_latency_changed(&self) -> bool {
-        self.latency_changed.swap(false, Ordering::Relaxed)
+        self.latency.take_changed()
     }
 
     pub fn current_latency(&self) -> u32 {
-        self.current_latency.load(Ordering::Relaxed)
+        self.latency.value()
     }
 }
