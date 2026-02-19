@@ -3,6 +3,8 @@ use std::sync::atomic::Ordering;
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
+use crate::utils::id_generator::get_next_param_id;
+
 use super::atomic_f32::AtomicF32;
 use super::param_trait::InnerParam;
 
@@ -30,7 +32,7 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 
-    #[builder(with = |id: u32| ClapId::new(id))]
+    #[builder(skip = get_next_param_id())]
     id: ClapId,
 }
 
