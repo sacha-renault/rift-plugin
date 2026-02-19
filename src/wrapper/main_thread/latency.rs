@@ -5,6 +5,6 @@ use crate::wrapper::ClapPlugin;
 
 impl<'a, P: ClapPlugin> PluginLatencyImpl for super::WrapperMainThread<'a, P> {
     fn get(&mut self) -> u32 {
-        todo!()
+        self.shared.host_messages.current_latency()
     }
 }
