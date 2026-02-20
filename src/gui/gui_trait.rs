@@ -48,6 +48,6 @@ pub trait ClapGui {
     fn hide(&mut self) -> Result<(), PluginError>;
 }
 
-pub trait IntoGui {
-    fn into_gui(self: Box<Self>, states: Arc<GuiContext>) -> Box<dyn ClapGui>;
+pub trait GuiFactory {
+    fn build(self: Box<Self>, states: Arc<GuiContext>) -> Box<dyn ClapGui>;
 }
