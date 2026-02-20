@@ -5,40 +5,71 @@ use clack_plugin::events::{Pckn, UnknownEvent};
 use clack_plugin::utils::{ClapId, Cookie};
 
 #[derive(Debug, Clone, Copy)]
-pub enum GuiParamEvent {
-    ValueEvent(ParamValueEvent),
-    GestureStart(ParamGestureBeginEvent),
-    GestureEnd(ParamGestureEndEvent),
+pub enum GuiParamEventKind {
+    Value(f64),
+    GestureBegin,
+    GestureEnd,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GuiParamEvent {
+    pub(crate) param_id: ClapId,
+    pub(crate) kind: GuiParamEventKind,
 }
 
 impl GuiParamEvent {
     pub fn value(param_id: ClapId, value: f64) -> Self {
-        let event = ParamValueEvent::new(0, param_id, Pckn::match_all(), value, Cookie::empty());
-        Self::ValueEvent(event)
-    }
-
-    pub fn value_with_pckn(param_id: ClapId, value: f64, pckn: Pckn) -> Self {
-        let event = ParamValueEvent::new(0, param_id, pckn, value, Cookie::empty());
-        Self::ValueEvent(event)
+        Self {
+            param_id,
+            kind: GuiParamEventKind::Value(value),
+        }
     }
 
     pub fn gesture_start(param_id: ClapId) -> Self {
-        let event = ParamGestureBeginEvent::new(0, param_id);
-        Self::GestureStart(event)
+        Self {
+            param_id,
+            kind: GuiParamEventKind::GestureBegin,
+        }
     }
 
     pub fn gesture_end(param_id: ClapId) -> Self {
-        let event = ParamGestureEndEvent::new(0, param_id);
-        Self::GestureEnd(event)
+        Self {
+            param_id,
+            kind: GuiParamEventKind::GestureEnd,
+        }
+    }
+
+    pub fn to_raw(&self) -> RawParamEvent {
+        match self.kind {
+            GuiParamEventKind::Value(v) => RawParamEvent::Value(ParamValueEvent::new(
+                0,
+                self.param_id,
+                Pckn::match_all(),
+                v,
+                Cookie::empty(),
+            )),
+            GuiParamEventKind::GestureBegin => {
+                RawParamEvent::GestureBegin(ParamGestureBeginEvent::new(0, self.param_id))
+            }
+            GuiParamEventKind::GestureEnd => {
+                RawParamEvent::GestureEnd(ParamGestureEndEvent::new(0, self.param_id))
+            }
+        }
     }
 }
 
-impl AsRef<UnknownEvent> for GuiParamEvent {
+pub enum RawParamEvent {
+    Value(ParamValueEvent),
+    GestureBegin(ParamGestureBeginEvent),
+    GestureEnd(ParamGestureEndEvent),
+}
+
+impl AsRef<UnknownEvent> for RawParamEvent {
     fn as_ref(&self) -> &UnknownEvent {
         match self {
-            GuiParamEvent::ValueEvent(v) => v.as_ref(),
-            GuiParamEvent::GestureStart(v) => v.as_ref(),
-            GuiParamEvent::GestureEnd(v) => v.as_ref(),
+            RawParamEvent::Value(e) => e.as_ref(),
+            RawParamEvent::GestureBegin(e) => e.as_ref(),
+            RawParamEvent::GestureEnd(e) => e.as_ref(),
         }
     }
 }

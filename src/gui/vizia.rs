@@ -13,7 +13,7 @@ use vizia::prelude::*;
 
 use crate::{
     context::GuiContext,
-    gui::{ClapGui, GuiFactory, GuiParamEvent},
+    gui::{ClapGui, GuiFactory, GuiParamEvent, events::GuiParamEventKind},
 };
 
 pub struct ViziaGuiFactory<F> {
@@ -46,12 +46,8 @@ struct ViziaData {
 impl Model for ViziaData {
     fn event(&mut self, _cx: &mut EventContext, event: &mut Event) {
         event.map(|app_event: &GuiParamEvent, _| {
-            match app_event {
-                GuiParamEvent::ValueEvent(event) if event.param_id().is_some() => {
-                    self.ctx
-                        .params
-                        .set_value(event.param_id().unwrap(), event.value());
-                }
+            match app_event.kind {
+                GuiParamEventKind::Value(v) => self.ctx.params.set_value(app_event.param_id, v),
                 _ => {}
             };
             self.ctx.param_event(*app_event);
