@@ -5,13 +5,13 @@ use clack_plugin::events::{Pckn, UnknownEvent};
 use clack_plugin::utils::{ClapId, Cookie};
 
 #[derive(Debug)]
-pub enum ParamGuiEvent {
+pub enum GuiParamEvent {
     ValueEvent(ParamValueEvent),
     GestureStart(ParamGestureBeginEvent),
     GestureEnd(ParamGestureEndEvent),
 }
 
-impl ParamGuiEvent {
+impl GuiParamEvent {
     pub fn value(param_id: ClapId, value: f64) -> Self {
         let event = ParamValueEvent::new(0, param_id, Pckn::match_all(), value, Cookie::empty());
         Self::ValueEvent(event)
@@ -33,12 +33,12 @@ impl ParamGuiEvent {
     }
 }
 
-impl AsRef<UnknownEvent> for ParamGuiEvent {
+impl AsRef<UnknownEvent> for GuiParamEvent {
     fn as_ref(&self) -> &UnknownEvent {
         match self {
-            ParamGuiEvent::ValueEvent(v) => v.as_ref(),
-            ParamGuiEvent::GestureStart(v) => v.as_ref(),
-            ParamGuiEvent::GestureEnd(v) => v.as_ref(),
+            GuiParamEvent::ValueEvent(v) => v.as_ref(),
+            GuiParamEvent::GestureStart(v) => v.as_ref(),
+            GuiParamEvent::GestureEnd(v) => v.as_ref(),
         }
     }
 }

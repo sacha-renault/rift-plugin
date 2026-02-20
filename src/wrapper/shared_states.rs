@@ -1,22 +1,22 @@
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
 
-use crate::context::{AudioThreadTasks, MainThreadTasks};
+use crate::context::{AudioThreadTask, MainThreadTask};
 
 const TASKS_CAPACITY: usize = 2048;
 
 pub(crate) struct PluginSharedState {
-    request_restart: AtomicBool,
     latency: AtomicU32,
-    main_thread_tasks: ArrayQueue<MainThreadTasks>,
-    audio_thread_tasks: ArrayQueue<AudioThreadTasks>,
+
+    /// Queues that audio / main thread can read
+    main_thread_tasks: ArrayQueue<MainThreadTask>,
+    audio_thread_tasks: ArrayQueue<AudioThreadTask>,
 }
 
 impl Default for PluginSharedState {
     fn default() -> Self {
         Self {
-            request_restart: AtomicBool::new(false),
             latency: AtomicU32::new(0),
             main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
             audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
@@ -36,20 +36,20 @@ impl PluginSharedState {
     }
 
     #[inline]
-    pub fn push_main_thread_task(&self, task: MainThreadTasks) -> Result<(), MainThreadTasks> {
+    pub fn push_main_thread_task(&self, task: MainThreadTask) -> Result<(), MainThreadTask> {
         self.main_thread_tasks.push(task)
     }
 
-    pub fn pop_main_thread_tasks(&self) -> Option<MainThreadTasks> {
+    pub fn pop_main_thread_tasks(&self) -> Option<MainThreadTask> {
         self.main_thread_tasks.pop()
     }
 
     #[inline]
-    pub fn push_audio_thread_task(&self, task: AudioThreadTasks) -> Result<(), AudioThreadTasks> {
+    pub fn push_audio_thread_task(&self, task: AudioThreadTask) -> Result<(), AudioThreadTask> {
         self.audio_thread_tasks.push(task)
     }
 
-    pub fn pop_audio_thread_tasks(&self) -> Option<AudioThreadTasks> {
+    pub fn pop_audio_thread_tasks(&self) -> Option<AudioThreadTask> {
         self.audio_thread_tasks.pop()
     }
 }

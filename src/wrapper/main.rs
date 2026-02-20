@@ -1,5 +1,5 @@
-use std::marker::PhantomData;
 use std::sync::Once;
+use std::{marker::PhantomData, sync::Arc};
 
 use clack_extensions::{
     audio_ports::PluginAudioPorts, gui::PluginGui, latency::PluginLatency, params::PluginParams,
@@ -7,6 +7,7 @@ use clack_extensions::{
 };
 use clack_plugin::prelude::*;
 
+use crate::context::GuiContext;
 use crate::wrapper::{
     ClapPlugin, main_thread::WrapperMainThread, processor::WrapperProcessor, shared::WrapperShared,
 };
@@ -74,7 +75,11 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
         log::debug!("Create new MainThread<'a>");
-        let gui = P::gui(shared.params.clone(), shared.other.clone());
+        let into_gui = P::gui(shared.params.clone(), shared.other.clone());
+        let context = Arc::new(GuiContext {
+            states: shared.states.clone(),
+        });
+        let gui = into_gui.into_gui(context);
 
         Ok(WrapperMainThread {
             shared: shared.clone(),

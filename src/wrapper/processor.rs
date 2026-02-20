@@ -1,11 +1,10 @@
 use clack_extensions::params::*;
-use clack_plugin::extensions::HostExtensionSide;
+use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
-use clack_plugin::{events::event_types::ParamValueEvent, extensions::Extension};
 
-use crate::context::{InitContext, ProcessContext};
+use crate::context::{AudioThreadTask, InitContext, ProcessContext};
 use crate::{
-    gui::ParamGuiEvent,
+    gui::GuiParamEvent,
     params::param_trait::Params,
     prelude::Buffers,
     wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared},
@@ -18,18 +17,24 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
 }
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
-    #[inline]
-    fn with_extension<E, F, R>(&self, func: F) -> Option<R>
-    where
-        E: Extension<ExtensionSide = HostExtensionSide>,
-        F: FnOnce(&E) -> R,
-    {
-        self.host.get_extension::<E>().map(|ext| func(&ext))
+    fn request_flush(&self) {
+        if let Some(ext) = self.host.get_extension::<HostParams>() {
+            ext.request_flush(self.host.as_shared());
+        } else {
+            log::error!("Flush failed")
+        }
     }
 
-    fn request_flush(&self) -> bool {
-        self.with_extension::<HostParams, _, _>(|host| host.request_flush(self.host.as_shared()))
-            .is_some()
+    #[inline]
+    fn handle_gui_param_change(&self, event: GuiParamEvent, outputs: &mut OutputEvents) {
+        if let err @ Err(..) = outputs.try_push(&event) {
+            log::error!("There was an error push event {err:?}")
+        }
+
+        match event {
+            GuiParamEvent::GestureStart(_) | GuiParamEvent::GestureEnd(_) => self.request_flush(),
+            GuiParamEvent::ValueEvent(_) => {}
+        }
     }
 }
 
@@ -49,20 +54,13 @@ impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
             // if let Some(some_event) = event.as_event::<SomeEvent>() { ... }
         }
 
-        self.shared.params.process_event(|event| {
-            if let err @ Err(..) = outputs.try_push(&event) {
-                log::error!("There was an error push event {err:?}")
-            }
+        while let Some(task) = self.shared.states.pop_audio_thread_tasks() {
+            use AudioThreadTask::*;
 
-            match event {
-                ParamGuiEvent::GestureStart(_) | ParamGuiEvent::GestureEnd(_) => {
-                    if !self.request_flush() {
-                        log::error!("Flush failed");
-                    }
-                }
-                ParamGuiEvent::ValueEvent(_) => {}
+            match task {
+                GuiParamEvent(event) => self.handle_gui_param_change(event, outputs),
             }
-        });
+        }
     }
 }
 
