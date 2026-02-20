@@ -3,7 +3,7 @@ use std::sync::Arc;
 use clack_extensions::latency::HostLatency;
 use clack_plugin::prelude::*;
 
-use crate::context::MainThreadTasks;
+use crate::context::MainThreadTask;
 use crate::prelude::*;
 use crate::wrapper::shared_states::PluginSharedState;
 use crate::wrapper::{ClapPlugin, shared::WrapperShared};
@@ -39,7 +39,7 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
     fn on_main_thread(&mut self) {
         let states = self.states();
         while let Some(task) = states.pop_main_thread_tasks() {
-            use MainThreadTasks::*;
+            use MainThreadTask::*;
 
             match task {
                 ChangeLatency(new_latency) => {

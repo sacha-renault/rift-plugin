@@ -37,7 +37,7 @@ pub mod prelude {
 
     pub use type_wrapper::{AudioPort, MainAudioPort};
 
-    pub use gui::{ClapGui, ParamGuiEvent, ViziaGui};
+    pub use gui::{ClapGui, GuiParamEvent, IntoGui, ViziaGui};
 
     pub use processing::*;
 

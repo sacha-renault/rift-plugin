@@ -1,5 +1,9 @@
+use std::sync::Arc;
+
 use clack_extensions::gui::{GuiSize, Window};
 use clack_plugin::plugin::PluginError;
+
+use crate::context::GuiContext;
 
 pub trait ClapGui {
     fn spawn(&mut self);
@@ -42,4 +46,8 @@ pub trait ClapGui {
     ///
     /// This should not free the resources associated with the GUI, just hide it.
     fn hide(&mut self) -> Result<(), PluginError>;
+}
+
+pub trait IntoGui {
+    fn into_gui(self: Box<Self>, states: Arc<GuiContext>) -> Box<dyn ClapGui>;
 }

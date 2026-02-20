@@ -11,7 +11,32 @@ use vizia_baseview::WindowHandle;
 
 use vizia::prelude::*;
 
-use crate::gui::ClapGui;
+use crate::{
+    context::GuiContext,
+    gui::{ClapGui, IntoGui},
+};
+
+pub struct ViziaGuiCreate<F> {
+    app_fn: Arc<F>,
+    size: (u32, u32),
+}
+
+impl<F> IntoGui for ViziaGuiCreate<F>
+where
+    F: Fn(&mut Context) + Send + Sync + 'static,
+{
+    #[allow(private_interfaces)]
+    fn into_gui(self: Box<Self>, context: Arc<GuiContext>) -> Box<dyn ClapGui> {
+        Box::new(ViziaGui {
+            parent: None,
+            handle: None,
+            app_fn: self.app_fn,
+            opened: Arc::new(AtomicBool::new(false)),
+            size: self.size,
+            context,
+        })
+    }
+}
 
 pub struct ViziaGui<F> {
     /// Holds raw handle to parent window.
@@ -24,6 +49,8 @@ pub struct ViziaGui<F> {
     app_fn: Arc<F>,
     /// Size
     size: (u32, u32),
+    /// States
+    context: Arc<GuiContext>,
 }
 
 unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
@@ -36,16 +63,18 @@ impl<F> ViziaGui<F>
 where
     F: Fn(&mut Context) + Send + Sync + 'static,
 {
-    pub fn new(size: (u32, u32), app_fn: F) -> Self {
-        Self {
-            parent: None,
-            handle: None,
-            opened: Arc::new(AtomicBool::new(false)),
+    pub fn new(size: (u32, u32), app_fn: F) -> ViziaGuiCreate<F> {
+        ViziaGuiCreate {
             app_fn: Arc::new(app_fn),
             size,
         }
     }
+}
 
+impl<F> ViziaGui<F>
+where
+    F: Fn(&mut Context) + Send + Sync + 'static,
+{
     fn _handle(&self) -> &WindowHandle {
         // this should be set anyway
         self.handle.as_ref().expect("No window handle")
@@ -63,7 +92,7 @@ where
             .on_idle(|_cx| {});
 
         self.handle = Some(application.open_parented(self));
-        self.opened.store(true, Ordering::Release);
+        self.opened.store(true, Ordering::Relaxed);
         log::info!("ClapGui::spawn was called")
     }
 
