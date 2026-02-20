@@ -41,5 +41,5 @@ pub mod prelude {
 
     pub use processing::*;
 
-    pub use context::{ChangeLatency, InitContext, ProcessContext};
+    pub use context::*;
 }
