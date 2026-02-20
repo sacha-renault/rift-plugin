@@ -3,6 +3,7 @@ use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};
+use crate::gui::GuiParamEventKind;
 use crate::{
     gui::GuiParamEvent,
     params::param_trait::Params,
@@ -27,13 +28,13 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
     #[inline]
     fn handle_gui_param_change(&self, event: GuiParamEvent, outputs: &mut OutputEvents) {
-        if let err @ Err(..) = outputs.try_push(&event) {
+        if let err @ Err(..) = outputs.try_push(event.to_raw()) {
             log::error!("There was an error push event {err:?}")
         }
 
-        match event {
-            GuiParamEvent::GestureStart(_) | GuiParamEvent::GestureEnd(_) => self.request_flush(),
-            GuiParamEvent::ValueEvent(_) => {}
+        match event.kind {
+            GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
+            GuiParamEventKind::Value(_) => {}
         }
     }
 }
