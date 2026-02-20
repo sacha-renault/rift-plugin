@@ -80,7 +80,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
             states: shared.states.clone(),
             params: shared.params.clone(),
         });
-        let gui = into_gui.into_gui(context);
+        let gui = into_gui.build(context);
 
         Ok(WrapperMainThread {
             shared: shared.clone(),

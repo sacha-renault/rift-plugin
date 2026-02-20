@@ -13,20 +13,20 @@ use vizia::prelude::*;
 
 use crate::{
     context::GuiContext,
-    gui::{ClapGui, GuiParamEvent, IntoGui},
+    gui::{ClapGui, GuiFactory, GuiParamEvent},
 };
 
-pub struct ViziaGuiCreate<F> {
+pub struct ViziaGuiFactory<F> {
     app_fn: Arc<F>,
     size: (u32, u32),
 }
 
-impl<F> IntoGui for ViziaGuiCreate<F>
+impl<F> GuiFactory for ViziaGuiFactory<F>
 where
     F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
     #[allow(private_interfaces)]
-    fn into_gui(self: Box<Self>, context: Arc<GuiContext>) -> Box<dyn ClapGui> {
+    fn build(self: Box<Self>, context: Arc<GuiContext>) -> Box<dyn ClapGui> {
         Box::new(ViziaGui {
             parent: None,
             handle: None,
@@ -84,8 +84,8 @@ impl<F> ViziaGui<F>
 where
     F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
-    pub fn new(size: (u32, u32), app_fn: F) -> ViziaGuiCreate<F> {
-        ViziaGuiCreate {
+    pub fn new(size: (u32, u32), app_fn: F) -> ViziaGuiFactory<F> {
+        ViziaGuiFactory {
             app_fn: Arc::new(app_fn),
             size,
         }
