@@ -4,7 +4,7 @@ use clack_plugin::events::event_types::{
 use clack_plugin::events::{Pckn, UnknownEvent};
 use clack_plugin::utils::{ClapId, Cookie};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum GuiParamEvent {
     ValueEvent(ParamValueEvent),
     GestureStart(ParamGestureBeginEvent),
