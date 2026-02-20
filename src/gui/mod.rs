@@ -4,4 +4,4 @@ mod vizia;
 
 pub use events::GuiParamEvent;
 pub use gui_trait::{ClapGui, IntoGui};
-pub use vizia::{ViziaGui, ViziaGuiCreate};
+pub use vizia::ViziaGui;

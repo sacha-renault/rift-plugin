@@ -32,7 +32,7 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 
-    #[builder(skip = get_next_param_id())]
+    #[builder(default = get_next_param_id())]
     id: ClapId,
 }
 

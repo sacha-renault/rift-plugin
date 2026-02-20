@@ -78,6 +78,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         let into_gui = P::gui(shared.params.clone(), shared.other.clone());
         let context = Arc::new(GuiContext {
             states: shared.states.clone(),
+            params: shared.params.clone(),
         });
         let gui = into_gui.into_gui(context);
 

@@ -13,7 +13,7 @@ use vizia::prelude::*;
 
 use crate::{
     context::GuiContext,
-    gui::{ClapGui, IntoGui},
+    gui::{ClapGui, GuiParamEvent, IntoGui},
 };
 
 pub struct ViziaGuiCreate<F> {
@@ -23,7 +23,7 @@ pub struct ViziaGuiCreate<F> {
 
 impl<F> IntoGui for ViziaGuiCreate<F>
 where
-    F: Fn(&mut Context) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
     #[allow(private_interfaces)]
     fn into_gui(self: Box<Self>, context: Arc<GuiContext>) -> Box<dyn ClapGui> {
@@ -35,6 +35,27 @@ where
             size: self.size,
             context,
         })
+    }
+}
+
+#[derive(Lens)]
+struct ViziaData {
+    ctx: Arc<GuiContext>,
+}
+
+impl Model for ViziaData {
+    fn event(&mut self, _cx: &mut EventContext, event: &mut Event) {
+        event.map(|app_event: &GuiParamEvent, _| {
+            match app_event {
+                GuiParamEvent::ValueEvent(event) if event.param_id().is_some() => {
+                    self.ctx
+                        .params
+                        .set_value(event.param_id().unwrap(), event.value());
+                }
+                _ => {}
+            };
+            self.ctx.param_event(*app_event);
+        });
     }
 }
 
@@ -61,7 +82,7 @@ unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
 
 impl<F> ViziaGui<F>
 where
-    F: Fn(&mut Context) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
     pub fn new(size: (u32, u32), app_fn: F) -> ViziaGuiCreate<F> {
         ViziaGuiCreate {
@@ -73,7 +94,7 @@ where
 
 impl<F> ViziaGui<F>
 where
-    F: Fn(&mut Context) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
     fn _handle(&self) -> &WindowHandle {
         // this should be set anyway
@@ -83,13 +104,21 @@ where
 
 impl<F> ClapGui for ViziaGui<F>
 where
-    F: Fn(&mut Context) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
     fn spawn(&mut self) {
         let app_fn = self.app_fn.clone();
-        let application = vizia_baseview::Application::new(move |cx| app_fn(cx))
-            .inner_size(self.size)
-            .on_idle(|_cx| {});
+        let context = self.context.clone();
+
+        let application = vizia_baseview::Application::new(move |cx| {
+            ViziaData {
+                ctx: context.clone(),
+            }
+            .build(cx);
+            app_fn(cx, context.clone());
+        })
+        .inner_size(self.size)
+        .on_idle(|_cx| {});
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Relaxed);

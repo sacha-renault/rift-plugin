@@ -16,7 +16,7 @@ pub mod shared_states;
 
 pub trait ClapPlugin: Send + Sync + 'static {
     /// Params for the plugin
-    type ParamType: Params + Send + Sync + Default + 'static;
+    type ParamType: Params + Default + Send + Sync + 'static;
 
     /// Anything else that should be shared, must just be thread safe
     type SharedType: Send + Sync + Default + 'static;
