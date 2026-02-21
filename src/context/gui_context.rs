@@ -13,7 +13,6 @@ pub struct GuiContext {
 impl GuiContext {
     pub fn param_event(&self, event: GuiParamEvent) {
         let task = AudioThreadTask::GuiParamEvent(event);
-        log::info!("{event:?}");
         if self.states.push_audio_thread_task(task).is_err() {
             log::error!("Couldn't push new param event from gui");
         }

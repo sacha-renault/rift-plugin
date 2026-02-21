@@ -1,17 +1,19 @@
+use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
+use crate::prelude::ClapParam;
 use crate::utils::id_generator::get_next_param_id;
 
 use super::atomic_f32::AtomicF32;
-use super::param_trait::InnerParam;
+use super::param_trait::TypedParam;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
     /// Default value for the param
-    #[allow(unused)] // This is actually used for init value
+    #[allow(unused)]
     default: f32,
 
     #[builder(skip = AtomicF32::new(default))]
@@ -36,9 +38,19 @@ pub struct FloatParam {
     id: ClapId,
 }
 
-impl InnerParam for FloatParam {
+impl TypedParam for FloatParam {
     type Value = f32;
 
+    fn value(&self) -> Self::Value {
+        self.value.load(Ordering::SeqCst)
+    }
+
+    fn set_value(&self, value: Self::Value) {
+        self.value.store(value, Ordering::SeqCst);
+    }
+}
+
+impl ClapParam for FloatParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -47,44 +59,39 @@ impl InnerParam for FloatParam {
         self.id
     }
 
-    fn unit<'a>(&'a self) -> &'a str {
+    fn unit(&self) -> &str {
         self.unit
     }
 
-    fn get(&self) -> f64 {
+    fn get_raw(&self) -> f64 {
         self.value.load(Ordering::SeqCst) as f64
     }
 
-    fn value(&self) -> Self::Value {
-        self.value.load(Ordering::SeqCst)
+    fn get_normalized(&self) -> f64 {
+        let value = self.get_raw();
+        self.normalize(value)
     }
 
-    fn set(&self, value: f64) {
+    fn set_normalized(&self, normalized: f64) {
+        self.set_raw(self.denormalize(normalized) as f64);
+    }
+
+    fn flags(&self) -> ParamInfoFlags {
+        self.flags
+    }
+
+    fn set_raw(&self, value: f64) {
         self.value.store(value as f32, Ordering::SeqCst);
     }
 
-    fn normalize(&self, value: Self::Value) -> f64 {
+    fn normalize(&self, value: f64) -> f64 {
         let range = self.max_value - self.min_value;
         let vf64 = value as f64;
         (vf64 - self.min_value) / range
     }
 
-    fn denormalize(&self, normalized: f64) -> Self::Value {
+    fn denormalize(&self, normalized: f64) -> f64 {
         let range = self.max_value - self.min_value;
-        let denorm = normalized * range + self.min_value;
-        denorm as f32
-    }
-
-    fn get_normalized(&self) -> f64 {
-        let value = self.value();
-        self.normalize(value)
-    }
-
-    fn set_normalized(&self, normalized: f64) {
-        self.set(self.denormalize(normalized) as f64);
-    }
-
-    fn flags(&self) -> ParamInfoFlags {
-        self.flags
+        normalized * range + self.min_value
     }
 }
