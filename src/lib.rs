@@ -30,7 +30,7 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     pub use params::param_float::FloatParam;
-    pub use params::param_trait::{InnerParam, Params};
+    pub use params::param_trait::{ClapParam, Params, TypedParam};
 
     pub use super::wrapper::main::PluginWrapper;
     pub use wrapper::ClapPlugin;

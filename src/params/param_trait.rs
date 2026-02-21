@@ -4,24 +4,15 @@ use std::fmt::Write;
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
 use clack_plugin::prelude::*;
 
-pub trait InnerParam {
-    type Value;
-
+pub trait ClapParam {
     // Identity
     fn name(&self) -> &str;
     fn id(&self) -> ClapId;
-    fn unit<'a>(&'a self) -> &'a str;
+    fn unit(&self) -> &str;
 
-    // Current value
-    fn value(&self) -> Self::Value;
-    fn get(&self) -> f64;
-    fn set(&self, value: f64);
+    fn get_raw(&self) -> f64;
+    fn set_raw(&self, value: f64);
 
-    // Normalization
-    fn normalize(&self, value: Self::Value) -> f64;
-    fn denormalize(&self, normalized: f64) -> Self::Value;
-
-    // For automation/modulation
     fn get_normalized(&self) -> f64;
     fn set_normalized(&self, normalized: f64);
 
@@ -42,6 +33,17 @@ pub trait InnerParam {
     }
 
     fn flags(&self) -> ParamInfoFlags;
+
+    fn normalize(&self, value: f64) -> f64;
+    fn denormalize(&self, normalized: f64) -> f64;
+}
+
+pub trait TypedParam {
+    type Value;
+
+    // Current value
+    fn value(&self) -> Self::Value;
+    fn set_value(&self, value: Self::Value);
 }
 
 pub trait Params: Sync + Send + 'static {
