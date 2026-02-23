@@ -4,6 +4,8 @@ use std::fmt::Write;
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
 use clack_plugin::prelude::*;
 
+use crate::params::param_ptr::ParamPtr;
+
 pub trait ClapParam {
     // Identity
     fn name(&self) -> &str;
@@ -12,6 +14,7 @@ pub trait ClapParam {
 
     fn get_raw(&self) -> f64;
     fn set_raw(&self, value: f64);
+    fn default_raw(&self) -> f64;
 
     fn get_normalized(&self) -> f64;
     fn set_normalized(&self, normalized: f64);
@@ -36,6 +39,7 @@ pub trait ClapParam {
 
     fn normalize(&self, value: f64) -> f64;
     fn denormalize(&self, normalized: f64) -> f64;
+    fn as_ptr(&self) -> ParamPtr;
 }
 
 pub trait TypedParam {
