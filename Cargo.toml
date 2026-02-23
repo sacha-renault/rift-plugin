@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+hug-derive = { path = "crates/hug-derive" }
+
 bon = "3.8.2"
 clack-plugin = { git = "https://github.com/prokopyl/clack"}
 clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
@@ -27,4 +29,4 @@ crossbeam-queue = "0.3.12"
 
 [workspace]
 resolver = "2"
-members = []
+members = ["crates/hug-derive"]

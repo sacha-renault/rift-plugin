@@ -11,6 +11,9 @@ pub struct ParamPtr {
     pub(crate) ptr: *const dyn ClapParam,
 }
 
+unsafe impl Send for ParamPtr {}
+unsafe impl Sync for ParamPtr {}
+
 impl ClapParam for ParamPtr {
     #[inline]
     fn id(&self) -> clack_plugin::prelude::ClapId {
