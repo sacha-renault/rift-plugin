@@ -1,4 +1,4 @@
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
@@ -7,17 +7,16 @@ use crate::params::param_ptr::ParamPtr;
 use crate::prelude::ClapParam;
 use crate::utils::id_generator::get_next_param_id;
 
-use super::atomic_f32::AtomicF32;
 use super::param_trait::TypedParam;
 
 #[derive(bon::Builder)]
-pub struct FloatParam {
+pub struct BoolParam {
     /// Default value for the param
     #[allow(unused)]
-    default: f32,
+    default: bool,
 
-    #[builder(skip = AtomicF32::new(default))]
-    value: AtomicF32,
+    #[builder(skip = AtomicBool::new(default))]
+    value: AtomicBool,
 
     /// Name of the param
     name: &'static str,
@@ -25,10 +24,12 @@ pub struct FloatParam {
     #[builder(default = "")]
     unit: &'static str,
 
-    #[builder(default = 0.0)]
+    #[allow(unused)]
+    #[builder(skip = 0.0)]
     min_value: f64,
 
-    #[builder(default = 1.0)]
+    #[allow(unused)]
+    #[builder(skip = 1.0)]
     max_value: f64,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
@@ -38,8 +39,8 @@ pub struct FloatParam {
     id: ClapId,
 }
 
-impl TypedParam for FloatParam {
-    type Value = f32;
+impl TypedParam for BoolParam {
+    type Value = bool;
 
     fn value(&self) -> Self::Value {
         self.value.load(Ordering::SeqCst)
@@ -50,7 +51,7 @@ impl TypedParam for FloatParam {
     }
 }
 
-impl ClapParam for FloatParam {
+impl ClapParam for BoolParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -64,39 +65,45 @@ impl ClapParam for FloatParam {
     }
 
     fn set_raw(&self, value: f64) {
-        self.value.store(value as f32, Ordering::SeqCst);
+        self.value.store(value >= 0.5, Ordering::SeqCst);
     }
 
     fn get_raw(&self) -> f64 {
-        self.value.load(Ordering::SeqCst) as f64
+        if self.value.load(Ordering::SeqCst) {
+            1.0
+        } else {
+            0.0
+        }
     }
 
     fn default_raw(&self) -> f64 {
-        self.default as f64
+        if self.default { 1.0 } else { 0.0 }
     }
 
     fn get_normalized(&self) -> f64 {
-        let value = self.get_raw();
-        self.normalize(value)
+        self.get_raw()
     }
 
     fn set_normalized(&self, normalized: f64) {
-        self.set_raw(self.denormalize(normalized));
+        self.set_raw(normalized);
     }
 
     fn flags(&self) -> ParamInfoFlags {
         self.flags
     }
 
+    #[inline]
     fn normalize(&self, value: f64) -> f64 {
-        let range = self.max_value - self.min_value;
-        let vf64 = value;
-        (vf64 - self.min_value) / range
+        // bool param already have
+        // normalized value (0.0 or 1.0)
+        value
     }
 
+    #[inline]
     fn denormalize(&self, normalized: f64) -> f64 {
-        let range = self.max_value - self.min_value;
-        normalized * range + self.min_value
+        // bool param already have
+        // normalized value (0.0 or 1.0)
+        normalized
     }
 
     fn as_ptr(&self) -> ParamPtr {
