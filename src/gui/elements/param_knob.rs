@@ -31,7 +31,7 @@ where
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, |p| p.get_raw() as f32);
+        let value_lens = make_lens(lens, accessor, |p| p.get_normalized() as f32);
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = text_formatter {
                 f(p.get_raw(), p.unit())
@@ -39,7 +39,7 @@ where
                 format!("{:.2}{}", p.get_raw(), p.unit())
             }
         });
-        let default_value = param_ptr.default_raw();
+        let default_value = param_ptr.normalize(param_ptr.default_raw());
 
         VStack::new(cx, move |cx| {
             Label::new(cx, text_lens);

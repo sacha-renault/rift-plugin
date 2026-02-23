@@ -31,6 +31,6 @@ pub fn set_value(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
 }
 
 pub fn set_value_normalized(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
-    let normalized = param_ptr.normalize(value);
+    let normalized = param_ptr.denormalize(value);
     cx.emit(GuiParamEvent::value(param_ptr.id(), normalized));
 }
