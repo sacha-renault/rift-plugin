@@ -29,6 +29,9 @@ pub mod prelude {
     pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
     pub use clack_plugin::prelude::PluginError;
 
+    // Derives
+    pub use hug_derive::ParamBuilder;
+
     pub use params::param_float::FloatParam;
     pub use params::param_ptr::ParamPtr;
     pub use params::param_trait::{ClapParam, Params, TypedParam};

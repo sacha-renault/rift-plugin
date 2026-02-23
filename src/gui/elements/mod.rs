@@ -1,3 +1,1 @@
-mod param_binding;
-
-pub use param_binding::{ParamBinding, make_lens};
+pub mod param_binding;

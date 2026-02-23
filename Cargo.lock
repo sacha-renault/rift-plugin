@@ -678,6 +678,7 @@ dependencies = [
  "clack-extensions",
  "clack-plugin",
  "crossbeam-queue",
+ "hug-derive",
  "log",
  "paste",
  "raw-window-handle 0.5.2",
@@ -1459,6 +1460,15 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hug-derive"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "iana-time-zone"

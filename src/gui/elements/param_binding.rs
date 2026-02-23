@@ -18,40 +18,19 @@ where
     })
 }
 
-pub trait ParamBinding {
-    // pub fn from_lens<P, MapFn>(
-    //     cx: &mut Context,
-    //     lens: impl Lens<Target = P> + Copy,
-    //     accessor: MapFn,
-    // ) -> Self
-    // where
-    //     P: Clone,
-    //     MapFn: 'static + Copy + Fn(&P) -> &dyn ClapParam,
-    // {
-    //     let param_ptr = lens.map(move |p| accessor(p).as_ptr()).get(cx);
-    //     Self::new(param_ptr)
-    // }
+pub fn gesture_start(param_ptr: ParamPtr, cx: &mut EventContext) {
+    cx.emit(GuiParamEvent::gesture_start(param_ptr.id()));
+}
 
-    // pub fn new(param_ptr: ParamPtr) -> Self {
-    //     Self { param_ptr }
-    // }
+pub fn gesture_end(param_ptr: ParamPtr, cx: &mut EventContext) {
+    cx.emit(GuiParamEvent::gesture_end(param_ptr.id()));
+}
 
-    fn gesture_start(&self, cx: &mut Context) {
-        cx.emit(GuiParamEvent::gesture_start(self.param_ptr().id()));
-    }
+pub fn set_value(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
+    cx.emit(GuiParamEvent::value(param_ptr.id(), value));
+}
 
-    fn gesture_end(&self, cx: &mut Context) {
-        cx.emit(GuiParamEvent::gesture_end(self.param_ptr().id()));
-    }
-
-    fn set_value(&self, cx: &mut Context, value: f64) {
-        cx.emit(GuiParamEvent::value(self.param_ptr().id(), value));
-    }
-
-    fn set_value_normalized(&self, cx: &mut Context, value: f64) {
-        let normalized = self.param_ptr().normalize(value);
-        cx.emit(GuiParamEvent::value(self.param_ptr().id(), normalized));
-    }
-
-    fn param_ptr(&self) -> ParamPtr;
+pub fn set_value_normalized(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
+    let normalized = param_ptr.normalize(value);
+    cx.emit(GuiParamEvent::value(param_ptr.id(), normalized));
 }
