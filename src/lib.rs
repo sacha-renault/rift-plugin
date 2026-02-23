@@ -32,6 +32,7 @@ pub mod prelude {
     // Derives
     pub use hug_derive::ParamBuilder;
 
+    pub use params::param_bool::BoolParam;
     pub use params::param_float::FloatParam;
     pub use params::param_ptr::ParamPtr;
     pub use params::param_trait::{ClapParam, Params, TypedParam};
