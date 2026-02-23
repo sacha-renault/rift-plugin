@@ -14,7 +14,7 @@ pub mod processor;
 pub mod shared;
 pub mod shared_states;
 
-pub trait ClapPlugin: Send + Sync + 'static {
+pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Params for the plugin
     type ParamType: Params + Default + Send + Sync + 'static;
 
@@ -29,7 +29,7 @@ pub trait ClapPlugin: Send + Sync + 'static {
     fn process<'a>(
         &mut self,
         buffers: Buffers<'a>,
-        context: ProcessContext<'a>,
+        context: ProcessContext<'a, Self>,
     ) -> Result<ProcessStatus, PluginError>;
 
     fn activate(&mut self, config: PluginAudioConfiguration, context: InitContext);
