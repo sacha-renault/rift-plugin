@@ -30,6 +30,7 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     pub use params::param_float::FloatParam;
+    pub use params::param_ptr::ParamPtr;
     pub use params::param_trait::{ClapParam, Params, TypedParam};
 
     pub use super::wrapper::main::PluginWrapper;
@@ -37,6 +38,7 @@ pub mod prelude {
 
     pub use type_wrapper::{AudioPort, MainAudioPort};
 
+    pub use gui::elements;
     pub use gui::{ClapGui, GuiFactory, GuiParamEvent, ViziaGui};
 
     pub use processing::*;

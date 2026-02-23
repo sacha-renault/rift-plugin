@@ -1,9 +1,9 @@
-use std::sync::Arc;
 use std::sync::atomic::Ordering;
 
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
+use crate::params::param_ptr::ParamPtr;
 use crate::prelude::ClapParam;
 use crate::utils::id_generator::get_next_param_id;
 
@@ -63,8 +63,16 @@ impl ClapParam for FloatParam {
         self.unit
     }
 
+    fn set_raw(&self, value: f64) {
+        self.value.store(value as f32, Ordering::SeqCst);
+    }
+
     fn get_raw(&self) -> f64 {
         self.value.load(Ordering::SeqCst) as f64
+    }
+
+    fn default_raw(&self) -> f64 {
+        self.default as f64
     }
 
     fn get_normalized(&self) -> f64 {
@@ -80,10 +88,6 @@ impl ClapParam for FloatParam {
         self.flags
     }
 
-    fn set_raw(&self, value: f64) {
-        self.value.store(value as f32, Ordering::SeqCst);
-    }
-
     fn normalize(&self, value: f64) -> f64 {
         let range = self.max_value - self.min_value;
         let vf64 = value as f64;
@@ -93,5 +97,11 @@ impl ClapParam for FloatParam {
     fn denormalize(&self, normalized: f64) -> f64 {
         let range = self.max_value - self.min_value;
         normalized * range + self.min_value
+    }
+
+    fn as_ptr(&self) -> ParamPtr {
+        ParamPtr {
+            ptr: self as *const dyn ClapParam,
+        }
     }
 }
