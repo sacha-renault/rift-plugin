@@ -1,4 +1,7 @@
-use crate::context::{MainThreadTask, main_thread_context_traits::HostStatesGetter};
+use crate::{
+    context::{MainThreadTask, main_thread_context_traits::HostStatesGetter},
+    wrapper::ClapPlugin,
+};
 
 #[allow(private_bounds)]
 pub trait ChangeLatencyImpl: HostStatesGetter {
@@ -13,4 +16,4 @@ pub trait ChangeLatencyImpl: HostStatesGetter {
 }
 
 impl<'a> ChangeLatencyImpl for super::InitContext<'a> {}
-impl<'a> ChangeLatencyImpl for super::ProcessContext<'a> {}
+impl<'a, P: ClapPlugin> ChangeLatencyImpl for super::ProcessContext<'a, P> {}

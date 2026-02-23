@@ -95,7 +95,11 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<ProcessStatus, PluginError> {
         self.flush(events.input, events.output);
         let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
-        let context = ProcessContext::new(&self.host, self.shared.states.clone());
+        let context = ProcessContext::new(
+            &self.host,
+            self.shared.states.clone(),
+            self.shared.other.clone(),
+        );
         self.plugin.process(buffers, context)
     }
 }

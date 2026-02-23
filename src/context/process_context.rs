@@ -2,28 +2,35 @@ use std::sync::Arc;
 
 use clack_plugin::host::HostAudioProcessorHandle;
 
-use crate::wrapper::shared_states::PluginSharedState;
+use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 
-pub struct ProcessContext<'a> {
+pub struct ProcessContext<'a, P: ClapPlugin> {
     host: &'a HostAudioProcessorHandle<'a>,
     states: Arc<PluginSharedState>,
+    shared: Arc<P::SharedType>,
     num_events: usize,
 }
 
-impl<'a> ProcessContext<'a> {
+impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
     pub(crate) fn new(
         host: &'a HostAudioProcessorHandle<'a>,
         host_messages: Arc<PluginSharedState>,
+        shared: Arc<P::SharedType>,
     ) -> Self {
         Self {
             host,
             states: host_messages,
+            shared,
             num_events: 0,
         }
     }
+
+    pub fn shared(&self) -> Arc<P::SharedType> {
+        Arc::clone(&self.shared)
+    }
 }
 
-impl<'a> super::HostStatesGetter for ProcessContext<'a> {
+impl<'a, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, P> {
     #[inline]
     fn increment_event_count(&mut self) {
         self.num_events += 1;
@@ -35,7 +42,7 @@ impl<'a> super::HostStatesGetter for ProcessContext<'a> {
     }
 }
 
-impl<'a> Drop for ProcessContext<'a> {
+impl<'a, P: ClapPlugin> Drop for ProcessContext<'a, P> {
     fn drop(&mut self) {
         if self.num_events > 0 {
             self.host.request_callback();
