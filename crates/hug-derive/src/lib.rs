@@ -47,9 +47,16 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
     let setters = builder_fields.iter().map(|f| {
         let fname = &f.ident;
         let fty = &f.ty;
+
+        // If the field is Option<T>, the setter accepts T; otherwise it accepts fty
+        let (setter_ty, assignment) = match inner_type_of_option(fty) {
+            Some(inner_ty) => (inner_ty, quote! { self.#fname = Some(value); }),
+            None => (fty, quote! { self.#fname = value; }),
+        };
+
         quote! {
-            pub fn #fname(mut self, value: #fty) -> Self {
-                self.#fname = value;
+            pub fn #fname(mut self, value: #setter_ty) -> Self {
+                #assignment
                 self
             }
         }
@@ -84,4 +91,27 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
         }
     }
     .into()
+}
+
+fn inner_type_of_option(ty: &syn::Type) -> Option<&syn::Type> {
+    // Must be a path type (not a reference, slice, etc.)
+    let syn::Type::Path(type_path) = ty else {
+        return None;
+    };
+    // Get the last segment, e.g. `Option` in `std::option::Option`
+    let segment = type_path.path.segments.last()?;
+
+    if segment.ident != "Option" {
+        return None;
+    }
+    // Must have angle bracket args: Option<T>
+    let syn::PathArguments::AngleBracketed(ref args) = segment.arguments else {
+        return None;
+    };
+    // Grab the first generic arg and make sure it's a type
+    let syn::GenericArgument::Type(inner_ty) = args.args.first()? else {
+        return None;
+    };
+
+    Some(inner_ty)
 }

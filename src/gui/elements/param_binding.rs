@@ -34,3 +34,14 @@ pub fn set_value_normalized(param_ptr: ParamPtr, cx: &mut EventContext, value: f
     let normalized = param_ptr.denormalize(value);
     cx.emit(GuiParamEvent::value(param_ptr.id(), normalized));
 }
+
+pub fn apply_opt_binding<E, F, T>(element: E, opt_value: Option<T>, func: F) -> E
+where
+    F: FnOnce(E, T) -> E,
+{
+    if let Some(value) = opt_value {
+        func(element, value)
+    } else {
+        element
+    }
+}

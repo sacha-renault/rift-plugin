@@ -1,0 +1,1016 @@
+/* GENERAL */
+
+:root {
+    background-color: var(--background-color);
+    color: var(--text-primary);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI",
+        "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji",
+        "Segoe UI Emoji";
+    font-variation-settings: "wght" 350;
+}
+
+*:focus-visible {
+    outline-width: 1px;
+    outline-color: var(--focus-color);
+    outline-offset: 3px;
+}
+
+/* BACKGROUNDS */
+
+.bg-default {
+    background-color: var(--background-secondary);
+}
+
+.bg-lighter {
+    background-color: var(--background-tertiary);
+}
+
+.bg-darker {
+    background-color: var(--background-color);
+}
+
+/* AVATAR */
+
+avatar {
+    background-color: var(--background-secondary);
+}
+
+avatar svg {
+    fill: var(--background-color);
+}
+
+/* BADGE */
+
+badge {
+    color: var(--text-primary);
+    background-color: var(--secondary-color);
+}
+
+badge svg {
+    fill: var(--text-primary);
+}
+
+badge.success {
+    background-color: #00ab14;
+}
+
+badge.warning {
+    background-color: #ffaa00;
+}
+
+badge.error {
+    background-color: var(--primary-color);
+}
+
+/* BUTTON  */
+
+button {
+    corner-radius: 4px;
+    background-color: var(--background-secondary);
+    transition: background-color 100ms;
+}
+
+button:hover {
+    background-color: var(--background-tertiary);
+    transition: background-color 100ms;
+}
+
+button:active {
+    background-color: var(--surface-color);
+}
+
+button.accent,
+button-group.accent > button {
+    background-color: var(--primary-color);
+    transition: background-color 100ms;
+    color: var(--text-primary);
+}
+
+button.accent:hover,
+button-group.accent > button:hover {
+    background-color: var(--text-accent);
+    transition: background-color 100ms;
+}
+
+button.accent:active,
+button-group.accent > button:active {
+    background-color: var(--secondary-color);
+}
+
+button.accent:disabled,
+button-group.accent:disabled > button {
+    border-width: 0px;
+    background-color: var(--disabled-color);
+    border-color: var(--disabled-color);
+}
+
+button.outline,
+button-group.outline > button {
+    background-color: transparent;
+    border-width: 1px;
+    border-color: var(--primary-color);
+    transition: background-color 100ms;
+    color: var(--primary-color);
+}
+
+button.outline:hover,
+button-group.outline > button:hover {
+    background-color: var(--primary-alpha-25);
+    transition: background-color 100ms;
+}
+
+button.outline:active,
+button-group.outline > button:active {
+    background-color: var(--primary-alpha-10);
+}
+
+button.outline:disabled,
+button-group.outline:disabled > button {
+    border-color: var(--disabled-color);
+    background-color: transparent;
+    color: var(--disabled-color);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+button.text,
+button-group.text > button {
+    background-color: transparent;
+    transition: background-color 100ms;
+    color: var(--primary-color);
+}
+
+button.text:hover,
+button-group.text > button:hover {
+    background-color: var(--primary-alpha-25);
+    transition: background-color 100ms;
+}
+
+button.text:active,
+button-group.text > button:active {
+    background-color: var(--primary-alpha-10);
+}
+
+button.text:disabled,
+button-group.text:disabled > button {
+    background-color: transparent;
+    color: var(--disabled-color);
+}
+
+button:disabled {
+    background-color: var(--disabled-color);
+    border-color: var(--disabled-color);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+    transition: color 100ms;
+}
+
+button svg {
+    fill: var(--text-primary);
+}
+
+/* BUTTON GROUP */
+
+button-group {
+    gap: 1px;
+}
+
+button-group > button,
+button-group > toggle-button {
+    corner-radius: 0px;
+}
+
+button-group.vertical > button,
+button-group.vertical > toggle-button {
+    corner-radius: 0px;
+}
+
+button-group > :first-child {
+    corner-top-left-radius: 4px;
+    corner-bottom-left-radius: 4px;
+}
+
+button-group > :last-child {
+    corner-top-right-radius: 4px;
+    corner-bottom-right-radius: 4px;
+}
+
+button-group.vertical > :first-child {
+    corner-radius: 0px;
+    corner-top-right-radius: 4px;
+    corner-top-left-radius: 4px;
+}
+
+button-group.vertical > :last-child {
+    corner-radius: 0px;
+    corner-bottom-right-radius: 4px;
+    corner-bottom-left-radius: 4px;
+}
+
+button-group.accent {
+    gap: 1px;
+}
+
+/* CHECKBOX */
+
+checkbox {
+    corner-radius: 2px;
+    border-width: 1px;
+    border-color: var(--text-secondary);
+    background-color: var(--background-color);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+checkbox:hover {
+    border-color: var(--primary-color);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+checkbox:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+checkbox:disabled {
+    border-color: var(--disabled-color);
+    transition: border-color 100ms;
+}
+
+checkbox:hover:disabled {
+    background-color: transparent;
+    transition: border-color 100ms;
+}
+
+checkbox:checked:hover {
+    background-color: var(--text-accent);
+    border-color: var(--text-accent);
+    color: var(--text-primary);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+checkbox:checked:disabled {
+    background-color: var(--disabled-color);
+    border-color: var(--disabled-color);
+    color: var(--text-primary);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+checkbox.intermediate {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+    color: var(--text-primary);
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+/* CHIP */
+
+chip {
+    corner-radius: 50%;
+    background-color: var(--text-secondary);
+}
+
+chip.outline {
+    border-width: 1px;
+    border-color: var(--text-secondary);
+    background-color: transparent;
+}
+
+chip .close-icon {
+    background-color: transparent;
+    transition: background-color 100ms;
+    corner-radius: 50%;
+}
+
+chip .close-icon:hover {
+    background-color: var(--hover-color);
+    transition: background-color 100ms;
+}
+
+chip:disabled .icon {
+    background-color: transparent;
+}
+
+/* COMBOBOX */
+
+combobox {
+    corner-radius: 4px;
+    background-color: var(--background-color);
+}
+
+combobox .title {
+    border-width: 1px;
+    border-color: var(--text-secondary);
+    corner-radius: 4px;
+}
+
+combobox > textbox > label.placeholder {
+    color: var(--text-primary);
+}
+
+combobox list list-item {
+    cursor: hand;
+}
+
+combobox .list label.nav {
+    background-color: var(--primary-alpha-20);
+}
+
+combobox .list label:checked {
+    background-color: var(--primary-color);
+}
+
+/* DATEPICKER */
+
+datepicker {
+    background-color: var(--background-secondary);
+    corner-radius: 4px;
+}
+
+.datepicker-header textbox {
+    background-color: transparent;
+}
+
+.datepicker-divisor {
+    background-color: var(--surface-color);
+}
+
+.datepicker-calendar-day {
+    color: var(--text-secondary);
+    cursor: hand;
+}
+
+.datepicker-calendar-day:checked {
+    color: var(--text-primary);
+    background-color: var(--primary-color);
+    corner-radius: 4px;
+}
+
+.datepicker-calendar-day-disabled {
+    color: var(--disabled-color);
+    cursor: arrow;
+}
+
+.datepicker-selected-date {
+    color: var(--text-secondary);
+}
+
+/* DIVIDER */
+
+divider > .divider-line {
+    background-color: var(--border-color);
+}
+
+/* DROPDOWN */
+
+dropdown {
+    background-color: var(--background-secondary);
+    corner-radius: 4px;
+}
+
+dropdown list label {
+    cursor: hand;
+}
+
+dropdown list label:hover {
+    background-color: var(--primary-alpha-20);
+}
+
+dropdown list label:checked {
+    background-color: var(--primary-color);
+}
+
+/* ICON */
+icon:disabled {
+    color: var(--disabled-color);
+}
+
+/* KNOB */
+
+knob {
+    /* COLOR OF INACTIVE TRACK */
+    background-color: var(--background-color);
+}
+
+knob .knob-track {
+    /* COLOR OF THE ACTIVE TRACK */
+    color: var(--secondary-color);
+}
+
+knob:disabled .knob-track {
+    color: var(--disabled-color);
+}
+
+.knob-head {
+    /* COLOR OF HEAD (round in the middle) */
+    background-color: var(--background-secondary);
+
+    /* COLOR BETWEEN THE HEAD AND THE TRACK */
+    border-color: var(--background-color);
+    border-width: 2px;
+}
+
+knob:disabled .knob-head {
+    background-color: var(--disabled-color);
+}
+
+knob .knob-tick {
+    /* COLOR OF THE TICK INDICATOR 
+    (the small line that rotate in the middle) */
+    background-color: var(--text-secondary);
+    corner-radius: 1px;
+}
+
+knob:disabled .knob-tick {
+    background-color: var(--disabled-color);
+}
+
+/* LABEL */
+
+label:disabled {
+    color: var(--disabled-color);
+}
+
+label.describing {
+    cursor: hand;
+}
+
+/* LIST */
+
+list label.dark {
+    background-color: var(--background-alpha-08);
+}
+
+/* MENU */
+
+menubutton {
+    background-color: var(--background-secondary);
+    corner-radius: 4px;
+}
+
+menubutton:focus {
+    background-color: var(--background-tertiary);
+}
+
+menubutton:hover {
+    background-color: var(--background-tertiary);
+}
+
+menubutton:disabled {
+    background-color: transparent;
+}
+
+menubutton .shortcut {
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+menubutton svg {
+    fill: var(--text-secondary);
+}
+
+submenu svg {
+    fill: var(--text-primary);
+}
+
+submenu {
+    background-color: var(--background-secondary);
+    corner-radius: 4px;
+}
+
+menubar submenu {
+    background-color: transparent;
+}
+
+submenu:checked {
+    background-color: var(--background-tertiary);
+}
+
+submenu:focus {
+    background-color: var(--background-tertiary);
+}
+
+submenu:hover {
+    background-color: var(--background-tertiary);
+}
+
+submenu:disabled {
+    background-color: transparent;
+}
+
+submenu > popup {
+    padding: 8px;
+}
+
+/* NOTIFICATION */
+
+notification {
+    background-color: var(--surface-elevated);
+    padding: 8px;
+    corner-radius: 4px;
+    shadow: 0px 2px 16px var(--shadow-alpha-22);
+}
+
+/* PICKLIST */
+
+picklist {
+    corner-radius: 4px;
+}
+
+picklist:focus-visible {
+    outline-width: 1px;
+    outline-color: var(--focus-color);
+    outline-offset: 3px;
+}
+
+picklist list list-item {
+    cursor: hand;
+}
+
+picklist list.selectable list-item .focus-indicator {
+    width: 2px;
+    position-type: absolute;
+    background-color: var(--primary-color);
+    visibility: hidden;
+}
+
+picklist list.selectable list-item:focus-visible .focus-indicator {
+    visibility: visible;
+}
+
+picklist list.selectable list-item:checked {
+    background-color: transparent;
+}
+
+picklist list.selectable list-item .checkmark {
+    fill: var(--primary-color);
+    visibility: hidden;
+}
+
+picklist list.selectable list-item:checked .checkmark {
+    visibility: visible;
+}
+
+picklist list.selectable list-item:hover {
+    background-color: var(--background-tertiary);
+}
+
+picklist list.selectable list-item:focus-visible {
+    background-color: var(--background-tertiary);
+    outline-color: transparent;
+}
+
+/* POPUP */
+
+popup {
+    background-color: var(--background-secondary);
+    corner-radius: 4px;
+    shadow: 0px 2px 16px var(--shadow-alpha-22);
+}
+
+/* PROGRESS BAR */
+
+progressbar {
+    corner-radius: 50%;
+    background-color: var(--surface-elevated);
+    overflow: hidden;
+}
+
+progressbar:disabled {
+    background-color: var(--disabled-color);
+}
+
+progressbar .progressbar-bar {
+    background-color: var(--primary-color);
+}
+
+progressbar:disabled .progressbar-bar {
+    background-color: var(--secondary-color);
+}
+
+/* RADIOBUTTON */
+
+radiobutton {
+    border-width: 2px;
+    corner-radius: 50%;
+    border-color: var(--text-secondary);
+    background-color: transparent;
+    transition: background-color 100ms;
+    transition: border-color 100ms;
+}
+
+radiobutton:hover {
+    border-color: var(--secondary-color);
+    transition: border-color 100ms;
+}
+
+radiobutton:focus-visible {
+    outline-width: 1px;
+    outline-color: var(--secondary-color);
+    outline-offset: 3px;
+}
+
+radiobutton:checked {
+    border-color: var(--secondary-color);
+    transition: border-color 100ms;
+}
+
+radiobutton:checked:hover {
+    border-color: var(--secondary-color);
+    transition: border-color 100ms;
+}
+
+radiobutton:checked:disabled,
+radiobutton:disabled {
+    border-color: var(--disabled-color);
+    transition: border-color 100ms;
+}
+
+radiobutton .inner {
+    corner-radius: 50%;
+    background-color: var(--text-secondary);
+    scale: 0;
+    transition: scale 100ms;
+    transition: background-color 100ms;
+}
+
+radiobutton:checked .inner {
+    background-color: var(--secondary-color);
+    scale: 1;
+    transition: scale 100ms;
+    transition: background-color 100ms;
+}
+
+radiobutton:hover .inner {
+    background-color: var(--secondary-color);
+    transition: background-color 100ms;
+}
+
+radiobutton:disabled .inner {
+    background-color: var(--disabled-color);
+    transition: background-color 100ms;
+    scale: 1;
+    transition: scale 100ms;
+}
+
+/* RATING */
+
+rating svg {
+    fill: var(--disabled-color);
+    font-size: x-large;
+    width: 20px;
+    height: 20px;
+    cursor: hand;
+}
+
+rating svg:checked {
+    fill: var(--text-accent);
+}
+
+rating:over svg:enabled {
+    fill: var(--disabled-color);
+}
+
+rating:over > svg.foo:enabled {
+    fill: var(--text-accent);
+}
+
+rating svg:hover {
+    scale: 1.2;
+    transition: scale 100ms;
+}
+
+rating svg:disabled {
+    fill: var(--disabled-color);
+    scale: 1;
+}
+
+rating svg:checked:disabled {
+    fill: #4d3845;
+}
+
+/* SCROLLVIEW */
+
+scrollview > scrollbar {
+    display: none;
+}
+
+scrollview.h-scroll > scrollbar,
+scrollview.v-scroll > scrollbar {
+    display: flex;
+}
+
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar .thumb {
+    background-color: var(--border-color);
+    corner-radius: 50%;
+    opacity: 0;
+    transition: opacity 200ms 0s linear;
+}
+
+scrollview.h-scroll:hover > scrollbar.horizontal > .thumb,
+scrollview.v-scroll:hover > scrollbar.vertical > .thumb {
+    background-color: var(--border-color);
+    opacity: 1;
+    transition: opacity 200ms 0s linear;
+}
+
+scrollview.h-scroll:active > scrollbar.horizontal > .thumb,
+scrollview.v-scroll:active > scrollbar.vertical > .thumb {
+    background-color: var(--hover-color);
+    opacity: 1;
+    transition: opacity 200ms 0s linear;
+}
+
+scrollview.h-scroll > scrollbar.horizontal:active > .thumb,
+scrollview.v-scroll > scrollbar.vertical:active > .thumb {
+    background-color: var(--hover-color);
+    opacity: 1;
+    transition: opacity 200ms 0s linear;
+}
+
+/* SLIDER */
+
+slider {
+    corner-radius: 2px;
+}
+
+slider:focus-visible {
+    outline-width: 1px;
+    outline-color: var(--primary-alpha-50);
+    outline-offset: 3px;
+    corner-radius: 4px;
+}
+
+slider .track {
+    background-color: var(--primary-alpha-10);
+    corner-radius: 2px;
+}
+
+slider .active {
+    background-color: var(--primary-alpha-50);
+    corner-radius: 2px;
+}
+
+slider .thumb {
+    background-color: var(--primary-color);
+    corner-radius: 50%;
+}
+
+slider .thumb:hover {
+    background-color: var(--text-accent);
+}
+
+slider:disabled {
+    background-color: var(--disabled-color);
+}
+
+slider:disabled .active {
+    background-color: var(--disabled-color);
+}
+
+slider:disabled .thumb {
+    background-color: var(--disabled-color);
+}
+
+/* SPINBOX */
+
+spinbox {
+    background-color: var(--background-secondary);
+    corner-radius: 4px;
+}
+
+spinbox .spinbox-button {
+    cursor: hand;
+}
+
+spinbox .spinbox-button:hover {
+    color: var(--text-primary);
+}
+
+spinbox .spinbox-value {
+    color: var(--text-primary);
+}
+
+spinbox textbox.spinbox-value {
+    background-color: transparent;
+    border-width: 0px;
+    corner-radius: 0px;
+}
+
+spinbox picklist.spinbox-value dropdown {
+    background-color: transparent;
+    border-width: 0px;
+}
+
+spinbox picklist.spinbox-value {
+    background-color: transparent;
+    border-width: 0px;
+    gap: 4px;
+}
+
+/* SWITCH */
+
+switch .switch-handle-bg {
+    corner-radius: 6px;
+    background-color: var(--border-color);
+    border: 1px solid var(--text-secondary);
+    transition: background-color 100ms;
+}
+
+switch .switch-handle {
+    background-color: var(--text-secondary);
+    corner-radius: 50%;
+    transition: background-color 100ms;
+    transition: left 100ms;
+}
+
+switch:hover .switch-handle {
+    background-color: var(--text-primary);
+    transition: background-color 100ms;
+}
+
+switch:focus-visible {
+    outline-width: 1px;
+    outline-color: var(--primary-alpha-50);
+    outline-offset: 3px;
+}
+
+switch:checked .switch-handle-bg {
+    background-color: var(--secondary-alpha-25);
+    transition: background-color 100ms;
+}
+
+switch:checked .switch-handle {
+    background-color: var(--secondary-color);
+    transition: background-color 100ms;
+}
+
+switch:checked:hover .switch-handle {
+    background-color: var(--secondary-color);
+    transition: background-color 100ms;
+}
+
+switch:disabled * {
+    background-color: var(--disabled-color);
+    transition: background-color 100ms;
+}
+
+switch:hover:disabled * {
+    background-color: var(--disabled-color);
+    transition: background-color 100ms;
+}
+
+switch:checked:disabled * {
+    background-color: var(--disabled-color);
+    transition: background-color 100ms;
+}
+
+switch:checked:hover:disabled * {
+    background-color: var(--disabled-color);
+    transition: background-color 100ms;
+}
+
+/* TABVIEW */
+
+tabheader:disabled {
+    background-color: transparent;
+}
+
+tabheader:checked .indicator {
+    background-color: var(--primary-color);
+}
+
+tabview .tabview-divider {
+    background-color: var(--border-color);
+}
+
+/* TEXTBOX */
+
+textbox {
+    border-width: 1px;
+    corner-radius: 4px;
+    border-color: var(--text-secondary);
+    background-color: var(--background-color);
+    transition: border-color 100ms;
+    transition: background-color 100ms;
+}
+
+textbox:checked {
+    border-color: var(--primary-color);
+    background-color: var(--background-color);
+    transition: border-color 100ms;
+}
+
+textbox:checked.caret {
+    caret-color: var(--text-secondary);
+}
+
+textbox > label.placeholder {
+    caret-color: transparent;
+    color: var(--text-secondary);
+}
+
+textbox:read-only {
+    background-color: transparent;
+    border-width: 0px;
+}
+
+textbox:disabled {
+    color: var(--disabled-color);
+    transition: color 100ms;
+}
+
+textbox:focus-visible {
+    border-color: var(--primary-alpha-50);
+    transition: border-color 100ms;
+}
+
+textbox:invalid {
+    border-color: var(--primary-color);
+    border-width: 1px;
+    transition: border-color 100ms;
+    background-color: #2d1820;
+}
+
+/* TOGGLE BUTTON */
+
+toggle-button {
+    corner-radius: 4px;
+    background-color: var(--background-secondary);
+    transition: background-color 100ms;
+}
+
+toggle-button:hover {
+    background-color: var(--background-tertiary);
+    transition: background-color 100ms;
+}
+
+toggle-button:active {
+    background-color: var(--surface-color);
+}
+
+toggle-button:checked {
+    background-color: var(--background-color);
+    transition: background-color 100ms;
+}
+
+toggle-button:disabled {
+    color: var(--disabled-color);
+    background-color: var(--disabled-color);
+    transition: background-color 100ms;
+}
+
+toggle-button svg {
+    fill: var(--text-primary);
+}
+
+/* TOOLTIP */
+tooltip {
+    padding: 4px;
+    background-color: var(--text-secondary);
+    corner-radius: 4px;
+}
+
+tooltip arrow {
+    background-color: var(--text-secondary);
+}
+
+/* VIRTUAL LIST */
+
+virtual-list label.dark {
+    background-color: var(--background-alpha-08);
+}
+
+/* XY PAD */
+
+xypad {
+    border-color: var(--text-primary);
+}
+
+xypad .thumb {
+    border-color: var(--text-primary);
+}
+
+xypad:disabled {
+    background-color: var(--disabled-color);
+}
+
+collapsible {
+    background-color: var(--background-tertiary);
+    shadow: 0px 2px 2px var(--shadow-alpha-22);
+}
+
+collapsible > .header > .expand-icon {
+    fill: var(--text-secondary);
+}
