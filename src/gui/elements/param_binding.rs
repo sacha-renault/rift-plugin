@@ -45,3 +45,33 @@ where
         element
     }
 }
+
+pub struct FView;
+
+impl View for FView {}
+
+pub(crate) trait ViewApplyModifiers<'a>: Sized {
+    fn maybe_apply_modifiers<F>(self, func: Option<F>) -> Handle<'a, FView>
+    where
+        F: Fn(Handle<'a, FView>) -> Handle<'a, FView>;
+}
+
+impl<'a, T> ViewApplyModifiers<'a> for Handle<'a, T>
+where
+    T: View,
+{
+    fn maybe_apply_modifiers<F>(self, func: Option<F>) -> Handle<'a, FView>
+    where
+        F: Fn(Handle<'a, FView>) -> Handle<'a, FView>,
+    {
+        // SAFETY: Handle<T> and Handle<FView> are identical in layout,
+        // PhantomData<T> is a ZST. We're just rebranding the type tag.
+        let handle: Handle<'a, FView> = unsafe { std::mem::transmute(self) };
+
+        if let Some(f) = func {
+            f(handle)
+        } else {
+            handle
+        }
+    }
+}

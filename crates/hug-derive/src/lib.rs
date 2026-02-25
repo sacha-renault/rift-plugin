@@ -6,7 +6,7 @@ use syn::{DeriveInput, Fields, Meta, parse_macro_input};
 pub fn derive_param_builder(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let name = &input.ident;
-    let (_, ty_generics, _) = input.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
 
     let fields = match &input.data {
         syn::Data::Struct(s) => match &s.fields {
@@ -62,12 +62,20 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
         }
     });
 
+    let extra_where = if let Some(wc) = where_clause {
+        let predicates = &wc.predicates;
+        quote! { #predicates }
+    } else {
+        quote! {}
+    };
+
     quote! {
-        impl<L, MapFn, P> #name #ty_generics
+        impl #impl_generics #name #ty_generics
         where
-            P: Clone,
-            L: Lens<Target = P> + Copy,
-            MapFn: (Fn(&P) -> &dyn ClapParam) + Copy + 'static,
+            L: Lens + Copy,
+            L::Target: Clone,
+            MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+            #extra_where
         {
             pub fn new(lens: L, accessor: MapFn) -> Self {
                 Self {
@@ -83,10 +91,7 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
             #(#setters)*
         }
 
-        impl<L, MapFn> View for #name <L, MapFn>
-        where
-            L: 'static,
-            MapFn: 'static,
+        impl #impl_generics View for #name #impl_generics #where_clause
         {
         }
     }
