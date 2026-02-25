@@ -18,12 +18,11 @@ where
 
     /// A function that will be called on the [`Handle<'_, Knob<L>>`]. It allow to modify
     /// the [`Handle`] as [`LayoutModifiers`] and [`StyleModifiers`]
-    #[builder(default = None, with = |v| v)]
-    knob_modifiers: Option<Arc<ModifierFn>>,
-
-    label_text_modifier: Option<Arc<ModifierFn>>,
-    arctrack_modifier: Option<Arc<ModifierFn>>,
-    tick_modifier: Option<Arc<ModifierFn>>,
+    #[builder(default = None)]
+    knob_modifiers: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
+    label_text_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
+    arctrack_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
+    tick_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
 }
 
 impl<L, MapFn> ParamKnob<L, MapFn>
