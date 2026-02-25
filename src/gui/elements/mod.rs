@@ -1,4 +1,5 @@
 pub mod param_binding;
+mod param_button;
 mod param_knob;
 
 mod gui_prelude {
@@ -8,4 +9,5 @@ mod gui_prelude {
     pub use vizia::prelude::*;
 }
 
+pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;
