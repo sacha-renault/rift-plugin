@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::gui_prelude::*;
 
-#[derive(ParamBuilder)]
+#[derive(ParamViewBuilder)]
 pub struct ParamKnob<L, MapFn>
 where
     L: 'static,
