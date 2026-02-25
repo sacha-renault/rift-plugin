@@ -39,6 +39,7 @@ pub fn build_variable_map(vars: &[(&str, &str)]) -> HashMap<String, String> {
         .collect()
 }
 
+#[derive(Debug)]
 pub struct CssString(pub String);
 
 impl IntoCssStr for CssString {

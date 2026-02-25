@@ -408,13 +408,13 @@ knob:disabled .knob-track {
     color: var(--disabled-color);
 }
 
-.knob-head {
+knob .knob-head {
     /* COLOR OF HEAD (round in the middle) */
     background-color: var(--background-secondary);
-
+    
     /* COLOR BETWEEN THE HEAD AND THE TRACK */
     border-color: var(--background-color);
-    border-width: 2px;
+    border-width: 5px;
 }
 
 knob:disabled .knob-head {
@@ -426,6 +426,7 @@ knob .knob-tick {
     (the small line that rotate in the middle) */
     background-color: var(--text-secondary);
     corner-radius: 1px;
+    height: 10px;
 }
 
 knob:disabled .knob-tick {
