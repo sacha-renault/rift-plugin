@@ -13,9 +13,6 @@ struct FieldReceiver {
     /// If not present, it defaults to None.
     #[darling(default)]
     default: Option<syn::Expr>,
-
-    #[darling(default)]
-    with: Option<syn::Expr>,
 }
 
 pub fn derive_param_builder(input: TokenStream) -> TokenStream {
@@ -62,30 +59,43 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
         let docs = &f.attrs;
 
         // checkout if it's in option
-        let (setter_ty, is_option) = match inner_type_of_option(fty) {
+        let (inner_ty, is_option) = match inner_type_of_option(fty) {
             Some(inner) => (inner, true),
             None => (fty, false),
         };
 
-        // transform with "with"
-        let transformed_value = if let Some(with_closure) = &f.with {
-            quote! { (#with_closure)(value) }
-        } else {
-            quote! { value }
-        };
+        if let Some((inputs, output)) = get_fn_signature(inner_ty) {
+            // GENERIC FUNCTION SETTER
+            let assignment = if is_option {
+                quote! { self.#fname = Some(Arc::new(func)); }
+            } else {
+                quote! { self.#fname = Arc::new(func); }
+            };
 
-        // if it's an option, we must wrap into Some
-        let assignment = if is_option {
-            quote! { Some(#transformed_value) }
+            quote! {
+                #(#docs)*
+                pub fn #fname<F>(mut self, func: F) -> Self
+                where
+                    F: Fn(#inputs) #output + Send + Sync + 'static
+                {
+                    #assignment
+                    self
+                }
+            }
         } else {
-            quote! { #transformed_value }
-        };
+            // STANDARD SETTER
+            let assignment = if is_option {
+                quote! { self.#fname = Some(value); }
+            } else {
+                quote! { self.#fname = value; }
+            };
 
-        quote! {
-            #(#docs)*
-            pub fn #fname(mut self, value: #setter_ty) -> Self {
-                self.#fname = #assignment;
-                self
+            quote! {
+                #(#docs)*
+                pub fn #fname(mut self, value: #inner_ty) -> Self {
+                    #assignment
+                    self
+                }
             }
         }
     });
@@ -147,4 +157,40 @@ fn inner_type_of_option(ty: &syn::Type) -> Option<&syn::Type> {
     };
 
     Some(inner_ty)
+}
+
+fn get_fn_signature(
+    ty: &syn::Type,
+) -> Option<(proc_macro2::TokenStream, proc_macro2::TokenStream)> {
+    let tp = if let syn::Type::Path(p) = ty {
+        p
+    } else {
+        return None;
+    };
+    let last_seg = tp.path.segments.last()?;
+
+    // Look inside Arc<...>
+    let syn::PathArguments::AngleBracketed(args) = &last_seg.arguments else {
+        return None;
+    };
+    let syn::GenericArgument::Type(syn::Type::TraitObject(to)) = args.args.first()? else {
+        return None;
+    };
+
+    for bound in &to.bounds {
+        if let syn::TypeParamBound::Trait(tr) = bound {
+            let last_trait_seg = tr.path.segments.last()?;
+            let name = last_trait_seg.ident.to_string();
+
+            // Check if it's Fn/FnMut/FnOnce
+            if name.starts_with("Fn") {
+                if let syn::PathArguments::Parenthesized(paren) = &last_trait_seg.arguments {
+                    let inputs = &paren.inputs;
+                    let output = &paren.output; // This includes the '->'
+                    return Some((quote! { #inputs }, quote! { #output }));
+                }
+            }
+        }
+    }
+    None
 }
