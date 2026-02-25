@@ -16,9 +16,11 @@ where
     on_mouse_up: Option<Arc<dyn Fn(&mut EventContext, MouseButton) + Send + Sync>>,
     value_text_formater: Option<fn(f64, &str) -> String>,
 
-    // Modifiers
-    #[builder(default = None)]
+    /// A function that will be called on the [`Handle<'_, Knob<L>>`]. It allow to modify
+    /// the [`Handle`] as [`LayoutModifiers`] and [`StyleModifiers`]
+    #[builder(default = None, with = |v| v)]
     knob_modifiers: Option<Arc<ModifierFn>>,
+
     label_text_modifier: Option<Arc<ModifierFn>>,
     arctrack_modifier: Option<Arc<ModifierFn>>,
     tick_modifier: Option<Arc<ModifierFn>>,
