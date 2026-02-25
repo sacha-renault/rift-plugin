@@ -18,8 +18,10 @@ where
 
     // Modifiers
     #[builder(default = None)]
-    knob_modifiers: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
-    label_text_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
+    knob_modifiers: Option<Arc<ModifierFn>>,
+    label_text_modifier: Option<Arc<ModifierFn>>,
+    arctrack_modifier: Option<Arc<ModifierFn>>,
+    tick_modifier: Option<Arc<ModifierFn>>,
 }
 
 impl<L, MapFn> ParamKnob<L, MapFn>
@@ -38,6 +40,8 @@ where
             value_text_formater,
             knob_modifiers,
             label_text_modifier,
+            arctrack_modifier,
+            tick_modifier,
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
@@ -56,8 +60,8 @@ where
                 .maybe_apply_modifiers(label_text_modifier.as_deref())
                 .class("knob-value-label");
 
-            Knob::custom(cx, default_value as f32, value_lens, |cx, lens| {
-                ZStack::new(cx, move |cx| {
+            Knob::custom(cx, default_value as f32, value_lens, move |cx, lens| {
+                ZStack::new(cx, |cx| {
                     ArcTrack::new(
                         cx,
                         false,
@@ -68,11 +72,13 @@ where
                         KnobMode::Continuous,
                     )
                     .value(lens)
+                    .maybe_apply_modifiers(arctrack_modifier.as_deref())
                     .class("knob-track");
 
                     HStack::new(cx, |cx| {
                         Element::new(cx).class("knob-tick");
                     })
+                    .maybe_apply_modifiers(tick_modifier.as_deref())
                     .rotate(lens.map(|v| Angle::Deg(*v * 300.0 - 150.0)))
                     .class("knob-head");
                 })

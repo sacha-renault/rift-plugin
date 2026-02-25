@@ -50,6 +50,8 @@ pub struct FView;
 
 impl View for FView {}
 
+pub type ModifierFn = dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>;
+
 pub(crate) trait ViewApplyModifiers<'a>: Sized {
     fn maybe_apply_modifiers<F>(self, func: Option<F>) -> Handle<'a, FView>
     where
