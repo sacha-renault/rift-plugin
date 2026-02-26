@@ -34,11 +34,8 @@ impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
         idx: usize,
         slices: impl Iterator<Item = &'a [f32]>,
     ) -> Result<(), ()> {
-        if idx == 0 {
-            self.states
-                .audio_accumulators
-                .as_ref()
-                .map(|acc| acc.push_slices(slices));
+        if let Some(acc) = self.states.audio_accumulators.get(idx).as_ref() {
+            acc.push_slices(slices);
             Ok(())
         } else {
             Err(())
