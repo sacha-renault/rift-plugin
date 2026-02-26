@@ -115,12 +115,10 @@ where
             app_fn(cx, context.clone());
         })
         .inner_size(self.size)
-        .on_idle(move |_cx| {
-            let _ = idle_ctx
-                .states
-                .audio_accumulators
-                .iter()
-                .map(|acc| acc.drain());
+        .on_idle(move |_| {
+            for acc in idle_ctx.states.audio_accumulators.iter() {
+                acc.drain();
+            }
         });
 
         self.handle = Some(application.open_parented(self));
