@@ -18,7 +18,7 @@ pub(crate) struct PluginSharedState {
     pub(crate) audio_thread_tasks: ArrayQueue<AudioThreadTask>,
 
     /// Audio accumulators
-    pub(crate) audio_accumulators: Option<AudioAccumulator<{ BLOCK_SIZE }>>,
+    pub(crate) audio_accumulators: Vec<AudioAccumulator<{ BLOCK_SIZE }>>,
 }
 
 impl Default for PluginSharedState {
@@ -27,7 +27,7 @@ impl Default for PluginSharedState {
             latency: AtomicU32::new(0),
             main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
             audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
-            audio_accumulators: Some(AudioAccumulator::new(2, 375)),
+            audio_accumulators: vec![AudioAccumulator::new(2, 375)],
         }
     }
 }

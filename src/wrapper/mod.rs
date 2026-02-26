@@ -8,7 +8,7 @@ use crate::params::param_trait::Params;
 use crate::prelude::{Buffers, MainAudioPort};
 use crate::type_wrapper::AudioPort;
 
-pub mod main;
+pub mod factory;
 pub mod main_thread;
 pub mod processor;
 pub mod shared;

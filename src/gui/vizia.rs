@@ -116,10 +116,10 @@ where
         })
         .inner_size(self.size)
         .on_idle(move |_cx| {
-            idle_ctx
+            let _ = idle_ctx
                 .states
                 .audio_accumulators
-                .as_ref()
+                .iter()
                 .map(|acc| acc.drain());
         });
 

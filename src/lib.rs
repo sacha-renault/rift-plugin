@@ -39,7 +39,7 @@ pub mod prelude {
 
     pub use super::export_clap_plugin;
 
-    pub use super::wrapper::main::PluginWrapper;
+    pub use super::wrapper::factory::PluginWrapper;
     pub use wrapper::ClapPlugin;
 
     pub use type_wrapper::{AudioPort, MainAudioPort};

@@ -1,6 +1,6 @@
 use crossbeam_queue::ArrayQueue;
 use std::sync::{
-    Mutex,
+    Arc, Mutex,
     atomic::{AtomicBool, Ordering},
 };
 
@@ -54,9 +54,13 @@ pub trait AudioConsumer: Send + Sync + 'static {
     fn consume(&mut self, block: &[f32], channel_idx: usize, total_channels: usize);
 }
 
+pub trait New {
+    fn new(channels: usize, count: usize) -> Self;
+}
+
 pub struct AudioAccumulator<const N: usize> {
     channels: Vec<ChannelProducer<N>>,
-    consumers: Mutex<Vec<Box<dyn AudioConsumer>>>,
+    consumers: Mutex<Vec<Arc<Mutex<dyn AudioConsumer>>>>,
     new_data: AtomicBool,
 }
 
@@ -72,6 +76,10 @@ impl<const N: usize> AudioAccumulator<N> {
             consumers: Mutex::new(Vec::new()),
             new_data: AtomicBool::new(false),
         }
+    }
+
+    pub fn add_consumer<C: AudioConsumer>(&self, consumer: Arc<Mutex<C>>) {
+        self.consumers.lock().unwrap().push(consumer);
     }
 
     pub fn channels(&self) -> usize {
@@ -92,11 +100,6 @@ impl<const N: usize> AudioAccumulator<N> {
         for drain_idx in 0..self.channels() {
             while self.channels[drain_idx].buf.pop().is_some() {}
         }
-    }
-
-    pub fn drop_listeners(&self) {
-        let mut consumer_lock = self.consumers.lock().unwrap();
-        consumer_lock.clear();
     }
 
     /// This function is meant to be called on the UI thread
@@ -127,7 +130,10 @@ impl<const N: usize> AudioAccumulator<N> {
                 };
 
                 for consumer in consumer_lock.iter_mut() {
-                    consumer.consume(block.as_slice(), idx, n_channels);
+                    consumer
+                        .lock()
+                        .unwrap()
+                        .consume(block.as_slice(), idx, n_channels);
                 }
             }
         }
