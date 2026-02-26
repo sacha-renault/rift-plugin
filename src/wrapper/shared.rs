@@ -25,10 +25,15 @@ impl<P: ClapPlugin> Clone for WrapperShared<P> {
 
 impl<P: ClapPlugin> Default for WrapperShared<P> {
     fn default() -> Self {
+        let mut states = PluginSharedState::new();
+        for acc in P::accumulators() {
+            states = states.add_accumulator(acc);
+        }
+
         Self {
             params: Arc::new(P::ParamType::default()),
             other: Arc::new(P::SharedType::default()),
-            states: Arc::new(PluginSharedState::default()),
+            states: Arc::new(states),
         }
     }
 }
