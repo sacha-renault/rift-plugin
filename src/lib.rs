@@ -37,6 +37,8 @@ pub mod prelude {
     pub use params::param_ptr::ParamPtr;
     pub use params::param_trait::{ClapParam, Params, TypedParam};
 
+    pub use super::export_clap_plugin;
+
     pub use super::wrapper::main::PluginWrapper;
     pub use wrapper::ClapPlugin;
 
@@ -48,4 +50,6 @@ pub mod prelude {
     pub use processing::*;
 
     pub use context::*;
+
+    pub const BLOCK_SIZE: usize = 128;
 }

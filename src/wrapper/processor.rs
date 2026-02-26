@@ -100,6 +100,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             self.shared.states.clone(),
             self.shared.other.clone(),
         );
-        self.plugin.process(buffers, context)
+        let result = self.plugin.process(buffers, context);
+        result
     }
 }

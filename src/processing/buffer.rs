@@ -203,7 +203,7 @@ impl<'a> Buffer<'a> {
     /// Note: because audio is stored in planar format (one contiguous buffer per
     /// channel), this iterator accesses non-contiguous memory at each step. The
     /// compiler cannot auto-vectorize this pattern. For pure per-channel processing
-    /// (gain, EQ, distortion), prefer [`Buffer::iter_channels`] which gives the
+    /// (gain, EQ, distortion), prefer [`Buffer::iter_channels_mut`] which gives the
     /// compiler a straight contiguous slice to work with.
     pub fn iter_samples(&'a self) -> SamplesIterator<'a> {
         let samples = self.samples();
@@ -216,17 +216,21 @@ impl<'a> Buffer<'a> {
         }
     }
 
+    pub fn iter_channels(&self) -> impl Iterator<Item = &[f32]> {
+        self.raw_data()
+            .iter()
+            .map(move |&ptr| unsafe { std::slice::from_raw_parts(ptr, self.samples()) })
+    }
+
     /// Iterates channel-by-channel, yielding a contiguous `&mut [f32]` for each channel.
     ///
     /// Preferred for per-channel DSP (gain, filters, saturation) — the compiler
     /// can auto-vectorize over the contiguous slice. For inter-channel processing,
     /// see [`Buffer::iter_samples`].
-    pub fn iter_channels(&'a self) -> ChannelIterator<'a> {
-        ChannelIterator {
-            vec: self.raw_data(),
-            position: 0,
-            samples: self.samples(),
-        }
+    pub fn iter_channels_mut(&'a self) -> impl Iterator<Item = &'a mut [f32]> {
+        self.raw_data()
+            .iter()
+            .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, self.samples()) })
     }
 }
 
@@ -282,29 +286,6 @@ impl<'a> Iterator for ChannelSamples<'a> {
             let ptr = self.vec[position];
 
             unsafe { Some(&mut (*ptr.add(self.channel_position))) }
-        } else {
-            None
-        }
-    }
-}
-
-pub struct ChannelIterator<'a> {
-    vec: &'a [*mut f32],
-    position: usize,
-    samples: usize,
-}
-
-impl<'a> Iterator for ChannelIterator<'a> {
-    type Item = &'a mut [f32];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let length = self.vec.len();
-        if self.position < length {
-            let position = self.position;
-            self.position += 1;
-            let ptr = self.vec[position];
-            let slice = unsafe { std::slice::from_raw_parts_mut(ptr, self.samples) };
-            Some(slice)
         } else {
             None
         }

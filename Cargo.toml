@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 hug-derive = { workspace = true }
+hug-accumulator = { workspace = true }
 vizia = { workspace = true }
 vizia_baseview = { workspace = true }
 
@@ -24,15 +25,17 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
 raw-window-handle = "0.5.0"
 log = "0.4"
 paste = "1.0.15"
-crossbeam-queue = "0.3.12"
+crossbeam-queue = {workspace = true}
 
 
 [workspace]
 resolver = "2"
-members = ["crates/hug-derive", "crates/hug-resolver"]
+members = ["crates/hug-accumulator","crates/hug-derive", "crates/hug-resolver"]
 
 [workspace.dependencies]
 hug-derive  = { path = "crates/hug-derive" }
 hug-resolver = { path = "crates/hug-resolver" }
+hug-accumulator = { path = "crates/hug-accumulator" }
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
+crossbeam-queue = "0.3.12"
