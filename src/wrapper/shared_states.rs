@@ -21,18 +21,21 @@ pub(crate) struct PluginSharedState {
     pub(crate) audio_accumulators: Vec<AudioAccumulator<{ BLOCK_SIZE }>>,
 }
 
-impl Default for PluginSharedState {
-    fn default() -> Self {
+impl PluginSharedState {
+    pub fn new() -> Self {
         Self {
             latency: AtomicU32::new(0),
             main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
             audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
-            audio_accumulators: vec![AudioAccumulator::new(2, 375)],
+            audio_accumulators: vec![],
         }
     }
-}
 
-impl PluginSharedState {
+    pub fn add_accumulator(mut self, acc: AudioAccumulator<BLOCK_SIZE>) -> Self {
+        self.audio_accumulators.push(acc);
+        self
+    }
+
     #[inline]
     pub fn set_latency(&self, latency: u32) {
         self.latency.store(latency, Ordering::Relaxed);
