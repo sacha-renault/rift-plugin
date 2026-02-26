@@ -1,17 +1,24 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
+use hug_accumulator::AudioAccumulator;
 
-use crate::context::{AudioThreadTask, MainThreadTask};
+use crate::{
+    context::{AudioThreadTask, MainThreadTask},
+    prelude::BLOCK_SIZE,
+};
 
 const TASKS_CAPACITY: usize = 2048;
 
 pub(crate) struct PluginSharedState {
-    latency: AtomicU32,
+    pub(crate) latency: AtomicU32,
 
     /// Queues that audio / main thread can read
-    main_thread_tasks: ArrayQueue<MainThreadTask>,
-    audio_thread_tasks: ArrayQueue<AudioThreadTask>,
+    pub(crate) main_thread_tasks: ArrayQueue<MainThreadTask>,
+    pub(crate) audio_thread_tasks: ArrayQueue<AudioThreadTask>,
+
+    /// Audio accumulators
+    pub(crate) audio_accumulators: Option<AudioAccumulator<{ BLOCK_SIZE }>>,
 }
 
 impl Default for PluginSharedState {
@@ -20,6 +27,7 @@ impl Default for PluginSharedState {
             latency: AtomicU32::new(0),
             main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
             audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
+            audio_accumulators: Some(AudioAccumulator::new(2, 375)),
         }
     }
 }

@@ -105,6 +105,7 @@ where
     fn spawn(&mut self) {
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
+        let idle_ctx = context.clone();
 
         let application = vizia_baseview::Application::new(move |cx| {
             ViziaData {
@@ -114,7 +115,13 @@ where
             app_fn(cx, context.clone());
         })
         .inner_size(self.size)
-        .on_idle(|_cx| {});
+        .on_idle(move |_cx| {
+            idle_ctx
+                .states
+                .audio_accumulators
+                .as_ref()
+                .map(|acc| acc.drain());
+        });
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Relaxed);
