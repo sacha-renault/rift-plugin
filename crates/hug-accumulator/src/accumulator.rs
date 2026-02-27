@@ -1,13 +1,7 @@
 use crossbeam_queue::ArrayQueue;
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
-};
-
-use parking_lot::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::audio_block::AudioBlock;
-use crate::consumer::AudioConsumer;
 
 struct ChannelProducer<const N: usize> {
     buf: ArrayQueue<AudioBlock<N>>,
@@ -29,7 +23,6 @@ impl<const N: usize> ChannelProducer<N> {
 
 pub struct AudioAccumulator<const N: usize> {
     channels: Vec<ChannelProducer<N>>,
-    consumers: Mutex<Vec<Arc<Mutex<dyn AudioConsumer>>>>,
     new_data: AtomicBool,
 }
 
@@ -42,13 +35,8 @@ impl<const N: usize> AudioAccumulator<N> {
 
         Self {
             channels,
-            consumers: Mutex::new(Vec::new()),
             new_data: AtomicBool::new(false),
         }
-    }
-
-    pub fn add_consumer(&self, consumer: Arc<Mutex<dyn AudioConsumer>>) {
-        self.consumers.lock().push(consumer);
     }
 
     pub fn channels(&self) -> usize {
@@ -73,34 +61,29 @@ impl<const N: usize> AudioAccumulator<N> {
 
     /// This function is meant to be called on the UI thread
     /// locks are fine here
-    pub fn drain(&self) {
+    pub fn drain<F>(&self, mut consume: F)
+    where
+        F: FnMut(&[f32], usize, usize),
+    {
         // If no new data, we can early exit
         if !self.new_data.swap(false, Ordering::Relaxed) {
             return;
         }
 
-        let n_channels = self.channels();
-        if n_channels == 0 {
+        let total_channels = self.channels();
+        if total_channels == 0 {
             return;
-        }
-
-        let mut consumer_lock = self.consumers.lock();
-
-        if consumer_lock.is_empty() {
-            return self.clear();
         }
 
         loop {
             // pop one block per channel
-            for idx in 0..n_channels {
+            for idx in 0..total_channels {
                 let Some(block) = self.channels[idx].buf.pop() else {
                     self.clear();
                     return;
                 };
 
-                for consumer in consumer_lock.iter_mut() {
-                    consumer.lock().consume(block.as_slice(), idx, n_channels);
-                }
+                consume(block.as_slice(), idx, total_channels);
             }
         }
 

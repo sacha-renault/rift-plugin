@@ -678,7 +678,6 @@ dependencies = [
  "clack-extensions",
  "clack-plugin",
  "crossbeam-queue",
- "hug-accumulator",
  "hug-derive",
  "log",
  "parking_lot",
