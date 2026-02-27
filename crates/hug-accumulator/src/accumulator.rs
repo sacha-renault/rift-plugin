@@ -47,7 +47,7 @@ impl<const N: usize> AudioAccumulator<N> {
         }
     }
 
-    pub fn add_consumer<C: AudioConsumer>(&self, consumer: Arc<Mutex<C>>) {
+    pub fn add_consumer(&self, consumer: Arc<Mutex<dyn AudioConsumer>>) {
         self.consumers.lock().push(consumer);
     }
 
@@ -74,12 +74,12 @@ impl<const N: usize> AudioAccumulator<N> {
     /// This function is meant to be called on the UI thread
     /// locks are fine here
     pub fn drain(&self) {
+        // If no new data, we can early exit
         if !self.new_data.swap(false, Ordering::Relaxed) {
             return;
         }
 
         let n_channels = self.channels();
-
         if n_channels == 0 {
             return;
         }

@@ -681,6 +681,7 @@ dependencies = [
  "hug-accumulator",
  "hug-derive",
  "log",
+ "parking_lot",
  "paste",
  "raw-window-handle 0.5.2",
  "vizia",

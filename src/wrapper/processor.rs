@@ -2,7 +2,7 @@ use clack_extensions::params::*;
 use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
-use crate::context::{AudioThreadTask, InitContext, ProcessContext};
+use crate::context::{AudioThreadTask, InitContext, MainThreadTask, ProcessContext};
 use crate::gui::GuiParamEventKind;
 use crate::{
     gui::GuiParamEvent,
@@ -78,6 +78,12 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         let mut plugin = P::create(shared.params.clone(), shared.other.clone());
         let init_context = InitContext::new(&main_thread.host, shared.states.clone());
         plugin.activate(audio_config, init_context);
+
+        // Set the accumulators and ask for a callback
+        let _ = shared
+            .states
+            .push_main_thread_task(MainThreadTask::SetAccumulators(plugin.accumulators()));
+        host.request_callback();
 
         // Allocate a scratch buffer ONCE
         Ok(Self {
