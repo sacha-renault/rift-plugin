@@ -1,5 +1,5 @@
 use crossbeam_queue::ArrayQueue;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::audio_block::AudioBlock;
 
@@ -23,7 +23,7 @@ impl<const N: usize> ChannelProducer<N> {
 
 pub struct AudioAccumulator<const N: usize> {
     channels: Vec<ChannelProducer<N>>,
-    new_data: AtomicBool,
+    num_writes: AtomicU64,
 }
 
 impl<const N: usize> AudioAccumulator<N> {
@@ -35,7 +35,7 @@ impl<const N: usize> AudioAccumulator<N> {
 
         Self {
             channels,
-            new_data: AtomicBool::new(false),
+            num_writes: AtomicU64::new(0),
         }
     }
 
@@ -50,13 +50,11 @@ impl<const N: usize> AudioAccumulator<N> {
             channel.copy_slice_as_blocks(slice);
         }
 
-        self.new_data.store(true, Ordering::Relaxed);
+        self.num_writes.fetch_add(1, Ordering::Relaxed);
     }
 
-    fn clear(&self) {
-        for drain_idx in 0..self.channels() {
-            while self.channels[drain_idx].buf.pop().is_some() {}
-        }
+    pub fn num_writes(&self) -> u64 {
+        self.num_writes.load(Ordering::Relaxed)
     }
 
     /// This function is meant to be called on the UI thread
@@ -65,11 +63,6 @@ impl<const N: usize> AudioAccumulator<N> {
     where
         F: FnMut(&[f32], usize, usize),
     {
-        // If no new data, we can early exit
-        if !self.new_data.swap(false, Ordering::Relaxed) {
-            return;
-        }
-
         let total_channels = self.channels();
         if total_channels == 0 {
             return;
@@ -90,5 +83,11 @@ impl<const N: usize> AudioAccumulator<N> {
         // guard lock will fall here, therefore
         // the first UI element that comes here drains all
         // data being written by audio thread.
+    }
+
+    fn clear(&self) {
+        for drain_idx in 0..self.channels() {
+            while self.channels[drain_idx].buf.pop().is_some() {}
+        }
     }
 }
