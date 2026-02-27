@@ -50,7 +50,4 @@ pub mod prelude {
     pub use processing::*;
 
     pub use context::*;
-
-    pub const BLOCK_SIZE: usize = 128;
-    pub use super::type_wrapper::Accumulators;
 }

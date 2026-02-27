@@ -2,15 +2,11 @@ use std::sync::Arc;
 
 use clack_extensions::gui::{GuiSize, Window};
 use clack_plugin::plugin::PluginError;
-use hug_accumulator::AudioConsumer;
-use parking_lot::Mutex;
 
-use crate::{context::GuiContext, prelude::Accumulators};
+use crate::context::GuiContext;
 
 pub trait ClapGui {
     fn spawn(&mut self);
-
-    fn set_accumulators(&mut self, accumulators: Accumulators);
 
     /// Set absolute scaling factor for GUI
     ///
@@ -54,5 +50,4 @@ pub trait ClapGui {
 
 pub trait GuiFactory {
     fn build(self: Box<Self>, states: Arc<GuiContext>) -> Box<dyn ClapGui>;
-    fn add_consumer(&mut self, idx: usize, consumer: Arc<Mutex<dyn AudioConsumer>>);
 }

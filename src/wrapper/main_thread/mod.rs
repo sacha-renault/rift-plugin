@@ -47,7 +47,6 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
                     self.notify_latency_changed();
                 }
                 RequestRestart => self.host.request_restart(),
-                SetAccumulators(accumulators) => self.gui.set_accumulators(accumulators),
             }
         }
     }

@@ -2,8 +2,7 @@
 
 use clack_extensions::gui::{GuiSize, Window};
 use clack_plugin::plugin::PluginError;
-use hug_accumulator::AudioConsumer;
-use parking_lot::Mutex;
+
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use std::sync::{
     Arc,
@@ -16,13 +15,11 @@ use vizia::prelude::*;
 use crate::{
     context::GuiContext,
     gui::{ClapGui, GuiFactory, GuiParamEvent, events::GuiParamEventKind},
-    prelude::Accumulators,
 };
 
 pub struct ViziaGuiFactory<F> {
     app_fn: Arc<F>,
     size: (u32, u32),
-    consumers: Vec<(usize, Arc<Mutex<dyn AudioConsumer>>)>,
 }
 
 impl<F> GuiFactory for ViziaGuiFactory<F>
@@ -38,13 +35,7 @@ where
             opened: Arc::new(AtomicBool::new(false)),
             size: self.size,
             context,
-            accumulators: Arc::new(Mutex::new(Arc::new([]))),
-            consumers: self.consumers,
         })
-    }
-
-    fn add_consumer(&mut self, idx: usize, consumer: Arc<Mutex<dyn AudioConsumer>>) {
-        self.consumers.push((idx, consumer));
     }
 }
 
@@ -78,10 +69,6 @@ pub struct ViziaGui<F> {
     size: (u32, u32),
     /// States
     context: Arc<GuiContext>,
-    /// Accumulators
-    accumulators: Arc<Mutex<Accumulators>>,
-    /// Consumers
-    consumers: Vec<(usize, Arc<Mutex<dyn AudioConsumer>>)>,
 }
 
 unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
@@ -98,7 +85,6 @@ where
         ViziaGuiFactory {
             app_fn: Arc::new(app_fn),
             size,
-            consumers: Vec::new(),
         }
     }
 }
@@ -120,7 +106,6 @@ where
     fn spawn(&mut self) {
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
-        let accumulators = self.accumulators.clone();
 
         let application = vizia_baseview::Application::new(move |cx| {
             ViziaData {
@@ -130,30 +115,11 @@ where
             app_fn(cx, context.clone());
         })
         .inner_size(self.size)
-        .on_idle(move |_| {
-            for acc in accumulators.lock().iter() {
-                acc.drain();
-            }
-        });
+        .on_idle(move |_| {});
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Relaxed);
         log::info!("ClapGui::spawn was called")
-    }
-
-    fn set_accumulators(&mut self, accumulators: Accumulators) {
-        let mut acc_guard = self.accumulators.lock();
-        *acc_guard = accumulators;
-
-        for (idx, consumer) in &self.consumers {
-            if let Some(acc) = acc_guard.get(*idx) {
-                acc.add_consumer(consumer.clone());
-            } else {
-                log::error!("Couldn't add consumer at non existing index : {idx}")
-            }
-        }
-
-        log::info!("Set accumulators with {} consumers", self.consumers.len());
     }
 
     fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
