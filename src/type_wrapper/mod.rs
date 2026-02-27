@@ -1,5 +1,10 @@
+use std::sync::Arc;
+
 use clack_extensions::audio_ports::{AudioPortFlags, AudioPortInfo, AudioPortType};
 use clack_plugin::utils::ClapId;
+use hug_accumulator::AudioAccumulator;
+
+use crate::prelude::BLOCK_SIZE;
 
 pub const PAIR_PORT_ID: ClapId = ClapId::new(0);
 
@@ -76,3 +81,5 @@ impl MainAudioPort {
         }
     }
 }
+
+pub type Accumulators = Arc<[AudioAccumulator<{ BLOCK_SIZE }>]>;

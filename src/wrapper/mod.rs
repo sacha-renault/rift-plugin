@@ -1,12 +1,11 @@
 use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
-use hug_accumulator::AudioAccumulator;
 
 use crate::context::{InitContext, ProcessContext};
 use crate::gui::GuiFactory;
 use crate::params::param_trait::Params;
-use crate::prelude::{BLOCK_SIZE, Buffers, MainAudioPort};
+use crate::prelude::{Accumulators, Buffers, MainAudioPort};
 use crate::type_wrapper::AudioPort;
 
 pub mod factory;
@@ -36,7 +35,9 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     fn activate(&mut self, config: PluginAudioConfiguration, context: InitContext);
 
     fn gui(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Box<dyn GuiFactory>;
-    fn accumulators() -> Vec<AudioAccumulator<{ BLOCK_SIZE }>>;
+    fn accumulators(&self) -> Accumulators {
+        Arc::new([])
+    }
 
     // ... Later more methods :)
     const ID: &str;

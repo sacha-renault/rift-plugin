@@ -3,10 +3,12 @@ use std::sync::Arc;
 use clack_extensions::gui::{GuiSize, Window};
 use clack_plugin::plugin::PluginError;
 
-use crate::context::GuiContext;
+use crate::{context::GuiContext, prelude::Accumulators};
 
 pub trait ClapGui {
     fn spawn(&mut self);
+
+    fn set_accumulators(&mut self, accumulators: Accumulators);
 
     /// Set absolute scaling factor for GUI
     ///
