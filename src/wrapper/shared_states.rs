@@ -1,12 +1,8 @@
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
-use hug_accumulator::AudioAccumulator;
 
-use crate::{
-    context::{AudioThreadTask, MainThreadTask},
-    prelude::BLOCK_SIZE,
-};
+use crate::context::{AudioThreadTask, MainThreadTask};
 
 const TASKS_CAPACITY: usize = 2048;
 
@@ -16,26 +12,19 @@ pub(crate) struct PluginSharedState {
     /// Queues that audio / main thread can read
     pub(crate) main_thread_tasks: ArrayQueue<MainThreadTask>,
     pub(crate) audio_thread_tasks: ArrayQueue<AudioThreadTask>,
-
-    /// Audio accumulators
-    pub(crate) audio_accumulators: Vec<AudioAccumulator<{ BLOCK_SIZE }>>,
 }
 
-impl PluginSharedState {
-    pub fn new() -> Self {
+impl Default for PluginSharedState {
+    fn default() -> Self {
         Self {
             latency: AtomicU32::new(0),
             main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
             audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
-            audio_accumulators: vec![],
         }
     }
+}
 
-    pub fn add_accumulator(mut self, acc: AudioAccumulator<BLOCK_SIZE>) -> Self {
-        self.audio_accumulators.push(acc);
-        self
-    }
-
+impl PluginSharedState {
     #[inline]
     pub fn set_latency(&self, latency: u32) {
         self.latency.store(latency, Ordering::Relaxed);

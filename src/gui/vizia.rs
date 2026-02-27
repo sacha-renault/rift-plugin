@@ -14,6 +14,7 @@ use vizia::prelude::*;
 use crate::{
     context::GuiContext,
     gui::{ClapGui, GuiFactory, GuiParamEvent, events::GuiParamEventKind},
+    prelude::Accumulators,
 };
 
 pub struct ViziaGuiFactory<F> {
@@ -34,6 +35,7 @@ where
             opened: Arc::new(AtomicBool::new(false)),
             size: self.size,
             context,
+            accumulators: Arc::new([]),
         })
     }
 }
@@ -68,6 +70,8 @@ pub struct ViziaGui<F> {
     size: (u32, u32),
     /// States
     context: Arc<GuiContext>,
+    /// Accumulators
+    accumulators: Accumulators,
 }
 
 unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
@@ -105,7 +109,7 @@ where
     fn spawn(&mut self) {
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
-        let idle_ctx = context.clone();
+        let accumulators = self.accumulators.clone();
 
         let application = vizia_baseview::Application::new(move |cx| {
             ViziaData {
@@ -116,7 +120,7 @@ where
         })
         .inner_size(self.size)
         .on_idle(move |_| {
-            for acc in idle_ctx.states.audio_accumulators.iter() {
+            for acc in accumulators.iter() {
                 acc.drain();
             }
         });
@@ -124,6 +128,10 @@ where
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Relaxed);
         log::info!("ClapGui::spawn was called")
+    }
+
+    fn set_accumulators(&mut self, accumulators: Accumulators) {
+        self.accumulators = accumulators;
     }
 
     fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {

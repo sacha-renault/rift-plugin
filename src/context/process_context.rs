@@ -28,19 +28,6 @@ impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
     pub fn shared(&self) -> Arc<P::SharedType> {
         Arc::clone(&self.shared)
     }
-
-    pub fn push_in_accumulator(
-        &self,
-        idx: usize,
-        slices: impl Iterator<Item = &'a [f32]>,
-    ) -> Result<(), ()> {
-        if let Some(acc) = self.states.audio_accumulators.get(idx).as_ref() {
-            acc.push_slices(slices);
-            Ok(())
-        } else {
-            Err(())
-        }
-    }
 }
 
 impl<'a, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, P> {
