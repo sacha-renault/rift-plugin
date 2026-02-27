@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 crossbeam-queue = {workspace = true}
+parking_lot = {workspace = true}

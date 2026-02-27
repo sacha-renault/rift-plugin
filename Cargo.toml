@@ -39,3 +39,4 @@ hug-accumulator = { path = "crates/hug-accumulator" }
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 crossbeam-queue = "0.3.12"
+parking_lot = "0.12.5"
