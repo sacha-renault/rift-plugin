@@ -26,6 +26,7 @@ raw-window-handle = "0.5.0"
 log = "0.4"
 paste = "1.0.15"
 crossbeam-queue = {workspace = true}
+parking_lot = { workspace = true }
 
 
 [workspace]
