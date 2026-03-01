@@ -2,7 +2,7 @@ use std::ffi::CStr;
 use std::fmt::Write;
 
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
-use clack_plugin::prelude::*;
+use clack_plugin::{prelude::*, utils::Cookie};
 
 use crate::params::param_ptr::ParamPtr;
 
@@ -15,6 +15,9 @@ pub trait ClapParam {
     fn get_raw(&self) -> f64;
     fn set_raw(&self, value: f64);
     fn default_raw(&self) -> f64;
+
+    fn min_value(&self) -> f64;
+    fn max_value(&self) -> f64;
 
     fn get_normalized(&self) -> f64;
     fn set_normalized(&self, normalized: f64);
@@ -39,6 +42,19 @@ pub trait ClapParam {
 
     fn normalize(&self, value: f64) -> f64;
     fn denormalize(&self, normalized: f64) -> f64;
+
+    fn param_info<'a>(&'a self) -> ParamInfo<'a> {
+        ParamInfo {
+            id: self.id(),
+            flags: self.flags(),
+            cookie: Cookie::empty(),
+            name: self.name().as_bytes(),
+            module: b"",
+            min_value: self.min_value(),
+            max_value: self.max_value(),
+            default_value: self.default_raw(),
+        }
+    }
     fn as_ptr(&self) -> ParamPtr;
 }
 

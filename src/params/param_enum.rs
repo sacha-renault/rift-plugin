@@ -107,6 +107,14 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.denormalize(normalized)
     }
 
+    fn min_value(&self) -> f64 {
+        self.inner.min_value as f64
+    }
+
+    fn max_value(&self) -> f64 {
+        self.inner.max_value as f64
+    }
+
     fn set_raw(&self, value: f64) {
         self.inner.set_raw(value);
     }
