@@ -1,4 +1,4 @@
-use std::sync::atomic::Ordering;
+use std::sync::atomic::{AtomicI32, Ordering};
 
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
@@ -7,17 +7,16 @@ use crate::params::param_ptr::ParamPtr;
 use crate::prelude::ClapParam;
 use crate::utils::id_generator::get_next_param_id;
 
-use super::atomic_f32::AtomicF32;
 use super::param_trait::TypedParam;
 
 #[derive(bon::Builder)]
-pub struct FloatParam {
+pub struct IntParam {
     /// Default value for the param
     #[allow(unused)]
-    pub(crate) default: f32,
+    pub(crate) default: i32,
 
-    #[builder(skip = AtomicF32::new(default))]
-    pub(crate) value: AtomicF32,
+    #[builder(skip = AtomicI32::new(default))]
+    pub(crate) value: AtomicI32,
 
     /// Name of the param
     pub(crate) name: &'static str,
@@ -25,11 +24,11 @@ pub struct FloatParam {
     #[builder(default = "")]
     pub(crate) unit: &'static str,
 
-    #[builder(default = 0.0)]
-    pub(crate) min_value: f64,
+    #[builder(default = 0)]
+    pub(crate) min_value: i32,
 
-    #[builder(default = 1.0)]
-    pub(crate) max_value: f64,
+    #[builder(default = 1)]
+    pub(crate) max_value: i32,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
@@ -38,8 +37,8 @@ pub struct FloatParam {
     pub(crate) id: ClapId,
 }
 
-impl TypedParam for FloatParam {
-    type Value = f32;
+impl TypedParam for IntParam {
+    type Value = i32;
 
     fn value(&self) -> Self::Value {
         self.value.load(Ordering::SeqCst)
@@ -50,7 +49,7 @@ impl TypedParam for FloatParam {
     }
 }
 
-impl ClapParam for FloatParam {
+impl ClapParam for IntParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -64,7 +63,8 @@ impl ClapParam for FloatParam {
     }
 
     fn set_raw(&self, value: f64) {
-        self.value.store(value as f32, Ordering::SeqCst);
+        let int_value = (value as i32).clamp(self.min_value, self.max_value);
+        self.value.store(int_value, Ordering::SeqCst);
     }
 
     fn get_raw(&self) -> f64 {
@@ -89,13 +89,13 @@ impl ClapParam for FloatParam {
     }
 
     fn normalize(&self, value: f64) -> f64 {
-        let range = self.max_value - self.min_value;
-        (value - self.min_value) / range
+        let range = (self.max_value - self.min_value) as f64;
+        (value - self.min_value as f64) / range
     }
 
     fn denormalize(&self, normalized: f64) -> f64 {
-        let range = self.max_value - self.min_value;
-        normalized * range + self.min_value
+        let range = (self.max_value - self.min_value) as f64;
+        normalized * range + self.min_value as f64
     }
 
     fn as_ptr(&self) -> ParamPtr {
