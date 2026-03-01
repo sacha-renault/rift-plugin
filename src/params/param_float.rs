@@ -34,7 +34,7 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
 
-    #[builder(default = get_next_param_id())]
+    #[builder(skip = get_next_param_id())]
     pub(crate) id: ClapId,
 }
 
@@ -86,6 +86,14 @@ impl ClapParam for FloatParam {
 
     fn flags(&self) -> ParamInfoFlags {
         self.flags
+    }
+
+    fn min_value(&self) -> f64 {
+        self.min_value as f64
+    }
+
+    fn max_value(&self) -> f64 {
+        self.max_value as f64
     }
 
     fn normalize(&self, value: f64) -> f64 {

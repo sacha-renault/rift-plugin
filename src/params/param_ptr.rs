@@ -81,6 +81,16 @@ impl ClapParam for ParamPtr {
         unsafe { (*self.ptr).denormalize(normalized) }
     }
 
+    #[inline]
+    fn min_value(&self) -> f64 {
+        unsafe { (*self.ptr).min_value() }
+    }
+
+    #[inline]
+    fn max_value(&self) -> f64 {
+        unsafe { (*self.ptr).max_value() }
+    }
+
     fn as_ptr(&self) -> ParamPtr {
         *self
     }

@@ -24,18 +24,10 @@ pub struct BoolParam {
     #[builder(default = "")]
     unit: &'static str,
 
-    #[allow(unused)]
-    #[builder(skip = 0.0)]
-    min_value: f64,
-
-    #[allow(unused)]
-    #[builder(skip = 1.0)]
-    max_value: f64,
-
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 
-    #[builder(default = get_next_param_id())]
+    #[builder(skip = get_next_param_id())]
     id: ClapId,
 }
 
@@ -90,6 +82,14 @@ impl ClapParam for BoolParam {
 
     fn flags(&self) -> ParamInfoFlags {
         self.flags
+    }
+
+    fn min_value(&self) -> f64 {
+        0.0
+    }
+
+    fn max_value(&self) -> f64 {
+        1.0
     }
 
     #[inline]
