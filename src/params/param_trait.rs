@@ -1,5 +1,4 @@
 use std::ffi::CStr;
-use std::fmt::Write;
 
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
 use clack_plugin::{prelude::*, utils::Cookie};
@@ -23,8 +22,14 @@ pub trait ClapParam {
     fn set_normalized(&self, normalized: f64);
 
     // Display formatting
-    fn value_to_text(&self, value: f64, writer: &mut ParamDisplayWriter) -> std::fmt::Result {
+    fn value_to_text(&self, value: f64, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
         write!(writer, "{}{}", value, self.unit())
+    }
+
+    fn to_text(&self) -> String {
+        let mut s = String::new();
+        self.value_to_text(self.get_raw(), &mut s).ok();
+        s
     }
 
     fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f64> {
