@@ -30,7 +30,7 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     // Derives
-    pub use hug_derive::ParamViewBuilder;
+    pub use hug_derive::{DeriveEnumValues, ParamViewBuilder};
 
     pub use params::param_bool::BoolParam;
     pub use params::param_enum::{EnumParam, EnumValues};
