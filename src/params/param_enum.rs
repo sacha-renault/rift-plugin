@@ -9,7 +9,7 @@ use crate::prelude::{ClapParam, IntParam};
 
 use super::param_trait::TypedParam;
 
-pub trait EnumValues: std::fmt::Debug + Default + Sized + Copy + 'static {
+pub trait EnumValues: std::fmt::Display + Default + Sized + Copy + 'static {
     fn to_index(self) -> u32;
     fn from_index(index: u32) -> Option<Self>;
     fn count() -> u32;
@@ -121,6 +121,6 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
 
     fn value_to_text(&self, value: f64, writer: &mut ParamDisplayWriter) -> std::fmt::Result {
         let variant = E::from_index(value.round() as u32).unwrap_or_default();
-        writer.write_str(&format!("{:?}", variant))
+        writer.write_str(&format!("{}", variant))
     }
 }
