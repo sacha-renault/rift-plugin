@@ -33,7 +33,9 @@ pub mod prelude {
     pub use hug_derive::ParamViewBuilder;
 
     pub use params::param_bool::BoolParam;
+    pub use params::param_enum::{EnumParam, EnumValues};
     pub use params::param_float::FloatParam;
+    pub use params::param_int::IntParam;
     pub use params::param_ptr::ParamPtr;
     pub use params::param_trait::{ClapParam, Params, TypedParam};
 

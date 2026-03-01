@@ -162,7 +162,7 @@ impl<'a> Buffer<'a> {
     }
 
     #[inline]
-    pub(crate) fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
+    pub fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
         Self::RawData {
             raw_data,
             frames_count,
