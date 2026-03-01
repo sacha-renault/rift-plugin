@@ -1,4 +1,4 @@
-use clack_extensions::params::{ParamDisplayWriter, ParamInfoFlags};
+use clack_extensions::params::ParamInfoFlags;
 
 use crate::prelude::ClapParam;
 
@@ -57,7 +57,7 @@ impl ClapParam for ParamPtr {
 
     // Display formatting
     #[inline]
-    fn value_to_text(&self, value: f64, writer: &mut ParamDisplayWriter) -> std::fmt::Result {
+    fn value_to_text(&self, value: f64, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
         unsafe { (*self.ptr).value_to_text(value, writer) }
     }
 
