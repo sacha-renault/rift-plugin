@@ -1,9 +1,48 @@
+#[derive(Clone)]
+pub struct BlockTime {
+    /// This define the timing (seconds and beats) withing the song
+    /// of the first beat of the BUFFER this block belongs to
+    /// We might see many blocks with same seconds or beats if buffer_size > N
+    seconds: f64,
+    beats: f64,
+}
+
+impl BlockTime {
+    pub fn seconds(&self) -> Option<f64> {
+        if self.seconds.is_nan() {
+            None
+        } else {
+            Some(self.seconds)
+        }
+    }
+
+    pub fn beats(&self) -> Option<f64> {
+        if self.beats.is_nan() {
+            None
+        } else {
+            Some(self.beats)
+        }
+    }
+
+    #[inline]
+    pub fn beat_phase(&self) -> Option<f64> {
+        self.beats().map(|b| b.fract())
+    }
+
+    #[inline]
+    pub fn beat_num(&self) -> Option<i64> {
+        self.beats().map(|b| b.floor() as i64)
+    }
+}
+
 pub struct TimedAudioBlock<const N: usize> {
     raw: [f32; N],
     slice_length: usize,
-    seconds: f64,
-    beats: f64,
-    // No need to carry tempo
+
+    /// This define the timing (seconds and beats) withing the song
+    /// of the first beat of the BUFFER this block belongs to
+    /// We might see many blocks with same seconds or beats if buffer_size > N
+    time: BlockTime,
 }
 
 impl<const N: usize> TimedAudioBlock<N> {
@@ -16,8 +55,7 @@ impl<const N: usize> TimedAudioBlock<N> {
         TimedAudioBlock {
             raw,
             slice_length,
-            seconds,
-            beats,
+            time: BlockTime { seconds, beats },
         }
     }
 
@@ -33,19 +71,8 @@ impl<const N: usize> TimedAudioBlock<N> {
         self.slice_length
     }
 
-    pub fn seconds(&self) -> Option<f64> {
-        if self.seconds.is_nan() {
-            None
-        } else {
-            Some(self.seconds)
-        }
-    }
-
-    pub fn beats(&self) -> Option<f64> {
-        if self.beats.is_nan() {
-            None
-        } else {
-            Some(self.beats)
-        }
+    #[inline]
+    pub fn time(&self) -> BlockTime {
+        self.time.clone()
     }
 }

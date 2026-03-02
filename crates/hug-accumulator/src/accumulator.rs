@@ -1,7 +1,12 @@
 use crossbeam_queue::ArrayQueue;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::audio_block::TimedAudioBlock;
+use crate::{BlockTime, audio_block::TimedAudioBlock};
+
+pub struct ChannelsInfo {
+    pub current: usize,
+    pub total_channels: usize,
+}
 
 struct ChannelProducer<const N: usize> {
     buf: ArrayQueue<TimedAudioBlock<N>>,
@@ -76,7 +81,7 @@ impl<const N: usize> AudioAccumulator<N> {
     /// locks are fine here
     pub fn drain<F>(&self, mut consume: F)
     where
-        F: FnMut(&[f32], usize, usize),
+        F: FnMut(&[f32], ChannelsInfo, BlockTime),
     {
         let total_channels = self.channels();
         if total_channels == 0 {
@@ -91,7 +96,14 @@ impl<const N: usize> AudioAccumulator<N> {
                     return;
                 };
 
-                consume(block.as_slice(), idx, total_channels);
+                consume(
+                    block.as_slice(),
+                    ChannelsInfo {
+                        current: idx,
+                        total_channels,
+                    },
+                    block.time(),
+                );
             }
         }
 
