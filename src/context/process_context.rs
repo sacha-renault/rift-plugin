@@ -1,7 +1,7 @@
-use core::f64;
 use std::sync::Arc;
 
 use clack_plugin::{host::HostAudioProcessorHandle, process::Process};
+use hug_shared::BlockInfo;
 
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 
@@ -10,6 +10,9 @@ pub struct ProcessContext<'a, P: ClapPlugin> {
     pub(crate) states: Arc<PluginSharedState>,
     pub(crate) shared: Arc<P::SharedType>,
     pub(crate) process: Process<'a>,
+    pub(crate) samplerate: f64,
+
+    /// THIS must be init to 0 or the entire thing is broken
     pub(crate) num_events: usize,
 }
 
@@ -18,18 +21,18 @@ impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
         Arc::clone(&self.shared)
     }
 
-    pub fn seconds(&self) -> f64 {
-        self.process
-            .transport
-            .map(|t| t.song_pos_seconds.to_float())
-            .unwrap_or(f64::NAN)
-    }
-
-    pub fn beats(&self) -> f64 {
-        self.process
-            .transport
-            .map(|t| t.song_pos_beats.to_float())
-            .unwrap_or(f64::NAN)
+    pub fn block_info(&self) -> Option<BlockInfo> {
+        if let Some(transport) = self.process.transport {
+            let info = BlockInfo {
+                seconds: transport.song_pos_seconds.to_float(),
+                beats: transport.song_pos_beats.to_float(),
+                samplerate: self.samplerate,
+                seconds_per_beat: transport.tempo,
+            };
+            Some(info)
+        } else {
+            None
+        }
     }
 }
 

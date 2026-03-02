@@ -679,6 +679,7 @@ dependencies = [
  "clack-plugin",
  "crossbeam-queue",
  "hug-derive",
+ "hug-shared",
  "log",
  "parking_lot",
  "paste",
@@ -1467,7 +1468,7 @@ name = "hug-accumulator"
 version = "0.1.0"
 dependencies = [
  "crossbeam-queue",
- "parking_lot",
+ "hug-shared",
 ]
 
 [[package]]
@@ -1487,6 +1488,10 @@ dependencies = [
  "regex",
  "vizia",
 ]
+
+[[package]]
+name = "hug-shared"
+version = "0.1.0"
 
 [[package]]
 name = "iana-time-zone"

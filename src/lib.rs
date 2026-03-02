@@ -29,8 +29,9 @@ pub mod prelude {
     pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
     pub use clack_plugin::prelude::PluginError;
 
-    // Derives
+    // reexport inner
     pub use hug_derive::{DeriveEnumValues, DeriveParams, ParamViewBuilder};
+    pub use hug_shared::*;
 
     pub use params::param_bool::BoolParam;
     pub use params::param_enum::{EnumParam, EnumValues};
