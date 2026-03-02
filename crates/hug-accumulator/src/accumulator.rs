@@ -1,10 +1,10 @@
 use crossbeam_queue::ArrayQueue;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::audio_block::AudioBlock;
+use crate::audio_block::TimedAudioBlock;
 
 struct ChannelProducer<const N: usize> {
-    buf: ArrayQueue<AudioBlock<N>>,
+    buf: ArrayQueue<TimedAudioBlock<N>>,
 }
 
 impl<const N: usize> ChannelProducer<N> {
@@ -14,9 +14,10 @@ impl<const N: usize> ChannelProducer<N> {
         }
     }
 
-    fn copy_slice_as_blocks(&self, slice: &[f32]) {
+    fn copy_slice_into_blocks(&self, slice: &[f32], seconds: f64, beats: f64) {
         for chunk in slice.chunks(N) {
-            let _ = self.buf.push(AudioBlock::new(chunk));
+            let audio_data = TimedAudioBlock::new(chunk, seconds, beats);
+            let _ = self.buf.push(audio_data);
         }
     }
 }
@@ -24,6 +25,10 @@ impl<const N: usize> ChannelProducer<N> {
 pub struct AudioAccumulator<const N: usize> {
     channels: Vec<ChannelProducer<N>>,
     num_writes: AtomicU64,
+    // TODO
+    // We might want here to add a scratch to wait when buffer is smaller than N
+    // (i mean much smaller, in case of buffer.len() == 8 and N = 512, we want to wait to fill a scratch before
+    // sending it ...)
 }
 
 impl<const N: usize> AudioAccumulator<N> {
@@ -43,11 +48,21 @@ impl<const N: usize> AudioAccumulator<N> {
         self.channels.len()
     }
 
+    #[inline]
+    pub fn push_slices_no_transport<'a>(&self, slices: impl Iterator<Item = &'a [f32]>) {
+        self.push_slices(slices, f64::NAN, f64::NAN);
+    }
+
     /// This function is totally lock free, audio thread
     /// can push slices here with no lock, mutex guard or alloc
-    pub fn push_slices<'a>(&self, slices: impl Iterator<Item = &'a [f32]>) {
+    pub fn push_slices<'a>(
+        &self,
+        slices: impl Iterator<Item = &'a [f32]>,
+        seconds: f64,
+        beats: f64,
+    ) {
         for (channel, slice) in self.channels.iter().zip(slices) {
-            channel.copy_slice_as_blocks(slice);
+            channel.copy_slice_into_blocks(slice, seconds, beats);
         }
 
         self.num_writes.fetch_add(1, Ordering::Relaxed);
