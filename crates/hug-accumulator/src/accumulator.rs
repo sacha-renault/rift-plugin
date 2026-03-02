@@ -1,12 +1,8 @@
 use crossbeam_queue::ArrayQueue;
+use hug_shared::{BlockInfo, BlockTime, ChannelsInfo};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use crate::{BlockTime, audio_block::TimedAudioBlock};
-
-pub struct ChannelsInfo {
-    pub current: usize,
-    pub total_channels: usize,
-}
+use crate::audio_block::TimedAudioBlock;
 
 struct ChannelProducer<const N: usize> {
     buf: ArrayQueue<TimedAudioBlock<N>>,
@@ -19,9 +15,19 @@ impl<const N: usize> ChannelProducer<N> {
         }
     }
 
-    fn copy_slice_into_blocks(&self, slice: &[f32], seconds: f64, beats: f64) {
+    fn copy_slice_into_blocks_no_info(&self, slice: &[f32]) {
         for chunk in slice.chunks(N) {
-            let audio_data = TimedAudioBlock::new(chunk, seconds, beats);
+            let time = BlockTime::none();
+            let audio_data = TimedAudioBlock::new(chunk, time);
+            let _ = self.buf.push(audio_data);
+        }
+    }
+
+    fn copy_slice_into_blocks(&self, slice: &[f32], mut block_info: BlockInfo) {
+        for chunk in slice.chunks(N) {
+            let time = BlockTime::new(block_info.seconds, block_info.beats);
+            let audio_data = TimedAudioBlock::new(chunk, time);
+            block_info.advance_by_samples(audio_data.len());
             let _ = self.buf.push(audio_data);
         }
     }
@@ -53,21 +59,21 @@ impl<const N: usize> AudioAccumulator<N> {
         self.channels.len()
     }
 
-    #[inline]
-    pub fn push_slices_no_transport<'a>(&self, slices: impl Iterator<Item = &'a [f32]>) {
-        self.push_slices(slices, f64::NAN, f64::NAN);
-    }
-
     /// This function is totally lock free, audio thread
     /// can push slices here with no lock, mutex guard or alloc
     pub fn push_slices<'a>(
         &self,
         slices: impl Iterator<Item = &'a [f32]>,
-        seconds: f64,
-        beats: f64,
+        block_info_opt: Option<BlockInfo>,
     ) {
-        for (channel, slice) in self.channels.iter().zip(slices) {
-            channel.copy_slice_into_blocks(slice, seconds, beats);
+        if let Some(block_info) = block_info_opt {
+            for (channel, slice) in self.channels.iter().zip(slices) {
+                channel.copy_slice_into_blocks(slice, block_info.clone());
+            }
+        } else {
+            for (channel, slice) in self.channels.iter().zip(slices) {
+                channel.copy_slice_into_blocks_no_info(slice);
+            }
         }
 
         self.num_writes.fetch_add(1, Ordering::Relaxed);

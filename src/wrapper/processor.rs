@@ -15,6 +15,7 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,
     plugin: P,
     host: HostAudioProcessorHandle<'a>,
+    samplerate: f64,
 }
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
@@ -84,6 +85,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             shared: shared.clone(),
             plugin,
             host,
+            samplerate: audio_config.sample_rate,
         })
     }
 
@@ -100,6 +102,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             states: self.shared.states.clone(),
             shared: self.shared.other.clone(),
             process,
+            samplerate: self.samplerate,
             num_events: 0,
         };
 
