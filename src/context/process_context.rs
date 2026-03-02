@@ -1,32 +1,35 @@
+use core::f64;
 use std::sync::Arc;
 
-use clack_plugin::host::HostAudioProcessorHandle;
+use clack_plugin::{host::HostAudioProcessorHandle, process::Process};
 
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 
 pub struct ProcessContext<'a, P: ClapPlugin> {
-    host: &'a HostAudioProcessorHandle<'a>,
-    states: Arc<PluginSharedState>,
-    shared: Arc<P::SharedType>,
-    num_events: usize,
+    pub(crate) host: &'a HostAudioProcessorHandle<'a>,
+    pub(crate) states: Arc<PluginSharedState>,
+    pub(crate) shared: Arc<P::SharedType>,
+    pub(crate) process: Process<'a>,
+    pub(crate) num_events: usize,
 }
 
 impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
-    pub(crate) fn new(
-        host: &'a HostAudioProcessorHandle<'a>,
-        host_messages: Arc<PluginSharedState>,
-        shared: Arc<P::SharedType>,
-    ) -> Self {
-        Self {
-            host,
-            states: host_messages,
-            shared,
-            num_events: 0,
-        }
-    }
-
     pub fn shared(&self) -> Arc<P::SharedType> {
         Arc::clone(&self.shared)
+    }
+
+    pub fn seconds(&self) -> f64 {
+        self.process
+            .transport
+            .map(|t| t.song_pos_seconds.to_float())
+            .unwrap_or(f64::NAN)
+    }
+
+    pub fn beats(&self) -> f64 {
+        self.process
+            .transport
+            .map(|t| t.song_pos_beats.to_float())
+            .unwrap_or(f64::NAN)
     }
 }
 

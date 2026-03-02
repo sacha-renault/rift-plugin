@@ -89,17 +89,20 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
 
     fn process(
         &mut self,
-        _process: Process,
+        process: Process,
         audio: Audio,
         events: Events,
     ) -> Result<ProcessStatus, PluginError> {
         self.flush(events.input, events.output);
         let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
-        let context = ProcessContext::new(
-            &self.host,
-            self.shared.states.clone(),
-            self.shared.other.clone(),
-        );
+        let context = ProcessContext {
+            host: &self.host,
+            states: self.shared.states.clone(),
+            shared: self.shared.other.clone(),
+            process,
+            num_events: 0,
+        };
+
         let result = self.plugin.process(buffers, context);
         result
     }
