@@ -8,11 +8,10 @@ use syn::{DeriveInput, parse_macro_input};
 #[darling(attributes(param))]
 struct ParamField {
     ident: Option<syn::Ident>,
-    ty: syn::Type,
-
-    /// If not present, it defaults to None.
-    #[darling(default)]
-    default: Option<syn::Expr>,
+    _ty: syn::Type,
+    // /// If not present, it defaults to None.
+    // #[darling(default)]
+    // default: Option<syn::Expr>,
 }
 
 #[derive(FromDeriveInput)]
