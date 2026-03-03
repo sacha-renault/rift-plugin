@@ -8,7 +8,7 @@ pub mod param_binding;
 mod gui_prelude {
     pub use super::param_binding::*;
     pub use crate::prelude::ClapParam;
-    pub use hug_derive::ParamViewBuilder;
+    pub use hug_derive::{HandleExtension, ParamViewBuilder};
     pub use vizia::prelude::*;
 
     pub use super::super::utils::*;

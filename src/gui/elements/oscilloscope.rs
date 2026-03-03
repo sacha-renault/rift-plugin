@@ -3,15 +3,15 @@ use vizia::vg;
 
 use super::gui_prelude::*;
 
-pub trait OscilloscopeExt {
-    fn data(self, data: RcCell<WindowedBuffer>) -> Self;
-    fn min(self, value: impl Res<f32>) -> Self;
-    fn max(self, value: impl Res<f32>) -> Self;
-}
-
+#[derive(HandleExtension)]
 pub struct Oscilloscope {
+    #[extension(ext)]
     buffer: Option<RcCell<WindowedBuffer>>,
+
+    #[extension(ext)]
     min: f32,
+
+    #[extension(ext)]
     max: f32,
 }
 
@@ -95,22 +95,5 @@ impl Oscilloscope {
         canvas.clip_path(&stroke_path, vg::ClipOp::Intersect, false);
         canvas.draw_rect(rect, &fill_paint);
         canvas.restore();
-    }
-}
-
-impl OscilloscopeExt for Handle<'_, Oscilloscope> {
-    /// This view assume that data are drain and feed into data in an other component
-    fn data(self, data: RcCell<WindowedBuffer>) -> Self {
-        self.modify(|osc| osc.buffer = Some(data))
-    }
-
-    fn max(mut self, value: impl Res<f32>) -> Self {
-        let value = value.get(self.context());
-        self.modify(|osc| osc.max = value)
-    }
-
-    fn min(mut self, value: impl Res<f32>) -> Self {
-        let value = value.get(self.context());
-        self.modify(|osc| osc.min = value)
     }
 }

@@ -1,5 +1,6 @@
 use proc_macro::TokenStream;
 
+mod derive_extensions;
 mod derive_param;
 mod enum_param;
 mod param_builder;
@@ -17,4 +18,9 @@ pub fn derive_enum_values(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(DeriveParams, attributes(params))]
 pub fn derive_params(input: TokenStream) -> TokenStream {
     derive_param::derive_params(input)
+}
+
+#[proc_macro_derive(HandleExtension, attributes(extension))]
+pub fn derive_extensions(input: TokenStream) -> TokenStream {
+    derive_extensions::derive_extensions(input)
 }
