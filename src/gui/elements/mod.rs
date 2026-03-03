@@ -1,3 +1,4 @@
+mod consumer_dispatch;
 mod oscilloscope;
 mod param_button;
 mod param_knob;
@@ -13,6 +14,7 @@ mod gui_prelude {
     pub use super::super::utils::*;
 }
 
+pub use consumer_dispatch::{AudioConsumerDispatch, AudioConsumerDispatchExt};
 pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
 pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;

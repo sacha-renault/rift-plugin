@@ -1,7 +1,7 @@
 use core::f64;
 use std::{cell::RefCell, rc::Rc};
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct ChannelsInfo {
     pub current: usize,
     pub total_channels: usize,
@@ -26,7 +26,7 @@ impl BlockInfo {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct BlockTime {
     /// This define the timing (seconds and beats) withing the song
     /// of the first beat of the BUFFER this block belongs to
