@@ -13,6 +13,6 @@ mod gui_prelude {
     pub use super::super::utils::*;
 }
 
-pub use oscilloscope::Oscilloscope;
+pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
 pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;

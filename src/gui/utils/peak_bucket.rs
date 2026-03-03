@@ -6,6 +6,7 @@ pub struct PeakBucket {
 }
 
 impl PeakBucket {
+    #[allow(dead_code)]
     pub fn new(x: f32) -> Self {
         Self {
             min: x,
@@ -22,6 +23,7 @@ impl PeakBucket {
         }
     }
 
+    #[inline]
     pub fn add_sample(&mut self, x: f32) {
         if self.count == 0 {
             (self.min, self.max) = (x, x);
@@ -44,11 +46,6 @@ impl PeakBucket {
         } else {
             self.max
         }
-    }
-
-    #[inline]
-    pub fn reset_count(&mut self) {
-        self.count = 0;
     }
 
     #[inline]

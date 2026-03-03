@@ -1,30 +1,18 @@
-use std::{cell::RefCell, sync::Arc};
-
-use hug_accumulator::{AudioAccumulator, AudioConsumer};
+use hug_shared::RcCell;
 use vizia::vg;
 
 use super::gui_prelude::*;
 
-pub struct Oscilloscope<LACC>
-where
-    LACC: Lens<Target = Arc<AudioAccumulator<128>>>,
-{
-    accumulator: LACC,
-    buffer: RefCell<WindowedBuffer>,
+pub trait OscilloscopeExt {
+    fn data(self, data: RcCell<WindowedBuffer>) -> Self;
 }
 
-impl<LACC> View for Oscilloscope<LACC>
-where
-    LACC: Lens<Target = Arc<AudioAccumulator<128>>>,
-{
+pub struct Oscilloscope {
+    buffer: Option<RcCell<WindowedBuffer>>,
+}
+
+impl View for Oscilloscope {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        // Push new samples into buckets
-        let acc = self.accumulator.get(cx);
-
-        let mut buckets = self.buffer.borrow_mut();
-        acc.drain(|block, infos, time| buckets.consume(block, infos, time));
-        drop(buckets);
-
         cx.draw_background(canvas);
         clip_bounds(cx, canvas);
         self.draw_stroke(cx, canvas);
@@ -32,56 +20,19 @@ where
     }
 }
 
-impl<LACC> Oscilloscope<LACC>
-where
-    LACC: Lens<Target = Arc<AudioAccumulator<128>>>,
-{
-    pub fn new<LBPM>(
-        cx: &mut Context,
-        accumulator: LACC,
-        samplerate: impl Res<f64>,
-        n_beats: impl Res<f64>,
-        bpm: LBPM,
-    ) -> Handle<'_, Self>
+impl Oscilloscope {
+    pub fn new<LSEC>(cx: &mut Context) -> Handle<'_, Self>
     where
-        LBPM: Lens<Target = f64>,
+        LSEC: Lens<Target = f64>,
     {
-        let mut buffer = WindowedBuffer::new(samplerate.get(cx), 900, n_beats.get(cx), bpm.get(cx));
-        buffer.set_beats(1.0);
-
-        let mut handle = Self {
-            accumulator,
-            buffer: RefCell::new(buffer),
-        }
-        .build(cx, |_| {});
-        let entity = handle.entity();
-
-        // num writes will tick everytime
-        // the audio thread writes data
-        Binding::new(
-            handle.context(),
-            accumulator.map(|acc| acc.num_writes()),
-            move |cx, _| {
-                cx.needs_redraw(entity);
-            },
-        );
-
-        // num writes will tick everytime
-        // the audio thread writes data
-        Binding::new(handle.context(), bpm, move |cx, bpm| {
-            let new_bpm = bpm.get(cx);
-
-            if let Some(view_state) = cx.data::<Self>() {
-                view_state.buffer.borrow_mut().set_tempo(new_bpm);
-                cx.needs_redraw(entity);
-            }
-        });
-
-        handle
+        Self { buffer: None }.build(cx, |_| {})
     }
 
     fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let buckets = self.buffer.borrow();
+        let Some(buckets) = self.buffer.as_ref().map(|b| b.borrow()) else {
+            return;
+        };
+
         let path = make_open_strokepath(
             Denormalizer::from_cx(cx),
             buckets.iter_peaks(),
@@ -98,7 +49,10 @@ where
     }
 
     fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let buckets = self.buffer.borrow();
+        let Some(buckets) = self.buffer.as_ref().map(|b| b.borrow()) else {
+            return;
+        };
+
         let stroke_path = make_closed_strokepath(
             Denormalizer::from_cx(cx),
             buckets.iter_peaks(),
@@ -125,5 +79,12 @@ where
         canvas.clip_path(&stroke_path, vg::ClipOp::Intersect, false);
         canvas.draw_rect(rect, &fill_paint);
         canvas.restore();
+    }
+}
+
+impl OscilloscopeExt for Handle<'_, Oscilloscope> {
+    /// This view assume that data are drain and feed into data in an other component
+    fn data(self, data: RcCell<WindowedBuffer>) -> Self {
+        self.modify(|osc| osc.buffer = Some(data))
     }
 }
