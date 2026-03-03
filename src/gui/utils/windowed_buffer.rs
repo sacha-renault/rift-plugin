@@ -3,7 +3,7 @@ use hug_shared::{BlockTime, ChannelsInfo};
 
 pub use super::PeakBucket;
 
-pub struct WindowedBuffer {
+pub struct WindowBufferAvg {
     buckets: Vec<PeakBucket>,
 
     samplerate: f64,
@@ -16,7 +16,7 @@ pub struct WindowedBuffer {
     intermediate: Vec<f32>,
 }
 
-impl WindowedBuffer {
+impl WindowBufferAvg {
     pub fn new(samplerate: f64, n_buckets: usize, seconds: f64) -> Self {
         // number of total sample that would be displayed
         let buckets = vec![PeakBucket::empty(); n_buckets];
@@ -62,7 +62,7 @@ impl WindowedBuffer {
     }
 }
 
-impl AudioConsumer for WindowedBuffer {
+impl AudioConsumer for WindowBufferAvg {
     fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
         self.gen_id = self.gen_id.wrapping_add(1);
         let total_channel = channels.total_channels as f32;
