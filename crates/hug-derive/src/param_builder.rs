@@ -136,7 +136,7 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
     .into()
 }
 
-fn inner_type_of_option(ty: &syn::Type) -> Option<&syn::Type> {
+pub fn inner_type_of_option(ty: &syn::Type) -> Option<&syn::Type> {
     // Must be a path type (not a reference, slice, etc.)
     let syn::Type::Path(type_path) = ty else {
         return None;

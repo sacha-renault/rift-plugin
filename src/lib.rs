@@ -30,7 +30,7 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     // reexport inner
-    pub use hug_derive::{DeriveEnumValues, DeriveParams, ParamViewBuilder};
+    pub use hug_derive::{DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder};
     pub use hug_shared::*;
 
     pub use params::param_bool::BoolParam;
