@@ -9,15 +9,14 @@ pub struct WindowedBuffer {
     samplerate: f64,
     sample_per_bucket: usize,
     n_buckets: usize,
-    tempo: f64,
-    beats: f64,
+    seconds: f64,
 
     write_idx: usize,
     gen_id: usize,
 }
 
 impl WindowedBuffer {
-    pub fn new(samplerate: f64, n_buckets: usize, beats: f64, tempo: f64) -> Self {
+    pub fn new(samplerate: f64, n_buckets: usize, seconds: f64) -> Self {
         // number of total sample that would be displayed
         let buckets = vec![PeakBucket::empty(); n_buckets];
 
@@ -28,24 +27,16 @@ impl WindowedBuffer {
             sample_per_bucket: 0,
             write_idx: 0,
             gen_id: 0,
-            tempo,
-            beats,
+            seconds,
         };
-        buffer.set_tempo(tempo);
+        buffer.set_seconds(seconds);
         buffer
     }
 
-    pub fn set_tempo(&mut self, tempo: f64) {
-        self.tempo = tempo;
-        self.set_beats(self.beats);
-    }
-
-    pub fn set_beats(&mut self, beats: f64) {
-        let seconds_per_beat = 60.0 / self.tempo;
-        let total_seconds = seconds_per_beat * self.beats;
-        let sample_count = self.samplerate * total_seconds;
+    pub fn set_seconds(&mut self, seconds: f64) {
+        let sample_count = self.samplerate * seconds;
         self.sample_per_bucket = (sample_count / self.n_buckets as f64).ceil() as usize;
-        self.beats = beats;
+        self.seconds = seconds;
     }
 
     pub fn push_point(&mut self, y: f32) {
@@ -72,15 +63,20 @@ impl WindowedBuffer {
 impl AudioConsumer for WindowedBuffer {
     fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
         self.gen_id = self.gen_id.wrapping_add(1);
-        let ChannelsInfo { current, .. } = channels;
+        let ChannelsInfo {
+            current,
+            total_channels,
+        } = channels;
 
         // This is a POC, we rn just process channel 0
-        if current != 0 {
+        if current == 0 {
             return;
         }
 
-        for &v in block.iter() {
-            self.push_point(v);
+        if current == total_channels - 1 {
+            for &v in block.iter() {
+                self.push_point(v);
+            }
         }
     }
 }

@@ -1,6 +1,12 @@
 use crossbeam_queue::ArrayQueue;
 use hug_shared::{BlockInfo, BlockTime, ChannelsInfo};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::{
+    ops::Deref,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
+};
 
 use crate::audio_block::TimedAudioBlock;
 
@@ -33,7 +39,20 @@ impl<const N: usize> ChannelProducer<N> {
     }
 }
 
+#[derive(Clone)]
 pub struct AudioAccumulator<const N: usize> {
+    inner: Arc<InnerAudioAccumulator<N>>,
+}
+
+impl<const N: usize> Deref for AudioAccumulator<N> {
+    type Target = InnerAudioAccumulator<N>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+pub struct InnerAudioAccumulator<const N: usize> {
     channels: Vec<ChannelProducer<N>>,
     num_writes: AtomicU64,
     // TODO
@@ -42,7 +61,7 @@ pub struct AudioAccumulator<const N: usize> {
     // sending it ...)
 }
 
-impl<const N: usize> AudioAccumulator<N> {
+impl<const N: usize> InnerAudioAccumulator<N> {
     pub fn new(count: usize, block_count: usize) -> Self {
         let mut channels = Vec::with_capacity(count);
         for _ in 0..count {

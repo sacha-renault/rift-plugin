@@ -1,4 +1,5 @@
 use core::f64;
+use std::{cell::RefCell, rc::Rc};
 
 #[derive(Clone)]
 pub struct ChannelsInfo {
@@ -82,3 +83,5 @@ impl BlockTime {
         self.beats().map(|b| b.floor() as i64)
     }
 }
+
+pub type RcCell<T> = Rc<RefCell<T>>;
