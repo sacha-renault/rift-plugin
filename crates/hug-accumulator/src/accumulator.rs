@@ -44,6 +44,14 @@ pub struct AudioAccumulator<const N: usize> {
     inner: Arc<InnerAudioAccumulator<N>>,
 }
 
+impl<const N: usize> AudioAccumulator<N> {
+    pub fn new(count: usize, block_count: usize) -> Self {
+        Self {
+            inner: Arc::new(InnerAudioAccumulator::new(count, block_count)),
+        }
+    }
+}
+
 impl<const N: usize> Deref for AudioAccumulator<N> {
     type Target = InnerAudioAccumulator<N>;
 

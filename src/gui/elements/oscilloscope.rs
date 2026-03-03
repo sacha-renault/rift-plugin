@@ -25,13 +25,23 @@ impl View for Oscilloscope {
 }
 
 impl Oscilloscope {
-    pub fn new(cx: &mut Context) -> Handle<'_, Self> {
-        Self {
+    pub fn new<L>(cx: &mut Context, redraw_lens: L) -> Handle<'_, Self>
+    where
+        L: Lens<Target = u64>,
+    {
+        let mut handle = Self {
             buffer: None,
             min: -1.0,
             max: 1.0,
         }
-        .build(cx, |_| {})
+        .build(cx, |_| {});
+        let entity = handle.entity();
+
+        Binding::new(handle.context(), redraw_lens, move |cx, _| {
+            cx.needs_redraw(entity);
+        });
+
+        handle
     }
 
     fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
@@ -41,7 +51,9 @@ impl Oscilloscope {
                 log::error!("{err}");
                 return;
             }
-            None => return, // This is just no set
+            None => {
+                return;
+            }
         };
 
         let path = make_open_strokepath(
