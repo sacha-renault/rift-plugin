@@ -63,20 +63,15 @@ impl WindowedBuffer {
 impl AudioConsumer for WindowedBuffer {
     fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
         self.gen_id = self.gen_id.wrapping_add(1);
-        let ChannelsInfo {
-            current,
-            total_channels,
-        } = channels;
+        let ChannelsInfo { current, .. } = channels;
 
         // This is a POC, we rn just process channel 0
-        if current == 0 {
+        if current != 0 {
             return;
         }
 
-        if current == total_channels - 1 {
-            for &v in block.iter() {
-                self.push_point(v);
-            }
+        for &v in block.iter() {
+            self.push_point(v);
         }
     }
 }
