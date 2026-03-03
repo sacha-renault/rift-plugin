@@ -7,6 +7,13 @@ pub struct ChannelsInfo {
     pub total_channels: usize,
 }
 
+impl ChannelsInfo {
+    pub fn is_last_channel(&self) -> bool {
+        // idx starts at 0
+        self.current + 1 == self.total_channels
+    }
+}
+
 #[derive(Clone)]
 pub struct BlockInfo {
     pub seconds: f64,
