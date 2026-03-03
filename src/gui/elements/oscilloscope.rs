@@ -21,10 +21,7 @@ impl View for Oscilloscope {
 }
 
 impl Oscilloscope {
-    pub fn new<LSEC>(cx: &mut Context) -> Handle<'_, Self>
-    where
-        LSEC: Lens<Target = f64>,
-    {
+    pub fn new(cx: &mut Context) -> Handle<'_, Self> {
         Self { buffer: None }.build(cx, |_| {})
     }
 
