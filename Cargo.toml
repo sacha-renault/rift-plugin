@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 hug-derive = { workspace = true }
 hug-shared = { workspace = true }
+hug-accumulator = { workspace = true }
 vizia = { workspace = true }
 vizia_baseview = { workspace = true }
 
