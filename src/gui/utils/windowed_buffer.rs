@@ -13,6 +13,7 @@ pub struct WindowedBuffer {
 
     write_idx: usize,
     gen_id: usize,
+    intermediate: Vec<f32>,
 }
 
 impl WindowedBuffer {
@@ -28,6 +29,7 @@ impl WindowedBuffer {
             write_idx: 0,
             gen_id: 0,
             seconds,
+            intermediate: Vec::new(),
         };
         buffer.set_seconds(seconds);
         buffer
@@ -63,15 +65,23 @@ impl WindowedBuffer {
 impl AudioConsumer for WindowedBuffer {
     fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
         self.gen_id = self.gen_id.wrapping_add(1);
-        let ChannelsInfo { current, .. } = channels;
+        let total_channel = channels.total_channels as f32;
 
-        // This is a POC, we rn just process channel 0
-        if current != 0 {
-            return;
+        // At channel 0, we ensure our intermediate buffer is large enough
+        if channels.current == 0 {
+            self.intermediate.clear();
+            self.intermediate.resize(block.len(), 0.);
         }
 
-        for &v in block.iter() {
-            self.push_point(v);
+        for (s, &v) in self.intermediate.iter_mut().zip(block.iter()) {
+            *s += v / total_channel;
+        }
+
+        if channels.is_last_channel() {
+            for i in 0..self.intermediate.len() {
+                let v = self.intermediate[i];
+                self.push_point(v);
+            }
         }
     }
 }
