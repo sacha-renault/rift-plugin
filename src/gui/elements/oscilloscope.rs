@@ -5,10 +5,14 @@ use super::gui_prelude::*;
 
 pub trait OscilloscopeExt {
     fn data(self, data: RcCell<WindowedBuffer>) -> Self;
+    fn min(self, value: impl Res<f32>) -> Self;
+    fn max(self, value: impl Res<f32>) -> Self;
 }
 
 pub struct Oscilloscope {
     buffer: Option<RcCell<WindowedBuffer>>,
+    min: f32,
+    max: f32,
 }
 
 impl View for Oscilloscope {
@@ -22,7 +26,12 @@ impl View for Oscilloscope {
 
 impl Oscilloscope {
     pub fn new(cx: &mut Context) -> Handle<'_, Self> {
-        Self { buffer: None }.build(cx, |_| {})
+        Self {
+            buffer: None,
+            min: -1.0,
+            max: 1.0,
+        }
+        .build(cx, |_| {})
     }
 
     fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
@@ -93,5 +102,15 @@ impl OscilloscopeExt for Handle<'_, Oscilloscope> {
     /// This view assume that data are drain and feed into data in an other component
     fn data(self, data: RcCell<WindowedBuffer>) -> Self {
         self.modify(|osc| osc.buffer = Some(data))
+    }
+
+    fn max(mut self, value: impl Res<f32>) -> Self {
+        let value = value.get(self.context());
+        self.modify(|osc| osc.max = value)
+    }
+
+    fn min(mut self, value: impl Res<f32>) -> Self {
+        let value = value.get(self.context());
+        self.modify(|osc| osc.min = value)
     }
 }
