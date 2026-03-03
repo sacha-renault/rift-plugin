@@ -29,8 +29,13 @@ impl Oscilloscope {
     }
 
     fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Some(buckets) = self.buffer.as_ref().map(|b| b.borrow()) else {
-            return;
+        let buckets = match self.buffer.as_ref().map(|b| b.try_borrow()) {
+            Some(Ok(buckets)) => buckets,
+            Some(Err(err)) => {
+                log::error!("{err}");
+                return;
+            }
+            None => return, // This is just no set
         };
 
         let path = make_open_strokepath(
@@ -49,8 +54,13 @@ impl Oscilloscope {
     }
 
     fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Some(buckets) = self.buffer.as_ref().map(|b| b.borrow()) else {
-            return;
+        let buckets = match self.buffer.as_ref().map(|b| b.try_borrow()) {
+            Some(Ok(buckets)) => buckets,
+            Some(Err(err)) => {
+                log::error!("{err}");
+                return;
+            }
+            None => return, // This is just no set
         };
 
         let stroke_path = make_closed_strokepath(
