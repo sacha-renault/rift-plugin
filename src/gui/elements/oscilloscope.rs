@@ -6,7 +6,7 @@ use super::gui_prelude::*;
 #[derive(HandleExtension)]
 pub struct Oscilloscope {
     #[extension(ext)]
-    buffer: Option<RcCell<WindowedBuffer>>,
+    buffer: Option<RcCell<WindowBufferAvg>>,
 
     #[extension(ext)]
     min: f32,
