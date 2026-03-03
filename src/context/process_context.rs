@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use clack_plugin::{host::HostAudioProcessorHandle, process::Process};
+use clack_plugin::{
+    events::event_types::TransportFlags, host::HostAudioProcessorHandle, process::Process,
+};
 use hug_shared::BlockInfo;
 
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
@@ -22,7 +24,9 @@ impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
     }
 
     pub fn block_info(&self) -> Option<BlockInfo> {
-        if let Some(transport) = self.process.transport {
+        if let Some(transport) = self.process.transport
+            && transport.flags.contains(TransportFlags::IS_PLAYING)
+        {
             let info = BlockInfo {
                 seconds: transport.song_pos_seconds.to_float(),
                 beats: transport.song_pos_beats.to_float(),
