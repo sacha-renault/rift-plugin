@@ -1,3 +1,6 @@
+//! Exaustive lists of task audio / main thread may have to perform. Those are sent in there respective queues
+//! in [`crate::wrapper::shared_states::PluginSharedState`].
+
 use crate::gui::GuiParamEvent;
 
 pub enum MainThreadTask {
