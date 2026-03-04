@@ -1,3 +1,5 @@
+//! A collection of event that can be use on Vizia GUI.
+
 mod consumer_dispatch;
 mod oscilloscope;
 mod param_button;

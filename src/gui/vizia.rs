@@ -8,9 +8,8 @@ use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
-use vizia_baseview::WindowHandle;
-
 use vizia::prelude::*;
+use vizia_baseview::WindowHandle;
 
 use crate::{
     context::GuiContext,
@@ -65,7 +64,7 @@ pub struct ViziaGui<F> {
     opened: Arc<AtomicBool>,
     /// the fn that will be used for mainloop in ViziaApp
     app_fn: Arc<F>,
-    /// Size
+    /// (width, height)
     size: (u32, u32),
     /// States
     context: Arc<GuiContext>,
