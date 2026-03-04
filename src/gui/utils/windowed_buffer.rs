@@ -41,6 +41,14 @@ impl WindowBufferAvg {
         self.seconds = seconds;
     }
 
+    pub fn set_num_buckets(&mut self, num_buckets: usize) {
+        self.n_buckets = num_buckets;
+
+        // This will recalculate the number of
+        // required samples per bucket
+        self.set_seconds(self.seconds);
+    }
+
     pub fn push_point(&mut self, y: f32) {
         let bucket = &mut self.buckets[self.write_idx];
         bucket.add_sample(y);
