@@ -5,10 +5,7 @@ mod oscilloscope;
 mod param_button;
 mod param_knob;
 
-pub mod param_binding;
-
 mod gui_prelude {
-    pub use super::param_binding::*;
     pub use crate::prelude::ClapParam;
     pub use hug_derive::{HandleExtension, ParamViewBuilder};
     pub use vizia::prelude::*;
