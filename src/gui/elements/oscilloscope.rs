@@ -20,7 +20,7 @@ use super::gui_prelude::*;
 pub struct Oscilloscope {
     /// Might change to some more generic struct
     /// Oscilloscope could draw any buffer actually
-    buffer: RcCell<WindowBufferAvg>,
+    buffer: RcCell<WindowBuffer>,
 
     #[extension(ext)]
     min: f32,
@@ -39,7 +39,7 @@ impl View for Oscilloscope {
 }
 
 impl Oscilloscope {
-    pub fn new(cx: &mut Context, buffer: RcCell<WindowBufferAvg>) -> Handle<'_, Self> {
+    pub fn new(cx: &mut Context, buffer: RcCell<WindowBuffer>) -> Handle<'_, Self> {
         Self {
             buffer,
             min: -1.0,
