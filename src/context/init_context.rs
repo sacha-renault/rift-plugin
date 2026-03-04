@@ -4,6 +4,7 @@ use clack_plugin::host::HostMainThreadHandle;
 
 use crate::wrapper::shared_states::PluginSharedState;
 
+/// Context for initializing plugin state during host callback requests.
 pub struct InitContext<'a> {
     host: &'a HostMainThreadHandle<'a>,
     states: Arc<PluginSharedState>,

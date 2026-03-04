@@ -14,7 +14,8 @@ pub struct ProcessContext<'a, P: ClapPlugin> {
     pub(crate) process: Process<'a>,
     pub(crate) samplerate: f64,
 
-    /// THIS must be init to 0 or the entire thing is broken
+    /// Count of pending events to be drained. MUST be initialized to 0; dropping with >0
+    /// triggers a callback request to the host via the destructor.
     pub(crate) num_events: usize,
 }
 
@@ -23,6 +24,7 @@ impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
         Arc::clone(&self.shared)
     }
 
+    /// Returns playback progress info (seconds/beats) if currently playing, otherwise None.
     pub fn block_info(&self) -> Option<BlockInfo> {
         if let Some(transport) = self.process.transport
             && transport.flags.contains(TransportFlags::IS_PLAYING)
@@ -55,6 +57,7 @@ impl<'a, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, P> {
 impl<'a, P: ClapPlugin> Drop for ProcessContext<'a, P> {
     fn drop(&mut self) {
         if self.num_events > 0 {
+            // Drains the event count buffer by requesting a final callback on drop.
             self.host.request_callback();
         }
     }

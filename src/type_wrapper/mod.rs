@@ -3,6 +3,7 @@ use clack_plugin::utils::ClapId;
 
 pub const PAIR_PORT_ID: ClapId = ClapId::new(0);
 
+/// Represents a single audio port with name, channel count, flags, and type info.
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct AudioPort<'a> {
     pub(crate) name: &'a [u8],
@@ -48,6 +49,7 @@ impl<'a> AudioPort<'a> {
         self
     }
 
+    /// Converts this builder-like instance into an owned [`AudioPortInfo`] tagged with a plugin-local ID.
     pub fn into_audio_port_info(&self, index: u32) -> AudioPortInfo<'a> {
         AudioPortInfo {
             id: ClapId::new(index),
@@ -60,6 +62,7 @@ impl<'a> AudioPort<'a> {
     }
 }
 
+/// Specifies whether main port is inputs, outputs, or bidirectional IO for the plugin host.
 #[derive(Debug, Clone, Copy)]
 pub enum MainAudioPort {
     InputOnly(u32),
@@ -68,6 +71,7 @@ pub enum MainAudioPort {
 }
 
 impl MainAudioPort {
+    /// Returns the number of channels associated with this I/O configuration variant.
     pub fn capacity(&self) -> u32 {
         match self {
             MainAudioPort::InputOnly(c)

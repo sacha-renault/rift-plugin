@@ -14,6 +14,7 @@ use crate::wrapper::{
 
 static INIT: Once = Once::new();
 
+/// Wrapper that declares audio ports, state, and GUI extensions, and validates descriptor fields at compile time.
 pub struct PluginWrapper<P: ClapPlugin>(PhantomData<P>);
 
 impl<P: ClapPlugin> Plugin for PluginWrapper<P> {

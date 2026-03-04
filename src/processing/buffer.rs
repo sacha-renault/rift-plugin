@@ -9,6 +9,15 @@ use clack_plugin::{
 
 use crate::prelude::MainAudioPort;
 
+/// Handles audio buffer management for a plugin instance.
+///
+/// Wraps [`Audio`] and [`MainAudioPort`] to provide access to inputs, outputs, and the main I/O port.
+/// Centralizes logic for retrieving buffers while accounting for host limitations (e.g., copying input to output).
+///
+/// # Note:
+/// (and todo!()) since accessing any port requires a mutable reference, it isn't possible to use main and auxiliary port
+/// in the same time. The plugin needs to hold a scratch buffer (allocated during activation) and copy required auxiliary port
+/// into it.
 pub struct Buffers<'a> {
     audio: Audio<'a>,
     main_config: MainAudioPort,
