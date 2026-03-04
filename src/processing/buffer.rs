@@ -74,9 +74,8 @@ impl<'a> Buffers<'a> {
             // Output only, should never happens
             // Inplace ... In that case the output bfr
             // is already correct
-            match paired {
-                ChannelPair::InputOutput(i, o) => o.copy_from_slice(i),
-                _ => {}
+            if let ChannelPair::InputOutput(i, o) = paired {
+                o.copy_from_slice(i)
             }
         }
 
@@ -97,8 +96,8 @@ impl<'a> Buffers<'a> {
     /// convinient struct for consistant api calls.
     /// - [`MainAudioPort::InputOnly`]: the input channels.
     /// - [`MainAudioPort::OutputOnly`]: the output channels. This channels has no
-    /// certainty to be empty, so if you don't process it, you might want to set 0s at least
-    /// to avoid noizy output.
+    ///   certainty to be empty, so if you don't process it, you might want to set 0s at least
+    ///   to avoid noizy output.
     /// - [`MainAudioPort::InputOutput`]: copies input into output then returns
     ///   the output buffer. If the host provides an in-place buffer, no copy
     ///   is performed and the single buffer is returned directly.

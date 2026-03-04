@@ -7,7 +7,7 @@ use crate::{
 pub trait ChangeLatencyImpl: HostStatesGetter {
     fn set_latency(&mut self, latency: u32) {
         let latency_task = MainThreadTask::ChangeLatency(latency);
-        if let Ok(_) = self.states().push_main_thread_task(latency_task) {
+        if self.states().push_main_thread_task(latency_task).is_ok() {
             self.increment_event_count();
         } else {
             log::error!("Couldn't push MainThreadTask::ChangeLatency({latency})")

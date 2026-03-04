@@ -45,7 +45,7 @@ impl TypedParam for BoolParam {
 
 impl ClapParam for BoolParam {
     fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 
     fn id(&self) -> ClapId {

@@ -36,8 +36,12 @@ impl<const N: usize> TimedAudioBlock<N> {
         self.slice_length
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.slice_length == 0
+    }
+
     #[inline]
     pub fn time(&self) -> BlockTime {
-        self.time.clone()
+        self.time
     }
 }

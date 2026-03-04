@@ -106,7 +106,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             num_events: 0,
         };
 
-        let result = self.plugin.process(buffers, context);
-        result
+        self.plugin.process(buffers, context)
     }
 }

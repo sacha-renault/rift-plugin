@@ -52,7 +52,7 @@ impl TypedParam for FloatParam {
 
 impl ClapParam for FloatParam {
     fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 
     fn id(&self) -> ClapId {
@@ -89,11 +89,11 @@ impl ClapParam for FloatParam {
     }
 
     fn min_value(&self) -> f64 {
-        self.min_value as f64
+        self.min_value
     }
 
     fn max_value(&self) -> f64 {
-        self.max_value as f64
+        self.max_value
     }
 
     fn normalize(&self, value: f64) -> f64 {

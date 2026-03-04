@@ -183,12 +183,11 @@ fn get_fn_signature(
             let name = last_trait_seg.ident.to_string();
 
             // Check if it's Fn/FnMut/FnOnce
-            if name.starts_with("Fn") {
-                if let syn::PathArguments::Parenthesized(paren) = &last_trait_seg.arguments {
+            if name.starts_with("Fn") && 
+                let syn::PathArguments::Parenthesized(paren) = &last_trait_seg.arguments {
                     let inputs = &paren.inputs;
                     let output = &paren.output; // This includes the '->'
-                    return Some((quote! { #inputs }, quote! { #output }));
-                }
+                    return Some((quote! { #inputs }, quote! { #output })); 
             }
         }
     }
