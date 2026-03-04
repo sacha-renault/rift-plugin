@@ -2,6 +2,17 @@ use std::sync::Arc;
 
 use super::gui_prelude::*;
 
+/// A button that toggles a parameter on or off based on its normalized value.
+///
+/// This element acts as a binary switch (on/off) linked to the provided [`Lens`].
+/// When the underlying parameter's normalized value exceeds `0.5`, the button is highlighted.
+/// Pressing the button snaps the parameter value to the opposite side of the range.
+///
+/// # Fields
+/// - `lens`: The data source for the button state.
+/// - `accessor`: Function to extract the parameter object from the lens target.
+/// - `on_press`: Callback invoked when the user confirms the toggle action.
+/// - `button_modifiers`: Optional function to customize the [`Handle`] of the inner button.
 #[derive(ParamViewBuilder)]
 pub struct ParamButton<L, MapFn>
 where

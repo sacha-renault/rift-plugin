@@ -3,10 +3,24 @@ use vizia::vg;
 
 use super::gui_prelude::*;
 
+/// Displays an audio waveform buffer as a stroked and filled line.
+///
+/// The `Oscilloscope` visualizes data from a [`WindowBufferAvg`] by plotting peak values
+/// across all frequency buckets. It supports dynamic updates via a redraw lens
+/// that invalidates the view whenever new data arrives in the bound buffer.
+///
+/// # Configuration
+/// - `buffer`: Optional reference to the audio buffer. If present, peaks are drawn.
+/// - `min` / `max`: Clamping bounds for the y-axis normalization (defaults: -1.0 to 1.0).
+///
+/// # Note:
+/// This struct will redraw only if a lens for redraw is given. You must have [`RedrawOnExt`] trait in
+/// scope to add the lens.
 #[derive(HandleExtension)]
 pub struct Oscilloscope {
-    #[extension(ext)]
-    buffer: Option<RcCell<WindowBufferAvg>>,
+    /// Might change to some more generic struct
+    /// Oscilloscope could draw any buffer actually
+    buffer: RcCell<WindowBufferAvg>,
 
     #[extension(ext)]
     min: f32,
@@ -25,29 +39,19 @@ impl View for Oscilloscope {
 }
 
 impl Oscilloscope {
-    pub fn new<L>(cx: &mut Context, redraw_lens: L) -> Handle<'_, Self>
-    where
-        L: Lens<Target = u64>,
-    {
-        let mut handle = Self {
-            buffer: None,
+    pub fn new(cx: &mut Context, buffer: RcCell<WindowBufferAvg>) -> Handle<'_, Self> {
+        Self {
+            buffer,
             min: -1.0,
             max: 1.0,
         }
-        .build(cx, |_| {});
-        let entity = handle.entity();
-
-        Binding::new(handle.context(), redraw_lens, move |cx, _| {
-            cx.needs_redraw(entity);
-        });
-
-        handle
+        .build(cx, |_| {})
     }
 
+    /// Draw the stroke path
     fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let buckets = match self.buffer.as_ref().map(|b| b.try_borrow()) {
-            Some(Ok(buckets)) => buckets,
-            _ => return,
+        let Ok(buckets) = self.buffer.try_borrow() else {
+            return;
         };
 
         let path = make_open_strokepath(
@@ -65,10 +69,10 @@ impl Oscilloscope {
         canvas.draw_path(&path, &paint);
     }
 
+    /// Draw the filled path (lower opacity)
     fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let buckets = match self.buffer.as_ref().map(|b| b.try_borrow()) {
-            Some(Ok(buckets)) => buckets,
-            _ => return,
+        let Ok(buckets) = self.buffer.try_borrow() else {
+            return;
         };
 
         let stroke_path = make_closed_strokepath(

@@ -1,3 +1,6 @@
+//! Contains utility structs and functions. Should be used in
+//! [`super::elements`]
+
 mod audio_peak;
 mod denormalizer;
 mod draw_utils;

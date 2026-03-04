@@ -2,6 +2,8 @@ use clack_extensions::params::ParamInfoFlags;
 
 use crate::prelude::ClapParam;
 
+/// A zero-cost wrapper around a raw pointer to a [`ClapParam`].
+/// The underlying parameter lives in the host and outlives this wrapper.
 #[derive(Clone, Copy)]
 pub struct ParamPtr {
     /// The shared struct (and thus the params) lives longer

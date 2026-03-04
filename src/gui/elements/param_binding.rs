@@ -75,3 +75,25 @@ where
         }
     }
 }
+
+pub trait RedrawOnExt: Sized {
+    fn redraw_on<L>(self, lens: L) -> Self
+    where
+        L: Lens<Target = u64>;
+}
+
+impl<V> RedrawOnExt for Handle<'_, V>
+where
+    V: View,
+{
+    fn redraw_on<L>(mut self, lens: L) -> Self
+    where
+        L: Lens<Target = u64>,
+    {
+        let entity = self.entity();
+        Binding::new(self.context(), lens, move |cx, _| {
+            cx.needs_redraw(entity);
+        });
+        self
+    }
+}

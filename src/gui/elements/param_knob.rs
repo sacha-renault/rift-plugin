@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::gui_prelude::*;
 
+/// A control for mapping a [`ClapParam`] to a rotary knob UI element.
 #[derive(ParamViewBuilder)]
 pub struct ParamKnob<L, MapFn>
 where
