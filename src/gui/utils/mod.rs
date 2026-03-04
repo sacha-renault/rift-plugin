@@ -11,4 +11,4 @@ pub use audio_peak::AudioPeaks;
 pub use denormalizer::Denormalizer;
 pub use draw_utils::{clip_bounds, make_closed_strokepath, make_open_strokepath};
 pub use peak_bucket::PeakBucket;
-pub use windowed_buffer::WindowBufferAvg;
+pub use windowed_buffer::{WindowBuffer, WindowBufferMode};
