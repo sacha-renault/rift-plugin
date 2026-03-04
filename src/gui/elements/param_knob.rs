@@ -87,15 +87,21 @@ where
             })
             .on_change(move |cx, v| {
                 set_value_normalized(param_ptr, cx, v as f64);
-                on_value_changed.as_ref().map(|f| f(cx, v));
+                if let Some(f) = on_value_changed.as_ref() {
+                    f(cx, v)
+                }
             })
             .on_mouse_down(move |cx, mb| {
                 gesture_start(param_ptr, cx);
-                on_mouse_down.as_ref().map(|f| f(cx, mb));
+                if let Some(f) = on_mouse_down.as_ref() {
+                    f(cx, mb)
+                }
             })
             .on_mouse_up(move |cx, mb| {
                 gesture_end(param_ptr, cx);
-                on_mouse_up.as_ref().map(|f| f(cx, mb));
+                if let Some(f) = on_mouse_up.as_ref() {
+                    f(cx, mb)
+                }
             })
             .maybe_apply_modifiers(knob_modifiers.as_deref())
             .class("knob");

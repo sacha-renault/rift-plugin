@@ -46,10 +46,9 @@ struct ViziaData {
 impl Model for ViziaData {
     fn event(&mut self, _cx: &mut EventContext, event: &mut Event) {
         event.map(|app_event: &GuiParamEvent, _| {
-            match app_event.kind {
-                GuiParamEventKind::Value(v) => self.ctx.params.set_value(app_event.param_id, v),
-                _ => {}
-            };
+            if let GuiParamEventKind::Value(v) = app_event.kind {
+                self.ctx.params.set_value(app_event.param_id, v)
+            }
             self.ctx.param_event(*app_event);
         });
     }
@@ -80,7 +79,7 @@ impl<F> ViziaGui<F>
 where
     F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
 {
-    pub fn new(size: (u32, u32), app_fn: F) -> ViziaGuiFactory<F> {
+    pub fn factory(size: (u32, u32), app_fn: F) -> ViziaGuiFactory<F> {
         ViziaGuiFactory {
             app_fn: Arc::new(app_fn),
             size,

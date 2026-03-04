@@ -57,10 +57,15 @@ where
                         1.0
                     };
 
+                    // Send gestures for param change
                     gesture_start(param_ptr, cx);
                     set_value_normalized(param_ptr, cx, new_value);
                     gesture_end(param_ptr, cx);
-                    on_press.as_ref().map(|f| f(cx, new_value as f32));
+
+                    // use callback
+                    if let Some(f) = on_press.as_ref() {
+                        f(cx, new_value as f32)
+                    }
                 })
                 .maybe_apply_modifiers(button_modifiers.as_deref())
                 .class("button");

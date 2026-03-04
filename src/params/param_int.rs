@@ -51,7 +51,7 @@ impl TypedParam for IntParam {
 
 impl ClapParam for IntParam {
     fn name(&self) -> &str {
-        &self.name
+        self.name
     }
 
     fn id(&self) -> ClapId {

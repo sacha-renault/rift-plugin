@@ -24,7 +24,7 @@ pub struct AudioPeaks {
 impl AudioPeaks {
     pub fn new(channels: usize) -> Self {
         let mut channel_peaks = Vec::new();
-        channel_peaks.resize_with(channels, || ChannelAudioPeaks::new());
+        channel_peaks.resize_with(channels, ChannelAudioPeaks::new);
 
         Self {
             channel_peaks,
