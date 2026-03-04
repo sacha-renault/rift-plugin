@@ -14,6 +14,7 @@ mod gui_prelude {
 }
 
 pub use consumer_dispatch::{AudioConsumerDispatch, AudioConsumerDispatchExt};
+pub use gui_prelude::RedrawOnExt;
 pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
 pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;
