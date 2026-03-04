@@ -2,8 +2,25 @@ use hug_accumulator::{AudioAccumulator, AudioConsumer};
 use hug_shared::RcCell;
 use vizia::prelude::*;
 
+/// Simple struct that is send when the binding over the redraw lens change
+/// This will be processed in [`View::event`].
 pub struct NewData;
 
+/// Dispatches audio data from an accumulator to registered consumers.
+///
+/// This component listens for write events in its accumulator, drains the data block,
+/// and distributes it to all attached [`AudioConsumer`] instances. It allow a many reader
+/// on a single queue.
+///
+/// # Examples:
+/// ```compile_fail
+/// let dispatcher = AudioConsumerDispatch::new(cx, AppData::accumulator))
+///     .add_consumer(wave_consumer.clone())
+///     .add_consumer(audio_peaks_consumer.clone());
+///
+/// // The redraw lens allow any component to redraw only when there is fresh data
+/// let redraw_lens = dispatcher.redraw_lens();
+/// ```
 pub struct AudioConsumerDispatch<const N: usize, L>
 where
     L: Lens<Target = AudioAccumulator<N>>,
@@ -38,7 +55,7 @@ where
     L: Lens<Target = AudioAccumulator<N>>,
 {
     fn element(&self) -> Option<&'static str> {
-        Some("logic-node")
+        Some("audio-dispatcher")
     }
 
     fn draw(&self, _: &mut DrawContext, _: &Canvas) {}
@@ -59,8 +76,17 @@ where
 }
 
 pub trait AudioConsumerDispatchExt {
+    /// Adds a new consumer that will receive audio data drained from the accumulator.
+    ///
+    /// The added [`AudioConsumer`] is registered with the dispatcher immediately.
+    /// When a write event occurs, all registered consumers are notified in sequence.
     fn add_consumer(self, consumer: RcCell<dyn AudioConsumer>) -> Self;
-    fn redraw_lens(self) -> impl Lens<Target = u64>;
+
+    /// Generates a redraw lens that fires whenever new data arrives in the accumulator.
+    ///
+    /// This lens maps the accumulator's internal write counter (`num_writes`) to a signal
+    /// indicating whether fresh audio blocks have been processed since the last frame.
+    fn redraw_lens(&self) -> impl Lens<Target = u64>;
 }
 
 impl<const N: usize, L> AudioConsumerDispatchExt for Handle<'_, AudioConsumerDispatch<N, L>>
@@ -71,12 +97,10 @@ where
         self.modify(|acc_drain| acc_drain.consumers.push(consumer))
     }
 
-    fn redraw_lens(self) -> impl Lens<Target = u64> {
-        let lens = self
-            .data::<AudioConsumerDispatch<N, L>>()
+    fn redraw_lens(&self) -> impl Lens<Target = u64> {
+        self.data::<AudioConsumerDispatch<N, L>>()
             .unwrap()
             .accumulator
-            .map(|acc| acc.num_writes());
-        lens
+            .map(|acc| acc.num_writes())
     }
 }
