@@ -12,7 +12,7 @@ mod windowed_buffer;
 
 pub use audio_peak::AudioPeaks;
 pub use denormalizer::Denormalizer;
-pub use draw_utils::{clip_bounds, make_closed_strokepath, make_open_strokepath};
+pub use draw_utils::{clip_bounds, make_strokepath};
 pub use gui_events::{gesture_end, gesture_start, set_value, set_value_normalized};
 pub use handle_generic_extensions::{FView, RedrawOnExt, ViewApplyModifiers};
 pub use lens::make_lens;

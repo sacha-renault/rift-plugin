@@ -78,7 +78,7 @@ pub fn derive_extensions(input: TokenStream) -> TokenStream {
             #(#defs)*
         }
 
-        impl #impl_generics #extension_name for Handle<'_, #name > #ty_generics #where_clause {
+        impl #impl_generics #extension_name for Handle<'_, #name #ty_generics>  #where_clause {
             #(#setters)*
         }
     }
