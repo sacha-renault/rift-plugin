@@ -1,66 +1,51 @@
 use vizia::{
     prelude::DrawContext,
-    vg::{self, Canvas},
+    vg::{Canvas, ClipOp, Path, Point, Rect},
 };
 
-use super::Denormalizer;
+struct PathWithClosing {
+    pub path: Path,
+    pub closing_points: [(f32, f32); 2],
+}
 
-pub fn make_open_strokepath(
-    denorm: Denormalizer,
-    points: impl Iterator<Item = f32>,
-    num_points: usize,
-) -> vg::path::Path {
-    let mut path = vg::Path::new();
-    let total = num_points as f32;
-
-    let mut points = points
-        .enumerate()
-        .map(|(x, y)| denorm.denormalize(x as f32 / total, y));
+pub fn make_strokepath(
+    mut points: impl Iterator<Item = (f32, f32)>,
+    zero_y: f32,
+) -> Option<PathWithClosing> {
+    let mut path = Path::new();
 
     if let Some((x, y)) = points.next() {
+        let first_x = x;
+
         path.move_to((x, y));
 
         for (x, y) in points {
             path.line_to((x, y));
         }
+
+        let last_x = if let Some(Point { x, .. }) = path.last_pt() {
+            x
+        } else {
+            // Very defensive, i might unwrap here since we have at least
+            // a point but i don't like unwraping
+            first_x
+        };
+
+        Some(PathWithClosing {
+            path,
+            closing_points: [(last_x, zero_y), (first_x, zero_y)],
+        })
+    } else {
+        None
     }
-
-    path
-}
-
-pub fn make_closed_strokepath(
-    denorm: Denormalizer,
-    points: impl Iterator<Item = f32>,
-    num_points: usize,
-) -> vg::path::Path {
-    let mut path = vg::Path::new();
-    let total = num_points as f32;
-
-    let points = points
-        .enumerate()
-        .map(|(x, y)| denorm.denormalize(x as f32 / total, y));
-
-    path.move_to(denorm.denormalize(0., 0.));
-    for (x, y) in points {
-        path.line_to((x, y));
-    }
-
-    if let Some(point) = path.last_pt() {
-        let (_, y) = denorm.denormalize(1.0, 0.);
-        path.line_to((point.x, y));
-    }
-
-    path.close();
-
-    path
 }
 
 pub fn clip_bounds(cx: &mut DrawContext, canvas: &Canvas) {
     let bounds = cx.bounds();
-    let mut clip_path = vg::Path::new();
+    let mut clip_path = Path::new();
     clip_path.add_rect(
-        vg::Rect::from_xywh(bounds.x, bounds.y, bounds.w, bounds.h),
+        Rect::from_xywh(bounds.x, bounds.y, bounds.w, bounds.h),
         None,
     );
-    canvas.clip_path(&clip_path, vg::ClipOp::Intersect, true);
+    canvas.clip_path(&clip_path, ClipOp::Intersect, true);
 }

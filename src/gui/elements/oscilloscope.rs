@@ -5,27 +5,9 @@ use super::gui_prelude::*;
 
 pub trait OscilloscopeData {
     fn num_points(&self) -> usize;
-    fn iter_points<'a>(&'a self) -> Box<dyn Iterator<Item = f32> + 'a>;
-}
-
-impl OscilloscopeData for WindowBuffer {
-    fn iter_points<'a>(&'a self) -> Box<dyn Iterator<Item = f32> + 'a> {
-        Box::new(self.iter_peaks())
-    }
-
-    fn num_points(&self) -> usize {
-        self.num_points()
-    }
-}
-
-impl OscilloscopeData for Vec<f32> {
-    fn num_points(&self) -> usize {
-        self.len()
-    }
-
-    fn iter_points<'a>(&'a self) -> Box<dyn Iterator<Item = f32> + 'a> {
-        Box::new(self.iter().copied())
-    }
+    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R;
 }
 
 /// Displays an audio waveform buffer as a stroked and filled line.
@@ -42,49 +24,58 @@ impl OscilloscopeData for Vec<f32> {
 /// This struct will redraw only if a lens for redraw is given. You must have [`RedrawOnExt`] trait in
 /// scope to add the lens.
 #[derive(HandleExtension)]
-pub struct Oscilloscope {
-    /// Might change to some more generic struct
-    /// Oscilloscope could draw any buffer actually
-    data: RcCell<dyn OscilloscopeData>,
+pub struct Oscilloscope<D: 'static> {
+    data: D,
 
     #[extension(ext)]
     min: f32,
 
     #[extension(ext)]
     max: f32,
+
+    #[extension(ext)]
+    filled_path: bool,
 }
 
-impl View for Oscilloscope {
+impl<D: OscilloscopeData> View for Oscilloscope<D> {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
         cx.draw_background(canvas);
         clip_bounds(cx, canvas);
-        self.draw_stroke(cx, canvas);
-        self.draw_fill(cx, canvas);
+
+        let denorm = Denormalizer::new(cx.bounds(), self.min, self.max);
+        let (_, zero_y) = denorm.denormalize(0., 0.);
+        let Some(path_with_closing) = self
+            .data
+            .with_points(denorm, |points| make_strokepath(points, zero_y))
+        else {
+            return;
+        };
+
+        self.draw_stroke(cx, canvas, &path_with_closing.path);
+        if self.filled_path {
+            let mut path = path_with_closing.path;
+            let [pt1, pt2] = path_with_closing.closing_points;
+            path.line_to(pt1);
+            path.line_to(pt2);
+            path.close();
+            self.draw_fill(cx, canvas, &path);
+        }
     }
 }
 
-impl Oscilloscope {
-    pub fn new(cx: &mut Context, data: RcCell<dyn OscilloscopeData>) -> Handle<'_, Self> {
+impl<D: OscilloscopeData> Oscilloscope<D> {
+    pub fn new(cx: &mut Context, data: D) -> Handle<'_, Self> {
         Self {
             data,
             min: -1.0,
             max: 1.0,
+            filled_path: true,
         }
         .build(cx, |_| {})
     }
 
     /// Draw the stroke path
-    fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Ok(buckets) = self.data.try_borrow() else {
-            return;
-        };
-
-        let path = make_open_strokepath(
-            Denormalizer::from_cx(cx),
-            buckets.iter_points(),
-            buckets.num_points(),
-        );
-
+    fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas, path: &vg::Path) {
         let mut paint = vg::Paint::default();
         paint.set_color(cx.font_color());
         paint.set_stroke_width(cx.border_width());
@@ -95,17 +86,7 @@ impl Oscilloscope {
     }
 
     /// Draw the filled path (lower opacity)
-    fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Ok(buckets) = self.data.try_borrow() else {
-            return;
-        };
-
-        let stroke_path = make_closed_strokepath(
-            Denormalizer::from_cx(cx),
-            buckets.iter_points(),
-            buckets.num_points(),
-        );
-
+    fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas, path: &vg::Path) {
         let mut fill_paint = vg::Paint::default();
         let font_color = cx.font_color();
         let color = Color::rgba(
@@ -123,8 +104,61 @@ impl Oscilloscope {
         let rect = vg::Rect::new(bounds.x, bounds.y, bounds.x + bounds.w, bounds.y + bounds.h);
 
         canvas.save();
-        canvas.clip_path(&stroke_path, vg::ClipOp::Intersect, false);
+        canvas.clip_path(&path, vg::ClipOp::Intersect, false);
         canvas.draw_rect(rect, &fill_paint);
         canvas.restore();
+    }
+}
+
+// Must implement for useage in oscilloscope
+impl OscilloscopeData for Vec<f32> {
+    fn num_points(&self) -> usize {
+        self.len()
+    }
+
+    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
+    {
+        let length = self.len() as f32;
+        let mut iterator = self
+            .iter()
+            .copied()
+            .enumerate()
+            .map(|(i, y)| denorm.denormalize((i as f32) / length, y));
+        f(&mut iterator)
+    }
+}
+
+impl OscilloscopeData for Vec<(f32, f32)> {
+    fn num_points(&self) -> usize {
+        self.len()
+    }
+
+    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
+    {
+        let mut iterator = self.iter().copied().map(|(x, y)| denorm.denormalize(x, y));
+        f(&mut iterator)
+    }
+}
+
+impl OscilloscopeData for RcCell<WindowBuffer> {
+    fn num_points(&self) -> usize {
+        self.borrow().num_points()
+    }
+
+    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
+    {
+        let borrow = self.borrow();
+        let length = self.num_points() as f32;
+        let mut iterator = borrow
+            .iter_peaks()
+            .enumerate()
+            .map(|(i, y)| denorm.denormalize((i as f32) / length, y));
+        f(&mut iterator)
     }
 }
