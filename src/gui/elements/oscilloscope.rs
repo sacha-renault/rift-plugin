@@ -4,15 +4,14 @@ use vizia::vg;
 use super::gui_prelude::*;
 
 pub trait OscilloscopeData {
-    fn num_points(&self) -> usize;
-    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    fn with_points<F, R>(&self, denorm: ViewportTransform, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R;
 }
 
 /// Displays an audio waveform buffer as a stroked and filled line.
 ///
-/// The `Oscilloscope` visualizes data from a [`WindowBufferAvg`] by plotting peak values
+/// The `Oscilloscope` visualizes data from a [`OscilloscopeData`] by plotting peak values
 /// across all frequency buckets. It supports dynamic updates via a redraw lens
 /// that invalidates the view whenever new data arrives in the bound buffer.
 ///
@@ -42,12 +41,12 @@ impl<D: OscilloscopeData> View for Oscilloscope<D> {
         cx.draw_background(canvas);
         clip_bounds(cx, canvas);
 
-        let denorm = Denormalizer::new(cx.bounds(), self.min, self.max);
-        let (_, zero_y) = denorm.denormalize(0., 0.);
-        let Some(path_with_closing) = self
-            .data
-            .with_points(denorm, |points| make_strokepath(points, zero_y))
-        else {
+        let bounds = cx.bounds();
+        let denorm = ViewportTransform::new(bounds, self.min, self.max);
+        let (_, zero_y) = denorm.transform(0., 0.);
+        let Some(path_with_closing) = self.data.with_points(denorm, bounds.width(), |points| {
+            make_strokepath(points, zero_y)
+        }) else {
             return;
         };
 
@@ -112,11 +111,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
 
 // Must implement for useage in oscilloscope
 impl OscilloscopeData for Vec<f32> {
-    fn num_points(&self) -> usize {
-        self.len()
-    }
-
-    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    fn with_points<F, R>(&self, denorm: ViewportTransform, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
@@ -125,40 +120,49 @@ impl OscilloscopeData for Vec<f32> {
             .iter()
             .copied()
             .enumerate()
-            .map(|(i, y)| denorm.denormalize((i as f32) / length, y));
+            .map(|(i, y)| denorm.transform((i as f32) / length, y));
         f(&mut iterator)
     }
 }
 
 impl OscilloscopeData for Vec<(f32, f32)> {
-    fn num_points(&self) -> usize {
-        self.len()
-    }
-
-    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    fn with_points<F, R>(&self, denorm: ViewportTransform, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
-        let mut iterator = self.iter().copied().map(|(x, y)| denorm.denormalize(x, y));
+        let mut iterator = self.iter().copied().map(|(x, y)| denorm.transform(x, y));
         f(&mut iterator)
     }
 }
 
 impl OscilloscopeData for RcCell<WindowBuffer> {
-    fn num_points(&self) -> usize {
-        self.borrow().num_points()
-    }
-
-    fn with_points<F, R>(&self, denorm: Denormalizer, f: F) -> R
+    fn with_points<F, R>(&self, denorm: ViewportTransform, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
         let borrow = self.borrow();
-        let length = self.num_points() as f32;
+        let length = borrow.num_points() as f32;
         let mut iterator = borrow
             .iter_peaks()
             .enumerate()
-            .map(|(i, y)| denorm.denormalize((i as f32) / length, y));
+            .map(|(i, y)| denorm.transform((i as f32) / length, y));
+        f(&mut iterator)
+    }
+}
+
+impl<Func> OscilloscopeData for Func
+where
+    Func: Fn(f32) -> f32,
+{
+    fn with_points<F, R>(&self, denorm: ViewportTransform, width: f32, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
+    {
+        let max = width.ceil() / 2.0;
+        let mut iterator = (0..max as usize).map(|v| {
+            let normalized = v as f32 / max;
+            denorm.transform(normalized, self(normalized))
+        });
         f(&mut iterator)
     }
 }
