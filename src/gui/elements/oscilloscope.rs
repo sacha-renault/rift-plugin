@@ -3,6 +3,31 @@ use vizia::vg;
 
 use super::gui_prelude::*;
 
+pub trait OscilloscopeData {
+    fn num_points(&self) -> usize;
+    fn iter_points<'a>(&'a self) -> Box<dyn Iterator<Item = f32> + 'a>;
+}
+
+impl OscilloscopeData for WindowBuffer {
+    fn iter_points<'a>(&'a self) -> Box<dyn Iterator<Item = f32> + 'a> {
+        Box::new(self.iter_peaks())
+    }
+
+    fn num_points(&self) -> usize {
+        self.num_points()
+    }
+}
+
+impl OscilloscopeData for Vec<f32> {
+    fn num_points(&self) -> usize {
+        self.len()
+    }
+
+    fn iter_points<'a>(&'a self) -> Box<dyn Iterator<Item = f32> + 'a> {
+        Box::new(self.iter().copied())
+    }
+}
+
 /// Displays an audio waveform buffer as a stroked and filled line.
 ///
 /// The `Oscilloscope` visualizes data from a [`WindowBufferAvg`] by plotting peak values
@@ -20,7 +45,7 @@ use super::gui_prelude::*;
 pub struct Oscilloscope {
     /// Might change to some more generic struct
     /// Oscilloscope could draw any buffer actually
-    buffer: RcCell<WindowBuffer>,
+    data: RcCell<dyn OscilloscopeData>,
 
     #[extension(ext)]
     min: f32,
@@ -39,9 +64,9 @@ impl View for Oscilloscope {
 }
 
 impl Oscilloscope {
-    pub fn new(cx: &mut Context, buffer: RcCell<WindowBuffer>) -> Handle<'_, Self> {
+    pub fn new(cx: &mut Context, data: RcCell<dyn OscilloscopeData>) -> Handle<'_, Self> {
         Self {
-            buffer,
+            data,
             min: -1.0,
             max: 1.0,
         }
@@ -50,13 +75,13 @@ impl Oscilloscope {
 
     /// Draw the stroke path
     fn draw_stroke(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Ok(buckets) = self.buffer.try_borrow() else {
+        let Ok(buckets) = self.data.try_borrow() else {
             return;
         };
 
         let path = make_open_strokepath(
             Denormalizer::from_cx(cx),
-            buckets.iter_peaks(),
+            buckets.iter_points(),
             buckets.num_points(),
         );
 
@@ -71,13 +96,13 @@ impl Oscilloscope {
 
     /// Draw the filled path (lower opacity)
     fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Ok(buckets) = self.buffer.try_borrow() else {
+        let Ok(buckets) = self.data.try_borrow() else {
             return;
         };
 
         let stroke_path = make_closed_strokepath(
             Denormalizer::from_cx(cx),
-            buckets.iter_peaks(),
+            buckets.iter_points(),
             buckets.num_points(),
         );
 
