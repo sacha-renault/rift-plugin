@@ -3,7 +3,7 @@ use vizia::{
     vg::{Canvas, ClipOp, Path, Point, Rect},
 };
 
-struct PathWithClosing {
+pub struct PathWithClosing {
     pub path: Path,
     pub closing_points: [(f32, f32); 2],
 }
