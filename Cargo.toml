@@ -32,13 +32,20 @@ parking_lot = { workspace = true }
 
 [workspace]
 resolver = "2"
-members = ["crates/hug-accumulator","crates/hug-derive", "crates/hug-resolver", "crates/hug-shared"]
+members = [
+  "crates/hug-accumulator",
+  "crates/hug-derive", 
+  "crates/hug-fft", 
+  "crates/hug-resolver", 
+  "crates/hug-shared"
+]
 
 [workspace.dependencies]
 hug-derive  = { path = "crates/hug-derive" }
 hug-resolver = { path = "crates/hug-resolver" }
 hug-accumulator = { path = "crates/hug-accumulator" }
 hug-shared = { path = "crates/hug-shared" }
+hug-fft = { path = "crates/hug-shared" }
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 crossbeam-queue = "0.3.12"
