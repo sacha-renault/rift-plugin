@@ -5,6 +5,7 @@ mod grid;
 mod oscilloscope;
 mod param_button;
 mod param_knob;
+mod param_slider;
 
 mod gui_prelude {
     pub use crate::prelude::ClapParam;
@@ -20,3 +21,4 @@ pub use gui_prelude::RedrawOnExt;
 pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
 pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;
+pub use param_slider::ParamSlider;
