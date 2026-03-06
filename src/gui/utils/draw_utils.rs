@@ -13,10 +13,11 @@ pub struct PathWithClosing {
 pub fn make_strokepath(
     points: impl Iterator<Item = (f32, f32)>,
     vtransform: ViewportTransform,
+    x_low: f32,
 ) -> Option<PathWithClosing> {
     let mut path = Path::new();
     let mut points = points.map(|(x, y)| vtransform.transform(x, y));
-    let (_, zero_y) = vtransform.transform(0., 0.5);
+    let (_, zero_y) = vtransform.transform(0., x_low);
 
     if let Some((x, y)) = points.next() {
         let first_x = x;

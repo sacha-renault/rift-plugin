@@ -4,6 +4,9 @@ use vizia::vg;
 use super::gui_prelude::*;
 
 pub trait OscilloscopeData {
+    /// This function return raw values for x and y
+    /// You may choose [`Oscilloscope::x_range`] and [`Oscilloscope::y_range`]
+    /// so it fits what u wanna display
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R;
@@ -26,15 +29,23 @@ pub trait OscilloscopeData {
 pub struct Oscilloscope<D: 'static> {
     data: D,
 
-    /// todo!(), min max are currently unused
-    #[extension(ext)]
-    min: f32,
-
-    #[extension(ext)]
-    max: f32,
-
     #[extension(ext)]
     filled_path: bool,
+
+    /// This is used to know where to close the wave for the fill
+    /// By default it's 0.5 (the filled path goes through middle)
+    /// but it can be change for abs display of the wave, etc ..
+    #[extension(ext)]
+    fill_lign_height: f32,
+
+    #[extension(ext)]
+    x_range: (f32, f32),
+
+    #[extension(ext)]
+    y_range: (f32, f32),
+
+    #[extension(ext)]
+    filter_transform: Option<Box<dyn Fn(f32, f32) -> Option<(f32, f32)>>>,
 }
 
 impl<D: OscilloscopeData> View for Oscilloscope<D> {
@@ -43,11 +54,15 @@ impl<D: OscilloscopeData> View for Oscilloscope<D> {
         clip_bounds(cx, canvas);
 
         let bounds = cx.bounds();
-        let vtransform = ViewportTransform::new(bounds);
-        let Some(path_with_closing) = self
-            .data
-            .with_points(bounds.width(), |points| make_strokepath(points, vtransform))
-        else {
+        let vtransform = ViewportTransform::with_range(bounds, self.x_range, self.y_range);
+        let Some(path_with_closing) = self.data.with_points(bounds.width(), |points| {
+            if let Some(transform) = &self.filter_transform {
+                let points = points.filter_map(|(x, y)| transform(x, y));
+                make_strokepath(points, vtransform, self.fill_lign_height)
+            } else {
+                make_strokepath(points, vtransform, self.fill_lign_height)
+            }
+        }) else {
             return;
         };
 
@@ -67,9 +82,11 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
     pub fn new(cx: &mut Context, data: D) -> Handle<'_, Self> {
         Self {
             data,
-            min: -1.0,
-            max: 1.0,
             filled_path: true,
+            fill_lign_height: 0.5,
+            filter_transform: None,
+            x_range: (0., 1.),
+            y_range: (0., 1.),
         }
         .build(cx, |_| {})
     }
@@ -142,11 +159,11 @@ impl OscilloscopeData for RcCell<WindowBuffer> {
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
         let borrow = self.borrow();
-        let length = borrow.num_points() as f32;
+        let length = (borrow.num_points() - 1) as f32;
         let mut iterator = borrow
             .iter_peaks()
             .enumerate()
-            .map(|(i, y)| ((i as f32) / length, (y + 1.0) / 2.0));
+            .map(|(i, y)| ((i as f32) / length, y));
         f(&mut iterator)
     }
 }
@@ -161,7 +178,7 @@ where
     {
         let max = width.ceil() / 2.0;
         let mut iterator = (0..max as usize).map(|v| {
-            let normalized = v as f32 / max;
+            let normalized = v as f32 / (max - 1.);
             (normalized, self(normalized))
         });
         f(&mut iterator)
