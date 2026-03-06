@@ -84,7 +84,9 @@ impl WindowBuffer {
     ///
     /// The iterator starts from the `write_idx` and wraps around to show the full history.
     pub fn iter_peaks(&self) -> impl Iterator<Item = f32> {
-        let start = self.write_idx;
+        // FIX: write_idx is the one we currently write on e.g. the most recent
+        // it has to be at the very end so start must be +1
+        let start = (self.write_idx + 1).rem_euclid(self.n_buckets);
         (start..self.n_buckets)
             .chain(0..start)
             .map(|idx| self.buckets[idx].peak())
