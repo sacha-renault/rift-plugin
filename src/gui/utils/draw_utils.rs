@@ -3,16 +3,20 @@ use vizia::{
     vg::{Canvas, ClipOp, Path, Point, Rect},
 };
 
+use crate::gui::utils::ViewportTransform;
+
 pub struct PathWithClosing {
     pub path: Path,
     pub closing_points: [(f32, f32); 2],
 }
 
 pub fn make_strokepath(
-    mut points: impl Iterator<Item = (f32, f32)>,
-    zero_y: f32,
+    points: impl Iterator<Item = (f32, f32)>,
+    vtransform: ViewportTransform,
 ) -> Option<PathWithClosing> {
     let mut path = Path::new();
+    let mut points = points.map(|(x, y)| vtransform.transform(x, y));
+    let (_, zero_y) = vtransform.transform(0., 0.5);
 
     if let Some((x, y)) = points.next() {
         let first_x = x;
