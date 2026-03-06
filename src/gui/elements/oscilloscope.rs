@@ -4,7 +4,7 @@ use vizia::vg;
 use super::gui_prelude::*;
 
 pub trait OscilloscopeData {
-    fn with_points<F, R>(&self, denorm: ViewportTransform, width: f32, f: F) -> R
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R;
 }
@@ -26,6 +26,7 @@ pub trait OscilloscopeData {
 pub struct Oscilloscope<D: 'static> {
     data: D,
 
+    /// todo!(), min max are currently unused
     #[extension(ext)]
     min: f32,
 
@@ -42,11 +43,11 @@ impl<D: OscilloscopeData> View for Oscilloscope<D> {
         clip_bounds(cx, canvas);
 
         let bounds = cx.bounds();
-        let denorm = ViewportTransform::new(bounds, self.min, self.max);
-        let (_, zero_y) = denorm.transform(0., 0.);
-        let Some(path_with_closing) = self.data.with_points(denorm, bounds.width(), |points| {
-            make_strokepath(points, zero_y)
-        }) else {
+        let vtransform = ViewportTransform::new(bounds);
+        let Some(path_with_closing) = self
+            .data
+            .with_points(bounds.width(), |points| make_strokepath(points, vtransform))
+        else {
             return;
         };
 
@@ -111,7 +112,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
 
 // Must implement for useage in oscilloscope
 impl OscilloscopeData for Vec<f32> {
-    fn with_points<F, R>(&self, denorm: ViewportTransform, _: f32, f: F) -> R
+    fn with_points<F, R>(&self, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
@@ -120,23 +121,23 @@ impl OscilloscopeData for Vec<f32> {
             .iter()
             .copied()
             .enumerate()
-            .map(|(i, y)| denorm.transform((i as f32) / length, y));
+            .map(|(i, y)| ((i as f32) / length, y));
         f(&mut iterator)
     }
 }
 
 impl OscilloscopeData for Vec<(f32, f32)> {
-    fn with_points<F, R>(&self, denorm: ViewportTransform, _: f32, f: F) -> R
+    fn with_points<F, R>(&self, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
-        let mut iterator = self.iter().copied().map(|(x, y)| denorm.transform(x, y));
+        let mut iterator = self.iter().copied();
         f(&mut iterator)
     }
 }
 
 impl OscilloscopeData for RcCell<WindowBuffer> {
-    fn with_points<F, R>(&self, denorm: ViewportTransform, _: f32, f: F) -> R
+    fn with_points<F, R>(&self, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
@@ -145,7 +146,7 @@ impl OscilloscopeData for RcCell<WindowBuffer> {
         let mut iterator = borrow
             .iter_peaks()
             .enumerate()
-            .map(|(i, y)| denorm.transform((i as f32) / length, y));
+            .map(|(i, y)| ((i as f32) / length, (y + 1.0) / 2.0));
         f(&mut iterator)
     }
 }
@@ -154,14 +155,14 @@ impl<Func> OscilloscopeData for Func
 where
     Func: Fn(f32) -> f32,
 {
-    fn with_points<F, R>(&self, denorm: ViewportTransform, width: f32, f: F) -> R
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
         let max = width.ceil() / 2.0;
         let mut iterator = (0..max as usize).map(|v| {
             let normalized = v as f32 / max;
-            denorm.transform(normalized, self(normalized))
+            (normalized, self(normalized))
         });
         f(&mut iterator)
     }
