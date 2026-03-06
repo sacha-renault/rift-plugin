@@ -41,18 +41,20 @@ pub trait RedrawOnExt: Sized {
     ///
     /// The bound Lens must target a `u64`. This method attaches a binding that calls `needs_redraw`
     /// on the current entity whenever the lens fires, ensuring the UI updates reactively.
-    fn redraw_on<L>(self, lens: L) -> Self
+    fn redraw_on<L, D>(self, lens: L) -> Self
     where
-        L: Lens<Target = u64>;
+        L: Lens<Target = D>,
+        D: Data;
 }
 
 impl<V> RedrawOnExt for Handle<'_, V>
 where
     V: View,
 {
-    fn redraw_on<L>(mut self, lens: L) -> Self
+    fn redraw_on<L, D>(mut self, lens: L) -> Self
     where
-        L: Lens<Target = u64>,
+        L: Lens<Target = D>,
+        D: Data,
     {
         let entity = self.entity();
         Binding::new(self.context(), lens, move |cx, _| {
