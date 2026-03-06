@@ -2,26 +2,32 @@ use vizia::vg;
 
 use super::gui_prelude::*;
 
+/// Defines the mathematical distribution of lines across the grid.
 pub enum GridScale {
-    Linear {
-        start: f32,
-        end: f32,
-        count: usize,
-    },
+    /// Equally spaced intervals.
+    Linear { start: f32, end: f32, count: usize },
+    /// Exponentially spaced intervals (e.g., frequency scales).
     Logarithmic {
         start: f32,
         end: f32,
         base: f32,
         sub_ticks: usize,
     },
+    /// Arbitrary positions defined by the caller.
     Lines(Vec<(f32, f32)>),
 }
 
 impl GridScale {
+    /// Creates a linear grid with equally spaced ticks.
     pub fn linear(start: f32, end: f32, count: usize) -> Self {
         Self::Linear { start, end, count }
     }
 
+    /// Creates a logarithmic grid.
+    ///
+    /// # Panics
+    /// Panics if `base` is less than or equal to 1.0,
+    /// or if the range includes non-positive values.
     pub fn logarithmic(start: f32, end: f32, base: f32, sub_ticks: usize) -> Self {
         Self::Logarithmic {
             start,
@@ -31,10 +37,12 @@ impl GridScale {
         }
     }
 
+    /// Creates a grid with a single line at the given normalized position and value.
     pub fn line(normalized: f32, value: f32) -> Self {
         Self::Lines(vec![(normalized, value)])
     }
 
+    /// Creates a grid from multiple manually defined lines.
     pub fn lines(lines: Vec<(f32, f32)>) -> Self {
         Self::Lines(lines)
     }
@@ -135,6 +143,8 @@ impl GridScale {
 /// Compile user [`GridScale`] input so we never have to recompute values
 /// (i hate allocation please stop)
 struct CompiledGridScale(Vec<GridValue>);
+
+/// A single tick definition in the compiled grid.
 struct GridValue {
     normalized: f32,
 
@@ -145,6 +155,27 @@ struct GridValue {
     value: f32,
 }
 
+/// A helper to draw grid lines on a [`Plot`] or similar canvas.
+///
+/// # Example:
+/// ```ignore
+/// ZStack::new(cx, |cx| {
+/// // Create a logarithmic horizontal frequency grid (20Hz to 20kHz)
+/// PlotGrid::new(cx, GridScale::logarithmic(20.0, 20000.0, 10.0, 8))
+/// .orientation(Orientation::Horizontal)
+///     .color(Color::gray())
+///     .opacity(0.2);
+///
+///     // Create a linear vertical decibel grid (-12dB to +12dB)
+/// PlotGrid::new(cx, GridScale::linear(-12.0, 12.0, 5))
+/// .orientation(Orientation::Vertical)
+///     .color(Color::gray())
+///     .opacity(0.2);
+/// });
+/// ```
+///
+/// # Note
+/// Only redraws when the underlying plot's layout changes (handled by the parent `View` impl).
 #[derive(HandleExtension)]
 pub struct PlotGrid {
     axe_values: CompiledGridScale,
@@ -163,7 +194,6 @@ impl View for PlotGrid {
 
         let viewport_transform = ViewportTransform::new(cx.bounds());
 
-        // The draw loop is now incredibly clean and fast. No math, just mapping.
         for axe_val in &self.axe_values.0 {
             let pos = axe_val.normalized;
 
@@ -186,10 +216,21 @@ impl View for PlotGrid {
 }
 
 impl PlotGrid {
+    /// Creates a new grid based on the provided scale.
     pub fn new(cx: &mut Context, scale: GridScale) -> Handle<'_, Self> {
         let axe_values = scale.compile();
         Self {
             axe_values,
+            orientation: Orientation::Horizontal,
+        }
+        .build(cx, |_| {})
+    }
+
+    /// Helper to create a simple bounding box grid (lines at 0.0 and 1.0).
+    /// You have to call this on both orientation to make the complete box
+    pub fn border(cx: &mut Context) -> Handle<'_, Self> {
+        Self {
+            axe_values: GridScale::lines(vec![(0., 0.), (1.0, 1.0)]).compile(),
             orientation: Orientation::Horizontal,
         }
         .build(cx, |_| {})
