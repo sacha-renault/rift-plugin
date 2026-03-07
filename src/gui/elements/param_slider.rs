@@ -49,7 +49,8 @@ where
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, |p| p.get_normalized() as f32);
+        let value_lens = make_lens(lens, accessor, |p| p.get_raw() as f32);
+        let (start, end) = (param_ptr.min_value(), param_ptr.max_value());
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = value_text_formater {
                 f(p.get_raw(), p.unit())
@@ -74,9 +75,10 @@ where
 
             Slider::new(cx, value_lens)
                 .step(step)
+                .range((start as f32)..(end as f32))
                 .orientation(orientation)
                 .on_change(move |cx, v| {
-                    set_value_normalized(param_ptr, cx, v as f64);
+                    set_value(param_ptr, cx, v as f64);
                     if let Some(f) = on_value_changed.as_ref() {
                         f(cx, v)
                     }
