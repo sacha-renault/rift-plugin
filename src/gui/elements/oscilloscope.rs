@@ -1,7 +1,10 @@
+use hug_fft::StftChannelConsumer;
 use hug_shared::RcCell;
 use vizia::vg;
 
 use super::gui_prelude::*;
+
+use crate::utils::basics::lerp;
 
 pub trait OscilloscopeData {
     /// This function return raw values for x and y
@@ -172,15 +175,57 @@ impl<Func> OscilloscopeData for Func
 where
     Func: Fn(f32) -> f32,
 {
-    fn with_points<F, R>(&self, width: f32, f: F) -> R
+    fn with_points<F, R>(&self, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
-        let max = width.ceil() / 2.0;
+        let max = 250.;
         let mut iterator = (0..max as usize).map(|v| {
             let normalized = v as f32 / (max - 1.);
             (normalized, self(normalized))
         });
+        f(&mut iterator)
+    }
+}
+
+impl OscilloscopeData for RcCell<StftChannelConsumer> {
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
+    {
+        let borrow = self.borrow();
+
+        let bins = borrow.bins();
+        let samplerate = borrow.sample_rate();
+        let fft_size = borrow.fft_size() as f32;
+        let length = bins.len() as f32;
+
+        let f_min = 20.0;
+        let f_max = 20000.0;
+        let log_ratio: f32 = f_max / f_min;
+
+        let num_points = width as usize;
+        let max = (num_points - 1) as f32;
+
+        let mut iterator = (0..num_points).map(|idx| {
+            let x = idx as f32 / max;
+            let freq = f_min * log_ratio.powf(x);
+            let bin_idx = (freq * fft_size as f32) / samplerate;
+
+            let val = if bin_idx.floor() < length - 1.0 {
+                let prev = bin_idx.floor() as usize;
+                let next = prev + 1;
+                lerp(bins[prev], bins[next], bin_idx.fract())
+            } else {
+                bins.last().copied().unwrap_or(0.0)
+            };
+
+            let db = 20.0 * val.max(1e-5).log10();
+
+            // We add up some db so higher spectrum looks more filled
+            (x, db)
+        });
+
         f(&mut iterator)
     }
 }

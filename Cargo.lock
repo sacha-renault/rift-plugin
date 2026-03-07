@@ -680,6 +680,7 @@ dependencies = [
  "crossbeam-queue",
  "hug-accumulator",
  "hug-derive",
+ "hug-fft",
  "hug-shared",
  "log",
  "parking_lot",

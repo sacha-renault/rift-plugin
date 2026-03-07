@@ -1,6 +1,8 @@
 use hug_accumulator::AudioConsumer;
 use hug_shared::{BlockTime, ChannelsInfo};
 
+use crate::utils::basics::lerp;
+
 struct ChannelAudioPeaks {
     true_peak: f32,
     smooth_peak: f32,
@@ -91,8 +93,4 @@ impl AudioConsumer for AudioPeaks {
 
 fn default_decay(peak: f32, block_size: usize) -> f32 {
     peak * 0.9985_f32.powi(block_size as i32)
-}
-
-fn lerp(current: f32, target: f32, factor: f32) -> f32 {
-    current + (target - current) * factor
 }
