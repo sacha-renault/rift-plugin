@@ -4,7 +4,40 @@ use vizia::vg;
 
 use super::gui_prelude::*;
 
-use crate::utils::basics::lerp;
+use crate::utils::basics::cubic_interpolate;
+
+/// Given a stft, retrieve a value at a fractional index using
+/// cubic interpolation
+#[inline]
+fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
+    let len = bins.len();
+
+    // Safety checks
+    if len <= 1 {
+        return bins[0];
+    }
+
+    // handle borders of slice
+    if x <= 0.0 {
+        return bins[0];
+    }
+    if x >= (len - 1) as f32 {
+        return bins[len - 1];
+    }
+
+    let i = x.floor() as usize;
+    let t = x.fract();
+    if t == 0. {
+        return bins[i];
+    }
+
+    let x0 = bins[i.saturating_sub(1)];
+    let x1 = bins[i];
+    let x2 = bins[(i + 1).min(len - 1)];
+    let x3 = bins[(i + 2).min(len - 1)];
+
+    cubic_interpolate(x0, x1, x2, x3, t)
+}
 
 pub trait OscilloscopeData {
     /// This function return raw values for x and y
@@ -198,7 +231,6 @@ impl OscilloscopeData for RcCell<StftChannelConsumer> {
         let bins = borrow.bins();
         let samplerate = borrow.sample_rate();
         let fft_size = borrow.fft_size() as f32;
-        let length = bins.len() as f32;
 
         let f_min = 20.0;
         let f_max = 20000.0;
@@ -212,13 +244,7 @@ impl OscilloscopeData for RcCell<StftChannelConsumer> {
             let freq = f_min * log_ratio.powf(x);
             let bin_idx = (freq * fft_size as f32) / samplerate;
 
-            let val = if bin_idx.floor() < length - 1.0 {
-                let prev = bin_idx.floor() as usize;
-                let next = prev + 1;
-                lerp(bins[prev], bins[next], bin_idx.fract())
-            } else {
-                bins.last().copied().unwrap_or(0.0)
-            };
+            let val = sample_spectrum(bins, bin_idx);
 
             let db = 20.0 * val.max(1e-5).log10();
 
