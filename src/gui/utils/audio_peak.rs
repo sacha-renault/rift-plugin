@@ -33,6 +33,11 @@ impl AudioPeaks {
         }
     }
 
+    pub fn lerp_factor(mut self, factor: f32) -> Self {
+        self.lerp_factor = factor;
+        self
+    }
+
     pub fn set_decay(mut self, func: fn(f32, usize) -> f32) -> Self {
         self.decay_fn = func;
         self
