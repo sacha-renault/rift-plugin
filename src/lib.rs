@@ -1,9 +1,10 @@
+pub(crate) mod utils;
+
 mod context;
 mod gui;
 mod params;
 mod processing;
 mod type_wrapper;
-mod utils;
 mod wrapper;
 
 #[macro_export]
