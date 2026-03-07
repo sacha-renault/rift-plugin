@@ -52,7 +52,8 @@ pub mod prelude {
     pub use gui::utils as gui_utils;
     pub use gui::{ClapGui, GuiFactory, GuiParamEvent, ViziaGui};
 
+    pub use context::*;
     pub use processing::*;
 
-    pub use context::*;
+    pub use utils::basics;
 }
