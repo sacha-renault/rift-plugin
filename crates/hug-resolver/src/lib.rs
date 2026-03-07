@@ -42,6 +42,12 @@ pub fn build_variable_map(vars: &[(&str, &str)]) -> HashMap<String, String> {
 #[derive(Debug)]
 pub struct CssString(pub String);
 
+impl std::fmt::Display for CssString {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
 impl IntoCssStr for CssString {
     fn get_style(&self) -> Result<String, std::io::Error> {
         Ok(self.0.clone())
