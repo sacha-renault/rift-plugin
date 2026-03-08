@@ -36,12 +36,12 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
     let indices: Vec<u32> = (0..count).collect();
 
     let expanded = quote! {
-        impl ::clack_hug::prelude::Params for #name {
+        impl ::rift_plugin::prelude::Params for #name {
             fn count(&self) -> u32 {
                 #count
             }
 
-            fn get_param_info<'a>(&'a self, index: u32) -> Option<::clack_hug::prelude::clack_extensions::params::ParamInfo<'a>> {
+            fn get_param_info<'a>(&'a self, index: u32) -> Option<::rift_plugin::prelude::clack_extensions::params::ParamInfo<'a>> {
                 match index {
                     #(
                         #indices => Some(self.#field_idents.param_info()),
@@ -50,7 +50,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 }
             }
 
-            fn get_value(&self, id: ::clack_hug::prelude::clack_plugin::prelude::ClapId) -> Option<f64> {
+            fn get_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId) -> Option<f64> {
                 #(
                     if id == self.#field_idents.id() {
                         return Some(self.#field_idents.get_raw());
@@ -59,7 +59,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 None
             }
 
-            fn set_value(&self, id: ::clack_hug::prelude::clack_plugin::prelude::ClapId, value: f64) {
+            fn set_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f64) {
                 #(
                     if id == self.#field_idents.id() {
                         self.#field_idents.set_raw(value);
@@ -68,7 +68,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 )*
             }
 
-            fn set_value_normalized(&self, id: ::clack_hug::prelude::clack_plugin::prelude::ClapId, value: f64) {
+            fn set_value_normalized(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f64) {
                 #(
                     if id == self.#field_idents.id() {
                         self.#field_idents.set_normalized(value);
@@ -77,7 +77,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 )*
             }
 
-            fn text_to_value(&self, id: ::clack_hug::prelude::clack_plugin::prelude::ClapId, text: &std::ffi::CStr) -> Option<f64> {
+            fn text_to_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, text: &std::ffi::CStr) -> Option<f64> {
                 #(
                     if id == self.#field_idents.id() {
                         return self.#field_idents.text_to_value(text);
@@ -88,9 +88,9 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
             fn value_to_text(
                 &self,
-                id: ::clack_hug::prelude::clack_plugin::prelude::ClapId,
+                id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId,
                 value: f64,
-                writer: &mut ::clack_hug::prelude::clack_extensions::params::ParamDisplayWriter,
+                writer: &mut ::rift_plugin::prelude::clack_extensions::params::ParamDisplayWriter,
             ) -> std::fmt::Result {
                 #(
                     if id == self.#field_idents.id() {

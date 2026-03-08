@@ -10,8 +10,8 @@ mod wrapper;
 #[macro_export]
 macro_rules! export_clap_plugin {
     ($PluginType:ty) => {
-        use clack_hug::prelude::PluginWrapper;
         use clack_plugin::clack_export_entry;
+        use rift_plugin::prelude::PluginWrapper;
 
         clack_export_entry! {
             clack_plugin::prelude::SinglePluginEntry<PluginWrapper<$PluginType>>
