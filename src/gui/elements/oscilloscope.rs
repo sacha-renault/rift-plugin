@@ -4,7 +4,7 @@ use vizia::vg;
 
 use super::gui_prelude::*;
 
-use crate::utils::basics::cubic_interpolate;
+use crate::prelude::utils::interpo::cubic_interpolate;
 
 /// Given a stft, retrieve a value at a fractional index using
 /// cubic interpolation

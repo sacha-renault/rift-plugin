@@ -1,7 +1,5 @@
-use hug_accumulator::AudioConsumer;
-use hug_shared::{BlockTime, ChannelsInfo};
-
-use crate::utils::basics::lerp;
+use crate::AudioConsumer;
+use hug_shared::{BlockTime, ChannelsInfo, utils::interpo::lerp};
 
 struct ChannelAudioPeaks {
     true_peak: f32,
