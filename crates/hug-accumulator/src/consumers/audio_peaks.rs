@@ -1,5 +1,5 @@
 use crate::AudioConsumer;
-use hug_shared::{BlockTime, ChannelsInfo, utils::interpo::lerp};
+use hug_shared::{BlockTime, ChannelsInfo, utils::interpo::lerp_n};
 
 struct ChannelAudioPeaks {
     true_peak: f32,
@@ -33,8 +33,13 @@ impl AudioPeaks {
         }
     }
 
+    /// Sets the lerping factor for smooth audio level transitions.
+    ///
+    /// The provided value is scaled by 1e-3 internally. Since this function is called
+    /// tons of times per second to update audio peaks, the raw lerp factor would be too large
+    /// without this scaling.
     pub fn lerp_factor(mut self, factor: f32) -> Self {
-        self.lerp_factor = factor;
+        self.lerp_factor = factor * 1e-3;
         self
     }
 
@@ -81,7 +86,7 @@ impl AudioConsumer for AudioPeaks {
         }
 
         // Always lerp to true_peak
-        smooth_peak = lerp(smooth_peak, true_peak, self.lerp_factor);
+        smooth_peak = lerp_n(smooth_peak, true_peak, self.lerp_factor, block.len() as i32);
         self.channel_peaks[channel_info.current] = ChannelAudioPeaks {
             true_peak,
             smooth_peak,
