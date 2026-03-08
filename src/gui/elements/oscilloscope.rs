@@ -221,6 +221,8 @@ where
     }
 }
 
+/// Yes, we do display spectrogram in the oscilloscope, it works the same
+/// anyway, we can use Oscilloscope for any data that for y has <= 1 x.
 impl OscilloscopeData for RcCell<StftChannelConsumer> {
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
