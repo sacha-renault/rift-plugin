@@ -4,6 +4,14 @@ pub fn lerp(current: f32, target: f32, factor: f32) -> f32 {
     current + (target - current) * factor
 }
 
+/// Compute n linear interpolation
+///
+/// Equivalent to (0..number).fold(current, |v, _| lerp(v, target, factor))
+#[inline]
+pub fn lerp_n(current: f32, target: f32, factor: f32, number: i32) -> f32 {
+    lerp(current, target, 1.0 - (1.0 - factor).powi(number))
+}
+
 /// Lerp between two values in a slice
 ///
 /// # Panics:
