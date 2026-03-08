@@ -1,9 +1,9 @@
 [package]
-name = "hug-accumulator"
+name = "rift-plugin-accumulator"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-hug-shared = {workspace = true}
+rift-plugin-shared = {workspace = true}
 crossbeam-queue = {workspace = true}
 rustfft = { workspace = true }

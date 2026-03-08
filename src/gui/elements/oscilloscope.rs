@@ -1,5 +1,5 @@
-use hug_accumulator::{StftChannelConsumer, WindowBuffer};
-use hug_shared::RcCell;
+use rift_plugin_accumulator::{StftChannelConsumer, WindowBuffer};
+use rift_plugin_shared::RcCell;
 use vizia::vg;
 
 use super::gui_prelude::*;

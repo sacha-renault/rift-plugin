@@ -1,4 +1,4 @@
-use hug_shared::{BlockTime, ChannelsInfo};
+use rift_plugin_shared::{BlockTime, ChannelsInfo};
 
 pub use super::peaks::PeakBucket;
 use crate::AudioConsumer;

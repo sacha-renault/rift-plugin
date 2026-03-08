@@ -1,5 +1,5 @@
 [package]
-name = "hug-resolver"
+name = "rift-plugin-resolver"
 version = "0.1.0"
 edition = "2024"
 

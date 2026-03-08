@@ -2,7 +2,7 @@ use core::f32;
 use std::{collections::VecDeque, sync::Arc};
 
 use super::AudioConsumer;
-use hug_shared::{BlockTime, ChannelsInfo};
+use rift_plugin_shared::{BlockTime, ChannelsInfo};
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
 fn hanning(fft_size: usize) -> Vec<f32> {

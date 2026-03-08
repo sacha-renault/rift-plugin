@@ -1,5 +1,5 @@
 use crate::AudioConsumer;
-use hug_shared::{BlockTime, ChannelsInfo, utils::interpo::lerp_n};
+use rift_plugin_shared::{BlockTime, ChannelsInfo, utils::interpo::lerp_n};
 
 struct ChannelAudioPeaks {
     true_peak: f32,

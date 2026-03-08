@@ -1,5 +1,5 @@
 use crossbeam_queue::ArrayQueue;
-use hug_shared::{BlockInfo, BlockTime, ChannelsInfo};
+use rift_plugin_shared::{BlockInfo, BlockTime, ChannelsInfo};
 use std::{
     ops::Deref,
     sync::{

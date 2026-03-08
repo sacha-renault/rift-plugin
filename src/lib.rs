@@ -31,8 +31,11 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     // reexport inner
-    pub use hug_derive::{DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder};
-    pub use hug_shared::*;
+    pub use rift_plugin_derive::{
+        DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder,
+    };
+    pub use rift_plugin_shared::utils;
+    pub use rift_plugin_shared::*;
 
     pub use params::param_bool::BoolParam;
     pub use params::param_enum::{EnumParam, EnumValues};
@@ -54,6 +57,4 @@ pub mod prelude {
 
     pub use context::*;
     pub use processing::*;
-
-    pub use hug_shared::utils;
 }
