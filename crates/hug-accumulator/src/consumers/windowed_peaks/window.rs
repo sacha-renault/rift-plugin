@@ -1,7 +1,7 @@
-use hug_accumulator::AudioConsumer;
 use hug_shared::{BlockTime, ChannelsInfo};
 
-pub use super::PeakBucket;
+pub use super::peaks::PeakBucket;
+use crate::AudioConsumer;
 
 /// Represents the operating mode of a [`WindowBuffer`].
 pub enum WindowBufferMode {

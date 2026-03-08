@@ -1,4 +1,4 @@
-use hug_accumulator::StftChannelConsumer;
+use hug_accumulator::{StftChannelConsumer, WindowBuffer};
 use hug_shared::RcCell;
 use vizia::vg;
 
