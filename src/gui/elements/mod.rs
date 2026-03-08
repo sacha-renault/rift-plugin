@@ -6,6 +6,7 @@ mod oscilloscope;
 mod param_button;
 mod param_knob;
 mod param_slider;
+mod peak_viewer;
 
 mod gui_prelude {
     pub use crate::prelude::ClapParam;
@@ -22,3 +23,4 @@ pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
 pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;
 pub use param_slider::ParamSlider;
+pub use peak_viewer::{PeakViewer, PeakViewerExt};

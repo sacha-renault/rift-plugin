@@ -48,18 +48,16 @@ impl AudioPeaks {
         self
     }
 
-    pub fn true_peak(&self, channel: usize) -> f32 {
-        self.channel_peaks
-            .get(channel)
-            .map(|ch| ch.true_peak)
-            .unwrap_or(0.)
+    pub fn num_channels(&self) -> usize {
+        self.channel_peaks.len()
     }
 
-    pub fn peak(&self, channel: usize) -> f32 {
-        self.channel_peaks
-            .get(channel)
-            .map(|ch| ch.smooth_peak)
-            .unwrap_or(0.)
+    pub fn true_peak(&self, channel: usize) -> Option<f32> {
+        self.channel_peaks.get(channel).map(|ch| ch.true_peak)
+    }
+
+    pub fn peak(&self, channel: usize) -> Option<f32> {
+        self.channel_peaks.get(channel).map(|ch| ch.smooth_peak)
     }
 }
 
