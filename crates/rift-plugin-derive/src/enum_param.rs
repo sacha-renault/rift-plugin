@@ -49,7 +49,7 @@ pub fn derive_enum_values(input: TokenStream) -> TokenStream {
     let indices: Vec<u32> = (0..count).collect();
 
     let expanded = quote! {
-        impl ::clack_hug::prelude::EnumValues for #name {
+        impl ::rift_plugin::prelude::EnumValues for #name {
             fn to_index(self) -> u32 {
                 self as u32
             }
