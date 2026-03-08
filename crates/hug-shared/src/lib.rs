@@ -1,6 +1,8 @@
 use core::f64;
 use std::{cell::RefCell, rc::Rc};
 
+pub mod utils;
+
 #[derive(Clone, Copy)]
 pub struct ChannelsInfo {
     pub current: usize,

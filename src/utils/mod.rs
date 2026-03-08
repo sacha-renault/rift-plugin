@@ -1,4 +1,3 @@
-pub mod basics;
 pub mod id_generator;
 
 #[allow(unused)]
