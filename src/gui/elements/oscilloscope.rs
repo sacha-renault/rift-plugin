@@ -81,6 +81,9 @@ pub struct Oscilloscope<D: 'static> {
     y_range: (f32, f32),
 
     #[extension(ext)]
+    resolution: f32,
+
+    #[extension(ext)]
     filter_transform: Option<Box<dyn Fn(f32, f32) -> Option<(f32, f32)>>>,
 }
 
@@ -91,7 +94,8 @@ impl<D: OscilloscopeData> View for Oscilloscope<D> {
 
         let bounds = cx.bounds();
         let vtransform = ViewportTransform::with_range(bounds, self.x_range, self.y_range);
-        let Some(path_with_closing) = self.data.with_points(bounds.width(), |points| {
+        let scaled_width = bounds.width() * self.resolution;
+        let Some(path_with_closing) = self.data.with_points(scaled_width, |points| {
             if let Some(transform) = &self.filter_transform {
                 let points = points.filter_map(|(x, y)| transform(x, y));
                 make_strokepath(points, vtransform, self.fill_lign_height)
@@ -123,6 +127,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
             filter_transform: None,
             x_range: (0., 1.),
             y_range: (0., 1.),
+            resolution: 1.0,
         }
         .build(cx, |_| {})
     }
