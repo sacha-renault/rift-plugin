@@ -8,10 +8,6 @@ rift-plugin-derive = { workspace = true }
 rift-plugin-shared = { workspace = true }
 rift-plugin-accumulator = { workspace = true }
 
-vizia = { workspace = true }
-vizia_baseview = { workspace = true }
-
-bon = "3.8.2"
 clack-plugin = { git = "https://github.com/prokopyl/clack"}
 clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "audio-ports",
@@ -24,6 +20,11 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "latency"
 ] }
 
+vizia = { workspace = true }
+vizia_baseview = { workspace = true }
+
+bon = "3.8.2"
+tinyjson = "2"
 raw-window-handle = "0.5.0"
 log = "0.4"
 paste = "1.0.15"

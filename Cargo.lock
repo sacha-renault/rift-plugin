@@ -2491,6 +2491,7 @@ dependencies = [
  "rift-plugin-accumulator",
  "rift-plugin-derive",
  "rift-plugin-shared",
+ "tinyjson",
  "vizia",
  "vizia_baseview",
 ]
@@ -3032,6 +3033,12 @@ dependencies = [
  "bytemuck",
  "strict-num",
 ]
+
+[[package]]
+name = "tinyjson"
+version = "2.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9ab95735ea2c8fd51154d01e39cf13912a78071c2d89abc49a7ef102a7dd725a"
 
 [[package]]
 name = "tinystr"

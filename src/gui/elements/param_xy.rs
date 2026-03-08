@@ -29,7 +29,7 @@ impl Model for DataXY {
 
 struct SetValueXY(f32, f32);
 
-/// A control for mapping a [`ClapParam`] to a rotary knob UI element.
+/// A control for mapping two [`ClapParam`] to a PAD.
 #[derive(ParamViewBuilder)]
 pub struct ParamPadXY<L, MapFnX, MapFnY>
 where
@@ -52,8 +52,6 @@ where
     on_mouse_up: Option<Arc<dyn Fn(&mut EventContext, MouseButton) + Send + Sync>>,
     value_text_formater: Option<fn(f64, &str) -> String>,
 
-    /// A function that will be called on the [`Handle<'_, Knob<L>>`]. It allow to modify
-    /// the [`Handle`] as [`LayoutModifiers`] and [`StyleModifiers`]
     #[builder(default = None)]
     pad_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
 }
