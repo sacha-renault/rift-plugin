@@ -1,5 +1,5 @@
-use hug_accumulator::AudioPeaks;
-use hug_shared::{RcCell, utils::db_conversion::linear_to_db};
+use rift_plugin_accumulator::AudioPeaks;
+use rift_plugin_shared::{RcCell, utils::db_conversion::linear_to_db};
 use vizia::vg::{self, Rect};
 
 use super::gui_prelude::*;

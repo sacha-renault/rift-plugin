@@ -1,5 +1,5 @@
-use hug_accumulator::{AudioAccumulator, AudioConsumer};
-use hug_shared::RcCell;
+use rift_plugin_accumulator::{AudioAccumulator, AudioConsumer};
+use rift_plugin_shared::RcCell;
 use vizia::prelude::*;
 
 /// Simple struct that is send when the binding over the redraw lens change

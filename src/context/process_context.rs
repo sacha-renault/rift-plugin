@@ -3,7 +3,7 @@ use std::sync::Arc;
 use clack_plugin::{
     events::event_types::TransportFlags, host::HostAudioProcessorHandle, process::Process,
 };
-use hug_shared::BlockInfo;
+use rift_plugin_shared::BlockInfo;
 
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 

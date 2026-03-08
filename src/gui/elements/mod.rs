@@ -10,7 +10,7 @@ mod peak_viewer;
 
 mod gui_prelude {
     pub use crate::prelude::ClapParam;
-    pub use hug_derive::{HandleExtension, ParamViewBuilder};
+    pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
     pub use vizia::prelude::*;
 
     pub use super::super::utils::*;
