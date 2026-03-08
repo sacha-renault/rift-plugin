@@ -1,7 +1,7 @@
 use core::f32;
 use std::{collections::VecDeque, sync::Arc};
 
-use hug_accumulator::AudioConsumer;
+use super::AudioConsumer;
 use hug_shared::{BlockTime, ChannelsInfo};
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
@@ -18,6 +18,9 @@ fn hanning(fft_size: usize) -> Vec<f32> {
 
 pub struct DequeBuffer {
     inner: VecDeque<f32>,
+
+    /// A cache were we can copy contigous version
+    /// of [`VecDeque`] without allocating
     flat_cache: Vec<f32>,
     capacity: usize,
 }
