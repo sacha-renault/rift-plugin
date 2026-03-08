@@ -6,12 +6,11 @@ use hug_shared::{BlockTime, ChannelsInfo};
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
 fn hanning(fft_size: usize) -> Vec<f32> {
-    (0..=fft_size)
-        .map(|v| {
-            let fft_size_f32 = fft_size as f32;
-            let centered = (v - fft_size / 2) as f32;
-            let cos = (f32::consts::PI * centered / fft_size_f32).cos();
-            cos * cos / fft_size_f32
+    let fftmax = (fft_size - 1) as f32;
+    (0..fft_size)
+        .map(|i| {
+            let w = 2.0 * f32::consts::PI * i as f32 / fftmax;
+            0.5 * (1.0 - w.cos())
         })
         .collect()
 }
@@ -121,7 +120,7 @@ impl StftChannelConsumer {
 
         Self {
             channel_target: channel,
-            samples: DequeBuffer::new(fft_size * 2, fft_size),
+            samples: DequeBuffer::new(fft_size, fft_size),
             cache: vec![0.0; fft_size / 2],
             fft,
             fft_size,
@@ -133,6 +132,7 @@ impl StftChannelConsumer {
 
     pub fn consume_samples(&mut self, block: &[f32]) {
         self.samples.push_block_front(block);
+        let half_fft_size = 0.5 * self.fft_size as f32;
 
         if self.samples.len() >= self.fft_size {
             let contiguous_samples = self.samples.as_contiguous_latest(self.fft_size);
@@ -148,7 +148,7 @@ impl StftChannelConsumer {
 
             // Store magnitudes for the VST UI
             for i in 0..(self.fft_size / 2) {
-                self.cache[i] = self.fft_workspace[i].norm();
+                self.cache[i] = self.fft_workspace[i].norm() / half_fft_size;
             }
         }
     }
