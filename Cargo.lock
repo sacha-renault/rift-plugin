@@ -680,7 +680,6 @@ dependencies = [
  "crossbeam-queue",
  "hug-accumulator",
  "hug-derive",
- "hug-fft",
  "hug-shared",
  "log",
  "parking_lot",
@@ -1471,6 +1470,7 @@ version = "0.1.0"
 dependencies = [
  "crossbeam-queue",
  "hug-shared",
+ "rustfft",
 ]
 
 [[package]]
@@ -1481,15 +1481,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "hug-fft"
-version = "0.1.0"
-dependencies = [
- "hug-accumulator",
- "hug-shared",
- "rustfft",
 ]
 
 [[package]]

@@ -7,7 +7,6 @@ edition = "2024"
 hug-derive = { workspace = true }
 hug-shared = { workspace = true }
 hug-accumulator = { workspace = true }
-hug-fft = { workspace = true }
 
 vizia = { workspace = true }
 vizia_baseview = { workspace = true }
@@ -37,7 +36,6 @@ resolver = "2"
 members = [
   "crates/hug-accumulator",
   "crates/hug-derive", 
-  "crates/hug-fft", 
   "crates/hug-resolver", 
   "crates/hug-shared"
 ]
@@ -47,7 +45,6 @@ hug-derive  = { path = "crates/hug-derive" }
 hug-resolver = { path = "crates/hug-resolver" }
 hug-accumulator = { path = "crates/hug-accumulator" }
 hug-shared = { path = "crates/hug-shared" }
-hug-fft = { path = "crates/hug-fft" }
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 crossbeam-queue = "0.3.12"

@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 hug-shared = {workspace = true}
 crossbeam-queue = {workspace = true}
+
+rustfft = "6.4.1"

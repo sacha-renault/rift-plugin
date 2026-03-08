@@ -1,7 +1,7 @@
 mod accumulator;
 mod audio_block;
-mod consumer;
+mod consumers;
 
 pub use accumulator::AudioAccumulator;
 pub use audio_block::TimedAudioBlock;
-pub use consumer::AudioConsumer;
+pub use consumers::{AudioConsumer, StftChannelConsumer};

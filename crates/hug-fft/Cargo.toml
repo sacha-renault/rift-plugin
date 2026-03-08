@@ -1,9 +1,0 @@
-[package]
-name = "hug-fft"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-hug-accumulator = { workspace = true }
-hug-shared = { workspace = true }
-rustfft = "6.4.1"
