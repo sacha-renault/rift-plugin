@@ -16,10 +16,14 @@ use super::gui_prelude::*;
 #[derive(ParamViewBuilder)]
 pub struct ParamButton<L, MapFn>
 where
-    L: 'static,
-    MapFn: 'static,
+    L: Lens + Copy,
+    L::Target: Clone,
+    MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
 {
+    #[builder(new)]
     lens: L,
+
+    #[builder(new)]
     accessor: MapFn,
 
     on_press: Option<Arc<dyn Fn(&mut EventContext, f32) + Send + Sync>>,
