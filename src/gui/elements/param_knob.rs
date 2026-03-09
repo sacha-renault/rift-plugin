@@ -28,6 +28,21 @@ where
     label_text_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     arctrack_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     tick_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
+
+    /// Function to map the param to a value in the UI.
+    ///
+    /// Composing [`ParamKnob::taper`] with [`ParamKnob::taper_inverse`]
+    /// must return the initial value. Plugin won't crash if not but the behavior
+    /// would be weird.
+    #[builder(default = None)]
+    taper: Option<fn(f32) -> f32>,
+
+    /// Function to map back the UI value to the parameter expected value.
+    ///
+    /// Composing [`ParamKnob::taper`] with [`ParamKnob::taper_inverse`]
+    /// must return the initial value. Plugin won't crash if not but the behavior
+    /// would be weird.
+    taper_inverse: Option<fn(f32) -> f32>,
 }
 
 impl<L, MapFn> ParamKnob<L, MapFn>
@@ -48,10 +63,15 @@ where
             label_text_modifier,
             arctrack_modifier,
             tick_modifier,
+            taper,
+            taper_inverse,
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, |p| p.get_normalized() as f32);
+        let value_lens = make_lens(lens, accessor, move |p| {
+            apply_transform_opt(taper, p.get_normalized() as f32)
+        });
+
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = value_text_formater {
                 f(p.get_raw(), p.unit())
@@ -59,7 +79,8 @@ where
                 format!("{:.2}{}", p.get_raw(), p.unit())
             }
         });
-        let default_value = param_ptr.normalize(param_ptr.default_raw());
+        let default_value =
+            apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
 
         VStack::new(cx, move |cx| {
             Label::new(cx, text_lens)
@@ -90,6 +111,7 @@ where
                 })
             })
             .on_change(move |cx, v| {
+                let v = apply_transform_opt(taper_inverse, v);
                 set_value_normalized(param_ptr, cx, v as f64);
                 if let Some(f) = on_value_changed.as_ref() {
                     f(cx, v)

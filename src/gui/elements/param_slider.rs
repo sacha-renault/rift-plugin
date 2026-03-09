@@ -31,6 +31,21 @@ where
 
     #[builder(default = 1e-6)]
     step: f32,
+
+    /// Function to map the param to a value in the UI.
+    ///
+    /// Composing [`ParamSlider::taper`] with [`ParamSlider::taper_inverse`]
+    /// must return the initial value. Plugin won't crash if not but the behavior
+    /// would be weird.
+    #[builder(default = None)]
+    taper: Option<fn(f32) -> f32>,
+
+    /// Function to map back the UI value to the parameter expected value.
+    ///
+    /// Composing [`ParamSlider::taper`] with [`ParamSlider::taper_inverse`]
+    /// must return the initial value. Plugin won't crash if not but the behavior
+    /// would be weird.
+    taper_inverse: Option<fn(f32) -> f32>,
 }
 
 impl<L, MapFn> ParamSlider<L, MapFn>
@@ -50,10 +65,14 @@ where
             slider_modifier,
             label_text_modifier,
             step,
+            taper_inverse,
+            taper,
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, |p| p.get_raw() as f32);
+        let value_lens = make_lens(lens, accessor, move |p| {
+            apply_transform_opt(taper, p.get_raw() as f32)
+        });
         let (start, end) = (param_ptr.min_value(), param_ptr.max_value());
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = value_text_formater {
@@ -82,6 +101,7 @@ where
                 .range((start as f32)..(end as f32))
                 .orientation(orientation)
                 .on_change(move |cx, v| {
+                    let v = apply_transform_opt(taper_inverse, v);
                     set_value(param_ptr, cx, v as f64);
                     if let Some(f) = on_value_changed.as_ref() {
                         f(cx, v)
