@@ -14,6 +14,8 @@ struct ParamField {
     // /// If not present, it defaults to None.
     // #[darling(default)]
     // default: Option<syn::Expr>,
+    #[darling(default)]
+    name: Option<String>,
 }
 
 #[derive(FromDeriveInput)]
@@ -34,6 +36,17 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
     let field_idents: Vec<_> = fields.iter().map(|f| f.ident.as_ref().unwrap()).collect();
     let count = field_idents.len() as u32;
     let indices: Vec<u32> = (0..count).collect();
+    let param_names: Vec<_> = fields
+        .iter()
+        .map(|f| {
+            if let Some(name) = f.name.clone() {
+                name
+            } else {
+                let ident = f.ident.as_ref().unwrap().to_string();
+                panic!("Parameter {} must have a `name`.", ident);
+            }
+        })
+        .collect();
 
     let expanded = quote! {
         impl ::rift_plugin::prelude::Params for #name {
@@ -98,6 +111,19 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                     }
                 )*
                 Err(std::fmt::Error)
+            }
+        }
+
+        impl ::rift_plugin::_sealed::__ParamsInitializer for #name {
+            fn __initialize(&mut self) {
+                use ::rift_plugin::_sealed::__ParamInitializer;
+                #(
+                    self.#field_idents.__initialize(
+                        #param_names.to_string(),
+                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::from(#indices),
+                        None,
+                    );
+                )*
             }
         }
     };

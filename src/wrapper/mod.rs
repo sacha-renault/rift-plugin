@@ -2,6 +2,7 @@ use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
+use crate::_sealed::__ParamsInitializer;
 use crate::context::{InitContext, ProcessContext};
 use crate::gui::GuiFactory;
 use crate::params::param_trait::Params;
@@ -16,7 +17,7 @@ pub mod shared_states;
 
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Params for the plugin
-    type ParamType: Params + Default + Send + Sync + 'static;
+    type ParamType: Params + __ParamsInitializer + Default + Send + Sync + 'static;
 
     /// Anything else that should be shared, must just be thread safe
     type SharedType: Send + Sync + Default + 'static;

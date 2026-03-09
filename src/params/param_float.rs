@@ -4,8 +4,8 @@ use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
 use crate::params::param_ptr::ParamPtr;
+use crate::params::param_trait::__ParamInitializer;
 use crate::prelude::ClapParam;
-use crate::utils::id_generator::hash_name_into_id;
 
 use super::atomic_f32::AtomicF32;
 use super::param_trait::TypedParam;
@@ -19,8 +19,14 @@ pub struct FloatParam {
     #[builder(skip = AtomicF32::new(default))]
     pub(crate) value: AtomicF32,
 
-    /// Name of the param
-    pub(crate) name: &'static str,
+    /// The name of the param will
+    /// be initialized in the derive with it's clap ID
+    /// and module.
+    #[builder(skip = String::from(""))]
+    name: String,
+
+    #[builder(skip = None)]
+    module: Option<String>,
 
     #[builder(default = "")]
     pub(crate) unit: &'static str,
@@ -34,7 +40,7 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
 
-    #[builder(default = hash_name_into_id(name))]
+    #[builder(skip = ClapId::new(0))]
     pub(crate) id: ClapId,
 }
 
@@ -52,7 +58,7 @@ impl TypedParam for FloatParam {
 
 impl ClapParam for FloatParam {
     fn name(&self) -> &str {
-        self.name
+        &self.name
     }
 
     fn id(&self) -> ClapId {
@@ -110,5 +116,13 @@ impl ClapParam for FloatParam {
         ParamPtr {
             ptr: self as *const dyn ClapParam,
         }
+    }
+}
+
+impl __ParamInitializer for FloatParam {
+    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
+        self.name = name;
+        self.id = id;
+        self.module = module;
     }
 }

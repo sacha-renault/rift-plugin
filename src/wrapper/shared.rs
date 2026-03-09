@@ -2,7 +2,10 @@ use std::sync::Arc;
 
 use clack_plugin::plugin::PluginShared;
 
-use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
+use crate::{
+    _sealed::__ParamsInitializer,
+    wrapper::{ClapPlugin, shared_states::PluginSharedState},
+};
 
 pub struct WrapperShared<P: ClapPlugin> {
     /// Params of the plugin, defined by the user
@@ -25,8 +28,11 @@ impl<P: ClapPlugin> Clone for WrapperShared<P> {
 
 impl<P: ClapPlugin> Default for WrapperShared<P> {
     fn default() -> Self {
+        let mut params = P::ParamType::default();
+        params.__initialize();
+
         Self {
-            params: Arc::new(P::ParamType::default()),
+            params: Arc::new(params),
             other: Arc::new(P::SharedType::default()),
             states: Arc::new(PluginSharedState::default()),
         }

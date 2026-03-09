@@ -4,6 +4,7 @@ use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
 use crate::params::param_ptr::ParamPtr;
+use crate::params::param_trait::__ParamInitializer;
 use crate::prelude::{ClapParam, IntParam};
 
 use super::param_trait::TypedParam;
@@ -21,7 +22,7 @@ pub struct EnumParam<E: EnumValues> {
 
 impl<E: EnumValues> EnumParam<E> {
     /// Notes: IMPORTANT, default flags are EMPTY
-    pub fn new(name: &'static str, default: E) -> Self {
+    pub fn new(default: E) -> Self {
         let total = E::count() as i32;
         let default = default.to_index() as i32;
         let inner = IntParam::builder()
@@ -30,7 +31,6 @@ impl<E: EnumValues> EnumParam<E> {
             // Kinda have to make them empty, since
             // We use union in the with_ setter, otherwise we have problems
             .flags(ParamInfoFlags::empty())
-            .name(name)
             .build();
         Self {
             inner,
@@ -129,5 +129,10 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
     fn value_to_text(&self, value: f64, writer: &mut dyn std::fmt::Write) -> std::fmt::Result {
         let variant = E::from_index(value.round() as u32).unwrap_or_default();
         writer.write_str(&format!("{}", variant))
+    }
+}
+impl<E: EnumValues> __ParamInitializer for EnumParam<E> {
+    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
+        self.inner.__initialize(name, id, module);
     }
 }
