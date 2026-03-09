@@ -168,3 +168,19 @@ pub trait Params: Sync + Send + 'static {
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result;
 }
+
+#[doc(hidden)]
+pub trait __ParamInitializer {
+    /// This function isn't meant to be called from client side
+    /// it's public but is called once at param creation and then NEVER
+    /// Any way, no mutable reference of Params is ever shared since it's wrapped
+    /// in Arc. Don't try to do weird thing to mutate this.
+    #[doc(hidden)]
+    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>);
+}
+
+#[doc(hidden)]
+pub trait __ParamsInitializer {
+    #[doc(hidden)]
+    fn __initialize(&mut self);
+}

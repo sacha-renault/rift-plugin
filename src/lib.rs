@@ -58,3 +58,15 @@ pub mod prelude {
     pub use context::*;
     pub use processing::*;
 }
+
+#[doc(hidden)]
+pub mod _sealed {
+    //! todo!()
+    //!
+    //! I didn't find an other way yet to initialize params id, name and module
+    //! in a nice way. I will come back later on this. This needs to be public
+    //! otherwise it can't be implemented by client side but that should NEVER be used
+    //! for ant Plugin that uses Rift. Meant only for internal stuff.
+    #[doc(hidden)]
+    pub use super::params::param_trait::{__ParamInitializer, __ParamsInitializer};
+}

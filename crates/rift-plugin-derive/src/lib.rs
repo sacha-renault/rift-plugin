@@ -15,7 +15,7 @@ pub fn derive_enum_values(input: TokenStream) -> TokenStream {
     enum_param::derive_enum_values(input)
 }
 
-#[proc_macro_derive(DeriveParams, attributes(params))]
+#[proc_macro_derive(DeriveParams, attributes(param))]
 pub fn derive_params(input: TokenStream) -> TokenStream {
     derive_param::derive_params(input)
 }

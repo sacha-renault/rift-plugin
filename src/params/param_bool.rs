@@ -4,8 +4,8 @@ use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
 use crate::params::param_ptr::ParamPtr;
+use crate::params::param_trait::__ParamInitializer;
 use crate::prelude::ClapParam;
-use crate::utils::id_generator::hash_name_into_id;
 
 use super::param_trait::TypedParam;
 
@@ -18,8 +18,14 @@ pub struct BoolParam {
     #[builder(skip = AtomicBool::new(default))]
     value: AtomicBool,
 
-    /// Name of the param
-    name: &'static str,
+    /// The name of the param will
+    /// be initialized in the derive with it's clap ID
+    /// and module.
+    #[builder(skip = String::from(""))]
+    name: String,
+
+    #[builder(skip = None)]
+    module: Option<String>,
 
     #[builder(default = "")]
     unit: &'static str,
@@ -27,7 +33,7 @@ pub struct BoolParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 
-    #[builder(default = hash_name_into_id(name))]
+    #[builder(skip = ClapId::new(0))]
     id: ClapId,
 }
 
@@ -45,7 +51,7 @@ impl TypedParam for BoolParam {
 
 impl ClapParam for BoolParam {
     fn name(&self) -> &str {
-        self.name
+        &self.name
     }
 
     fn id(&self) -> ClapId {
@@ -110,5 +116,12 @@ impl ClapParam for BoolParam {
         ParamPtr {
             ptr: self as *const dyn ClapParam,
         }
+    }
+}
+impl __ParamInitializer for BoolParam {
+    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
+        self.name = name;
+        self.id = id;
+        self.module = module;
     }
 }
