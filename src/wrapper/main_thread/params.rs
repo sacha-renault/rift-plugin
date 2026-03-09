@@ -1,5 +1,6 @@
 pub use clack_extensions::audio_ports::*;
 pub use clack_extensions::params::*;
+use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
 use crate::params::param_trait::Params;
@@ -15,8 +16,16 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
         self.shared.params.count()
     }
 
-    fn flush(&mut self, _intputs: &InputEvents, _outputs: &mut OutputEvents) {
-        log::debug!("PluginMainThreadParams::flush");
+    fn flush(&mut self, inputs: &InputEvents, _outputs: &mut OutputEvents) {
+        for event in inputs.iter() {
+            if let Some(param_event) = event.as_event::<ParamValueEvent>() {
+                let Some(id) = param_event.param_id() else {
+                    continue;
+                };
+                let value = param_event.value();
+                self.shared.params.set_value(id, value);
+            };
+        }
         // todo!()
     }
 
