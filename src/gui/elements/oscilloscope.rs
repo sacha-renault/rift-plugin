@@ -255,7 +255,6 @@ impl OscilloscopeData for RcCell<StftChannelConsumer> {
 
             let db = 20.0 * val.max(1e-5).log10();
 
-            // We add up some db so higher spectrum looks more filled
             (x, db)
         });
 

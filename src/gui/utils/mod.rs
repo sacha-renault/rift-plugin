@@ -12,3 +12,7 @@ pub use gui_events::{gesture_end, gesture_start, set_value, set_value_normalized
 pub use handle_generic_extensions::{FView, RedrawOnExt, ViewApplyModifiers};
 pub use lens::make_lens;
 pub use viewport_transform::ViewportTransform;
+
+pub fn apply_transform_opt(func: Option<fn(f32) -> f32>, v: f32) -> f32 {
+    if let Some(func) = func { func(v) } else { v }
+}
