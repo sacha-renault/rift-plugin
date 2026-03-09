@@ -5,7 +5,7 @@ use clack_plugin::utils::ClapId;
 
 use crate::params::param_ptr::ParamPtr;
 use crate::prelude::ClapParam;
-use crate::utils::id_generator::get_next_param_id;
+use crate::utils::id_generator::hash_name_into_id;
 
 use super::atomic_f32::AtomicF32;
 use super::param_trait::TypedParam;
@@ -34,7 +34,7 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
 
-    #[builder(skip = get_next_param_id())]
+    #[builder(skip = hash_name_into_id(name))]
     pub(crate) id: ClapId,
 }
 

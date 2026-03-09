@@ -8,6 +8,7 @@ use clack_extensions::{
 use clack_plugin::prelude::*;
 
 use crate::context::GuiContext;
+use crate::prelude::Params;
 use crate::wrapper::{
     ClapPlugin, main_thread::WrapperMainThread, processor::WrapperProcessor, shared::WrapperShared,
 };
@@ -68,7 +69,35 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
 
     fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
         log::debug!("Create new WrapperShared");
-        Ok(WrapperShared::default())
+        let shared = WrapperShared::default();
+
+        // Ensure ID are unique over the plugin
+        let mut ids = Vec::new();
+
+        let param_count = <P::ParamType as Params>::count(&shared.params);
+        for index in 0..param_count {
+            let Some(info) = <P::ParamType as Params>::get_param_info(&shared.params, index) else {
+                if cfg!(debug_assertions) {
+                    panic!("Couldn't find param at index");
+                } else {
+                    log::error!("Couldn't find pararm at index");
+                    return Err(PluginError::Message("Couldn't initialize the plugin"));
+                };
+            };
+
+            if ids.iter().any(|&id| id == info.id) {
+                if cfg!(debug_assertions) {
+                    panic!("Duplicate ids {}", info.id);
+                } else {
+                    log::error!("Couldn't find pararm at index");
+                    return Err(PluginError::Message("Duplicate IDs"));
+                };
+            } else {
+                ids.push(info.id);
+            }
+        }
+
+        Ok(shared)
     }
 
     fn new_main_thread<'a>(

@@ -13,7 +13,7 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError> {
         let mut bytes = Vec::new();
         input
-            .read(&mut bytes)
+            .read_to_end(&mut bytes)
             .map_err(|_| PluginError::Message("Failed to read state"))?;
 
         let json: JsonValue = String::from_utf8(bytes)
@@ -63,6 +63,8 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
             params_map.insert(id.to_string(), JsonValue::Number(value));
         }
 
+        log::info!("param_save");
+
         let mut root: HashMap<String, JsonValue> = HashMap::new();
         root.insert(
             "version".to_string(),
@@ -78,6 +80,8 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
                     .as_bytes(),
             )
             .map_err(|_| PluginError::Message("Failed to write state"))?;
+
+        log::info!("write");
 
         Ok(())
     }
