@@ -1,52 +1,12 @@
 use rift_plugin_accumulator::{StftChannelConsumer, WindowBuffer};
 use rift_plugin_shared::RcCell;
+use rift_plugin_shared::utils::spaces::Linespace;
+
 use vizia::vg;
 
 use super::gui_prelude::*;
 
 use crate::prelude::utils::interpo::cubic_interpolate;
-
-/// Given a stft, retrieve a value at a fractional index using
-/// cubic interpolation
-#[inline]
-fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
-    let len = bins.len();
-
-    // Safety checks
-    if len <= 1 {
-        return bins[0];
-    }
-
-    // handle borders of slice
-    if x <= 0.0 {
-        return bins[0];
-    }
-    if x >= (len - 1) as f32 {
-        return bins[len - 1];
-    }
-
-    let i = x.floor() as usize;
-    let t = x.fract();
-    if t == 0. {
-        return bins[i];
-    }
-
-    let x0 = bins[i.saturating_sub(1)];
-    let x1 = bins[i];
-    let x2 = bins[(i + 1).min(len - 1)];
-    let x3 = bins[(i + 2).min(len - 1)];
-
-    cubic_interpolate(x0, x1, x2, x3, t)
-}
-
-pub trait OscilloscopeData {
-    /// This function return raw values for x and y
-    /// You may choose [`Oscilloscope::x_range`] and [`Oscilloscope::y_range`]
-    /// so it fits what u wanna display
-    fn with_points<F, R>(&self, width: f32, f: F) -> R
-    where
-        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R;
-}
 
 /// Displays an audio waveform buffer as a stroked and filled line.
 ///
@@ -168,6 +128,15 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
     }
 }
 
+pub trait OscilloscopeData {
+    /// This function return raw values for x and y
+    /// You may choose [`Oscilloscope::x_range`] and [`Oscilloscope::y_range`]
+    /// so it fits what u wanna display
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
+    where
+        F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R;
+}
+
 // Must implement for useage in oscilloscope
 impl OscilloscopeData for Vec<f32> {
     fn with_points<F, R>(&self, _: f32, f: F) -> R
@@ -213,17 +182,47 @@ impl<Func> OscilloscopeData for Func
 where
     Func: Fn(f32) -> f32,
 {
-    fn with_points<F, R>(&self, _: f32, f: F) -> R
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
-        let max = 250.;
-        let mut iterator = (0..max as usize).map(|v| {
-            let normalized = v as f32 / (max - 1.);
-            (normalized, self(normalized))
-        });
+        let num_points = width.ceil() as usize;
+        let mut iterator = Linespace::new(0., 1., num_points).map(|x| (x, self(x)));
         f(&mut iterator)
     }
+}
+
+/// Given a stft, retrieve a value at a fractional index using
+/// cubic interpolation
+#[inline]
+fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
+    let len = bins.len();
+
+    // Safety checks
+    if len <= 1 {
+        return bins[0];
+    }
+
+    // handle borders of slice
+    if x <= 0.0 {
+        return bins[0];
+    }
+    if x >= (len - 1) as f32 {
+        return bins[len - 1];
+    }
+
+    let i = x.floor() as usize;
+    let t = x.fract();
+    if t == 0. {
+        return bins[i];
+    }
+
+    let x0 = bins[i.saturating_sub(1)];
+    let x1 = bins[i];
+    let x2 = bins[(i + 1).min(len - 1)];
+    let x3 = bins[(i + 2).min(len - 1)];
+
+    cubic_interpolate(x0, x1, x2, x3, t)
 }
 
 /// Yes, we do display spectrogram in the oscilloscope, it works the same
@@ -242,19 +241,13 @@ impl OscilloscopeData for RcCell<StftChannelConsumer> {
         let f_min = 20.0;
         let f_max = 20000.0;
         let log_ratio: f32 = f_max / f_min;
+        let num_points = width.ceil() as usize;
 
-        let num_points = width as usize;
-        let max = (num_points - 1) as f32;
-
-        let mut iterator = (0..num_points).map(|idx| {
-            let x = idx as f32 / max;
+        let mut iterator = Linespace::new(0.0, 1.0, num_points).map(|x| {
             let freq = f_min * log_ratio.powf(x);
-            let bin_idx = (freq * fft_size as f32) / samplerate;
-
+            let bin_idx = (freq * fft_size) / samplerate;
             let val = sample_spectrum(bins, bin_idx);
-
             let db = 20.0 * val.max(1e-5).log10();
-
             (x, db)
         });
 
