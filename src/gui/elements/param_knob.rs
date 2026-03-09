@@ -43,6 +43,9 @@ where
     /// must return the initial value. Plugin won't crash if not but the behavior
     /// would be weird.
     taper_inverse: Option<fn(f32) -> f32>,
+
+    #[builder(default = (-240., 60.))]
+    knob_range: (f32, f32),
 }
 
 impl<L, MapFn> ParamKnob<L, MapFn>
@@ -65,7 +68,10 @@ where
             tick_modifier,
             taper,
             taper_inverse,
+            knob_range: (start_angle, end_angle),
         } = self;
+        let sweep = end_angle - start_angle;
+        let offset = sweep / 2.0;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
         let value_lens = make_lens(lens, accessor, move |p| {
@@ -94,8 +100,8 @@ where
                         false,
                         Percentage(100.0),
                         Percentage(15.0),
-                        -240.,
-                        60.,
+                        start_angle,
+                        end_angle,
                         KnobMode::Continuous,
                     )
                     .value(lens)
@@ -106,7 +112,7 @@ where
                         Element::new(cx).class("knob-tick");
                     })
                     .maybe_apply_modifiers(tick_modifier.as_deref())
-                    .rotate(lens.map(|v| Angle::Deg(*v * 300.0 - 150.0)))
+                    .rotate(lens.map(move |v| Angle::Deg(*v * sweep - offset)))
                     .class("knob-head");
                 })
             })
