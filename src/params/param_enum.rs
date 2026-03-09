@@ -74,6 +74,10 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.name()
     }
 
+    fn module(&self) -> Option<&str> {
+        self.inner.module()
+    }
+
     fn id(&self) -> ClapId {
         self.inner.id()
     }
