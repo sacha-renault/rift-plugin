@@ -28,6 +28,11 @@ impl ClapParam for ParamPtr {
     }
 
     #[inline]
+    fn module(&self) -> Option<&str> {
+        unsafe { (*self.ptr).module() }
+    }
+
+    #[inline]
     fn unit(&self) -> &str {
         unsafe { (*self.ptr).unit() }
     }

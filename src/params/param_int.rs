@@ -60,6 +60,10 @@ impl ClapParam for IntParam {
         &self.name
     }
 
+    fn module(&self) -> Option<&str> {
+        self.module.as_deref()
+    }
+
     fn id(&self) -> ClapId {
         self.id
     }

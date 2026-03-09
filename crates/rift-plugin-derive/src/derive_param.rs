@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 // In your proc-macro crate
 use darling::{FromDeriveInput, FromField, ast};
 use proc_macro::TokenStream;
@@ -36,10 +38,16 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
     let field_idents: Vec<_> = fields.iter().map(|f| f.ident.as_ref().unwrap()).collect();
     let count = field_idents.len() as u32;
     let indices: Vec<u32> = (0..count).collect();
+
+    let mut unique_names = HashSet::<String>::new();
     let param_names: Vec<_> = fields
         .iter()
         .map(|f| {
             if let Some(name) = f.name.clone() {
+                if unique_names.contains(&name) {
+                    panic!("Parameter name `{}` is not unique", name)
+                }
+                unique_names.insert(name.clone());
                 name
             } else {
                 let ident = f.ident.as_ref().unwrap().to_string();
