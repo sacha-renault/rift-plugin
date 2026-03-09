@@ -24,7 +24,7 @@ vizia = { workspace = true }
 vizia_baseview = { workspace = true }
 
 bon = "3.8.2"
-tinyjson = "2"
+serde_json = { version = "1" }
 raw-window-handle = "0.5.0"
 log = "0.4"
 paste = "1.0.15"
