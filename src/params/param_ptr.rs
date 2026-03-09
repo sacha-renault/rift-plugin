@@ -28,7 +28,7 @@ impl ClapParam for ParamPtr {
     }
 
     #[inline]
-    fn module(&self) -> Option<&str> {
+    fn module(&self) -> &str {
         unsafe { (*self.ptr).module() }
     }
 

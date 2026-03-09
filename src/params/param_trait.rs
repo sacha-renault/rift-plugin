@@ -21,7 +21,9 @@ pub trait ClapParam {
     fn name(&self) -> &str;
 
     /// Get the module of the param if specified (e.g., "Oscillator A").
-    fn module(&self) -> Option<&str>;
+    ///
+    /// Can be an empty string
+    fn module(&self) -> &str;
 
     /// Get the internal identifier (`ClapId`) for this parameter.
     ///
@@ -114,7 +116,7 @@ pub trait ClapParam {
             flags: self.flags(),
             cookie: Cookie::empty(),
             name: self.name().as_bytes(),
-            module: self.module().unwrap_or("").as_bytes(),
+            module: self.module().as_bytes(),
             min_value: self.min_value(),
             max_value: self.max_value(),
             default_value: self.default_raw(),
