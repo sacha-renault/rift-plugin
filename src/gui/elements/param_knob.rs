@@ -26,6 +26,7 @@ where
     #[builder(default = None)]
     knob_modifiers: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     label_text_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
+    label_name_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     arctrack_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     tick_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
 
@@ -44,8 +45,14 @@ where
     /// would be weird.
     taper_inverse: Option<fn(f32) -> f32>,
 
+    /// Range of the knob (start, end)
+    ///
+    /// Ensure end - start < 360. to avoid weird behavior
     #[builder(default = (-240., 60.))]
     knob_range: (f32, f32),
+
+    #[builder(default = true)]
+    has_name_label: bool,
 }
 
 impl<L, MapFn> ParamKnob<L, MapFn>
@@ -64,11 +71,13 @@ where
             value_text_formater,
             knob_modifiers,
             label_text_modifier,
+            label_name_modifier,
             arctrack_modifier,
             tick_modifier,
             taper,
             taper_inverse,
             knob_range: (start_angle, end_angle),
+            has_name_label,
         } = self;
         let sweep = end_angle - start_angle;
         let offset = sweep / 2.0;
@@ -89,9 +98,11 @@ where
             apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
 
         VStack::new(cx, move |cx| {
-            Label::new(cx, text_lens)
-                .maybe_apply_modifiers(label_text_modifier.as_deref())
-                .class("knob-value-label");
+            if has_name_label {
+                Label::new(cx, param_ptr.name())
+                    .maybe_apply_modifiers(label_name_modifier.as_deref())
+                    .class("knob-name-label");
+            }
 
             Knob::custom(cx, default_value as f32, value_lens, move |cx, lens| {
                 ZStack::new(cx, |cx| {
@@ -137,6 +148,10 @@ where
             })
             .maybe_apply_modifiers(knob_modifiers.as_deref())
             .class("knob");
+
+            Label::new(cx, text_lens)
+                .maybe_apply_modifiers(label_text_modifier.as_deref())
+                .class("knob-value-label");
         })
         .class("knob-container")
     }
