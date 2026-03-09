@@ -27,7 +27,7 @@ pub struct BoolParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 
-    #[builder(skip = hash_name_into_id(name))]
+    #[builder(default = hash_name_into_id(name))]
     id: ClapId,
 }
 
