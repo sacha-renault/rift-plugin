@@ -1,10 +1,13 @@
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::hash::{DefaultHasher, Hash, Hasher};
 
 use clack_plugin::utils::ClapId;
 
-static NEXT_PARAM_ID: AtomicU32 = AtomicU32::new(0);
+pub fn hash_name_into_id(name: &'static str) -> ClapId {
+    let mut hasher = DefaultHasher::new();
+    name.hash(&mut hasher);
+    let hash = hasher.finish();
 
-pub fn get_next_param_id() -> ClapId {
-    let id = NEXT_PARAM_ID.fetch_add(1, Ordering::Relaxed);
-    ClapId::new(id)
+    // todo!() can we handle collision ?
+    // Truncate the last 32 bits
+    ClapId::new(hash as u32)
 }

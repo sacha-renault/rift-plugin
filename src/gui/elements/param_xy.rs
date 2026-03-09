@@ -71,8 +71,8 @@ where
             on_value_changed,
             on_mouse_down,
             on_mouse_up,
-            value_text_formater,
             pad_modifier,
+            ..
         } = self;
 
         let param_ptr_x = lens.map(move |ps| accessor_x(ps).as_ptr()).get(cx);
