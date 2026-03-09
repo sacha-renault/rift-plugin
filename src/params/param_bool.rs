@@ -54,8 +54,8 @@ impl ClapParam for BoolParam {
         &self.name
     }
 
-    fn module(&self) -> Option<&str> {
-        self.module.as_deref()
+    fn module(&self) -> &str {
+        self.module.as_deref().unwrap_or("")
     }
 
     fn id(&self) -> ClapId {

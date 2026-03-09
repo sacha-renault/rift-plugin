@@ -74,7 +74,7 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.name()
     }
 
-    fn module(&self) -> Option<&str> {
+    fn module(&self) -> &str {
         self.inner.module()
     }
 
@@ -135,6 +135,7 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         writer.write_str(&format!("{}", variant))
     }
 }
+
 impl<E: EnumValues> __ParamInitializer for EnumParam<E> {
     fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
         self.inner.__initialize(name, id, module);
