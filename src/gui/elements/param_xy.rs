@@ -13,21 +13,37 @@ struct DataXY {
 
 impl Model for DataXY {
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
-        event.map(|&SetValueXY(x, y), _| {
-            if self.xy.0 != x {
-                self.xy.0 = x;
-                set_value_normalized(self.param_ptr_x, cx, x as f64);
-            }
+        event.map(|evt, _| match evt {
+            &SetPadValue::XY(x, y) => {
+                if self.xy.0 != x {
+                    self.xy.0 = x;
+                    set_value_normalized(self.param_ptr_x, cx, x as f64);
+                }
 
-            if self.xy.1 != y {
-                self.xy.1 = y;
-                set_value_normalized(self.param_ptr_y, cx, y as f64);
+                if self.xy.1 != y {
+                    self.xy.1 = y;
+                    set_value_normalized(self.param_ptr_y, cx, y as f64);
+                }
             }
+            &SetPadValue::X(x) => self.xy.0 = x,
+            &SetPadValue::Y(y) => self.xy.1 = y,
         });
     }
 }
 
-struct SetValueXY(f32, f32);
+enum SetPadValue {
+    /// This variant is only called after UI moves !
+    /// it allow to update the param repr
+    XY(f32, f32),
+
+    /// This variant is only called after the param
+    /// changed internally, it allow to update the UI
+    X(f32),
+
+    /// This variant is only called after the param
+    /// changed internally, it allow to update the UI
+    Y(f32),
+}
 
 /// A control for mapping two [`ClapParam`] to a PAD.
 #[derive(ParamViewBuilder)]
@@ -82,13 +98,6 @@ where
             param_ptr_y.get_normalized() as f32,
         );
 
-        DataXY {
-            param_ptr_x,
-            param_ptr_y,
-            xy,
-        }
-        .build(cx);
-
         // let text_lens = make_lens(lens, accessor, move |p| {
         //     if let Some(f) = value_text_formater {
         //         f(p.get_raw(), p.unit())
@@ -98,14 +107,21 @@ where
         // });
         // let default_value = param_ptr.normalize(param_ptr.default_raw());
 
-        VStack::new(cx, move |cx| {
+        let mut handle = VStack::new(cx, move |cx| {
+            DataXY {
+                param_ptr_x,
+                param_ptr_y,
+                xy,
+            }
+            .build(cx);
+
             // Label::new(cx, text_lens)
             //     .maybe_apply_modifiers(label_text_modifier.as_deref())
             //     .class("knob-value-label");
 
             XYPad::new(cx, DataXY::xy)
                 .on_change(move |cx, value_x, value_y| {
-                    cx.emit(SetValueXY(value_x, value_y));
+                    cx.emit(SetPadValue::XY(value_x, value_y));
                     if let Some(f) = on_value_changed.as_ref() {
                         f(cx, value_x, value_y)
                     }
@@ -127,6 +143,27 @@ where
                 .maybe_apply_modifiers(pad_modifier.as_deref())
                 .class("xy-pad");
         })
-        .class("xy-pad-container")
+        .class("xy-pad-container");
+        let entity = handle.entity();
+
+        // Creat binding for each param so we update the internal value
+        Binding::new(
+            handle.context(),
+            lens.map(move |ps| accessor_x(ps).get_normalized()),
+            move |cx, lens| {
+                let value = lens.get(cx);
+                cx.emit_to(entity, SetPadValue::X(value as f32));
+            },
+        );
+        Binding::new(
+            handle.context(),
+            lens.map(move |ps| accessor_y(ps).get_normalized()),
+            move |cx, lens| {
+                let value = lens.get(cx);
+                cx.emit_to(entity, SetPadValue::Y(value as f32));
+            },
+        );
+
+        handle
     }
 }
