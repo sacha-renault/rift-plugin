@@ -34,7 +34,7 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
 
-    #[builder(skip = hash_name_into_id(name))]
+    #[builder(default = hash_name_into_id(name))]
     pub(crate) id: ClapId,
 }
 
