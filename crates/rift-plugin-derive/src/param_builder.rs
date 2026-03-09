@@ -13,6 +13,9 @@ struct FieldReceiver {
     /// If not present, it defaults to None.
     #[darling(default)]
     default: Option<syn::Expr>,
+
+    #[darling(default)]
+    new: bool,
 }
 
 pub fn derive_param_builder(input: TokenStream) -> TokenStream {
@@ -33,14 +36,10 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
         .map(|field| FieldReceiver::from_field(field).unwrap())
         .collect::<Vec<_>>();
 
+    let new_field: Vec<_> = parsed_fields.iter().filter(|f| f.new).collect();
+
     // Every field except lens and accessor gets a setter
-    let builder_fields = parsed_fields
-        .iter()
-        .filter(|f| {
-            let name = f.ident.as_ref().unwrap().to_string();
-            name != "lens" && name != "accessor"
-        })
-        .collect::<Vec<_>>();
+    let builder_fields = parsed_fields.iter().filter(|f| !f.new).collect::<Vec<_>>();
 
     let builder_inits = builder_fields.iter().map(|f| {
         let fname = &f.ident;
@@ -100,31 +99,25 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
         }
     });
 
-    let extra_where = if let Some(wc) = where_clause {
-        let predicates = &wc.predicates;
-        quote! { #predicates }
-    } else {
-        quote! {}
-    };
+    let new_params = new_field.iter().map(|f| {
+        let fname = &f.ident;
+        let fty = &f.ty;
+        quote! { #fname: #fty }
+    });
+
+    let new_inits = new_field.iter().map(|f| {
+        let fname = &f.ident;
+        quote! { #fname }
+    });
 
     quote! {
-        impl #impl_generics #name #ty_generics
-        where
-            L: Lens + Copy,
-            L::Target: Clone,
-            MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
-            #extra_where
+        impl #impl_generics #name #ty_generics #where_clause
         {
-            pub fn new(lens: L, accessor: MapFn) -> Self {
+            pub fn new(#(#new_params),*) -> Self {
                 Self {
-                    lens,
-                    accessor,
+                    #(#new_inits,)*
                     #(#builder_inits,)*
                 }
-            }
-
-            pub fn lens_and_accessor(&self) -> (L, MapFn) {
-                (self.lens, self.accessor)
             }
             #(#setters)*
         }
@@ -183,11 +176,12 @@ fn get_fn_signature(
             let name = last_trait_seg.ident.to_string();
 
             // Check if it's Fn/FnMut/FnOnce
-            if name.starts_with("Fn") && 
-                let syn::PathArguments::Parenthesized(paren) = &last_trait_seg.arguments {
-                    let inputs = &paren.inputs;
-                    let output = &paren.output; // This includes the '->'
-                    return Some((quote! { #inputs }, quote! { #output })); 
+            if name.starts_with("Fn")
+                && let syn::PathArguments::Parenthesized(paren) = &last_trait_seg.arguments
+            {
+                let inputs = &paren.inputs;
+                let output = &paren.output; // This includes the '->'
+                return Some((quote! { #inputs }, quote! { #output }));
             }
         }
     }
