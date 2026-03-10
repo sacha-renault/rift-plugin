@@ -2,16 +2,13 @@ use core::f32;
 use std::{collections::VecDeque, sync::Arc};
 
 use super::AudioConsumer;
+use rift_plugin_shared::utils::spaces::Linespace;
 use rift_plugin_shared::{BlockTime, ChannelsInfo};
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
 fn hanning(fft_size: usize) -> Vec<f32> {
-    let fftmax = (fft_size - 1) as f32;
-    (0..fft_size)
-        .map(|i| {
-            let w = 2.0 * f32::consts::PI * i as f32 / fftmax;
-            0.5 * (1.0 - w.cos())
-        })
+    Linespace::new(0.0, 2.0 * f32::consts::PI, fft_size)
+        .map(|w| 0.5 * (1.0 - w.cos()))
         .collect()
 }
 
@@ -44,19 +41,9 @@ impl DequeBuffer {
     }
 
     /// Updates the flat buffer and returns a contiguous slice
+    #[inline]
     pub fn as_contiguous(&mut self) -> &[f32] {
-        let (front, back) = self.inner.as_slices();
-
-        // Copy the two internal slices of the Deque into the flat Vec
-        let front_len = front.len();
-        self.flat_cache[..front_len].copy_from_slice(front);
-
-        if !back.is_empty() {
-            self.flat_cache[front_len..front_len + back.len()].copy_from_slice(back);
-        }
-
-        // Return only the portion that has data
-        &self.flat_cache[..self.inner.len()]
+        self.as_contiguous_latest(self.inner.len())
     }
 
     pub fn as_contiguous_latest(&mut self, n: usize) -> &[f32] {
