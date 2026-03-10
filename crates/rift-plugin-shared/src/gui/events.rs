@@ -1,8 +1,10 @@
-use clack_plugin::events::event_types::{
-    ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent,
+use clack_plugin::{
+    events::{
+        Pckn, UnknownEvent,
+        event_types::{ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent},
+    },
+    utils::{ClapId, Cookie},
 };
-use clack_plugin::events::{Pckn, UnknownEvent};
-use clack_plugin::utils::{ClapId, Cookie};
 
 #[derive(Debug, Clone, Copy)]
 pub enum GuiParamEventKind {
@@ -17,8 +19,8 @@ pub enum GuiParamEventKind {
 /// The GUI-side event wrapper passed to `GuiView::handle_event` for parameter interactions.
 #[derive(Debug, Clone, Copy)]
 pub struct GuiParamEvent {
-    pub(crate) param_id: ClapId,
-    pub(crate) kind: GuiParamEventKind,
+    pub param_id: ClapId,
+    pub kind: GuiParamEventKind,
 }
 
 impl GuiParamEvent {

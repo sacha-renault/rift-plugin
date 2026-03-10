@@ -1,12 +1,11 @@
 use rift_plugin_accumulator::{StftChannelConsumer, WindowBuffer};
 use rift_plugin_shared::RcCell;
+use rift_plugin_shared::utils::interpo::cubic_interpolate;
 use rift_plugin_shared::utils::spaces::Linespace;
 
 use vizia::vg;
 
 use super::gui_prelude::*;
-
-use crate::prelude::utils::interpo::cubic_interpolate;
 
 /// Displays an audio waveform buffer as a stroked and filled line.
 ///

@@ -3,7 +3,7 @@ use vizia::{
     vg::{Canvas, ClipOp, Path, Point, Rect},
 };
 
-use crate::gui::utils::ViewportTransform;
+use crate::utils::ViewportTransform;
 
 pub struct PathWithClosing {
     pub path: Path,

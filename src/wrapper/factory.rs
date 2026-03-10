@@ -7,7 +7,7 @@ use clack_extensions::{
 };
 use clack_plugin::prelude::*;
 
-use crate::context::GuiContext;
+use crate::context::GuiContextImpl;
 use crate::wrapper::{
     ClapPlugin, main_thread::WrapperMainThread, processor::WrapperProcessor, shared::WrapperShared,
 };
@@ -78,7 +78,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
     ) -> Result<Self::MainThread<'a>, PluginError> {
         log::info!("Create new MainThread<'a>");
         let into_gui = P::gui(shared.params.clone(), shared.other.clone());
-        let context = Arc::new(GuiContext {
+        let context = Arc::new(GuiContextImpl {
             states: shared.states.clone(),
             params: shared.params.clone(),
         });

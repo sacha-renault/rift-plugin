@@ -1,9 +1,16 @@
 use std::sync::Arc;
 
-use clack_extensions::gui::{GuiSize, Window};
+use clack_extensions::gui::*;
 use clack_plugin::plugin::PluginError;
 
-use crate::context::GuiContext;
+use crate::params::Params;
+
+use super::events::GuiParamEvent;
+
+pub trait GuiContext: Send + Sync {
+    fn param_event(&self, event: GuiParamEvent);
+    fn params(&self) -> Arc<dyn Params>;
+}
 
 pub trait ClapGui {
     fn spawn(&mut self);
@@ -49,5 +56,5 @@ pub trait ClapGui {
 }
 
 pub trait GuiFactory {
-    fn build(self: Box<Self>, states: Arc<GuiContext>) -> Box<dyn ClapGui>;
+    fn build(self: Box<Self>, states: Arc<dyn GuiContext>) -> Box<dyn ClapGui>;
 }

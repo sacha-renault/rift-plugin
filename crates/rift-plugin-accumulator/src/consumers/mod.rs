@@ -1,4 +1,4 @@
-use rift_plugin_shared::{BlockTime, ChannelsInfo};
+use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 
 mod audio_peaks;
 mod spectrogram;

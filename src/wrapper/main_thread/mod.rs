@@ -3,6 +3,8 @@ use std::sync::Arc;
 use clack_extensions::latency::HostLatency;
 use clack_plugin::prelude::*;
 
+use rift_plugin_shared::gui::ClapGui;
+
 use crate::context::MainThreadTask;
 use crate::prelude::*;
 use crate::wrapper::shared_states::PluginSharedState;
