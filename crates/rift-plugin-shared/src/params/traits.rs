@@ -3,7 +3,7 @@ use std::ffi::CStr;
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
 use clack_plugin::{prelude::*, utils::Cookie};
 
-use crate::params::param_ptr::ParamPtr;
+use super::ptr::ParamPtr;
 
 /// Core abstraction for audio plugin parameters.
 ///

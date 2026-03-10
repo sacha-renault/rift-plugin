@@ -1,7 +1,7 @@
 pub(crate) mod utils;
 
 mod context;
-mod gui;
+// mod gui;
 mod params;
 mod processing;
 mod type_wrapper;
@@ -34,15 +34,14 @@ pub mod prelude {
     pub use rift_plugin_derive::{
         DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder,
     };
+    pub use rift_plugin_shared::gui::{ClapGui, GuiFactory};
+    pub use rift_plugin_shared::params::{ClapParam, ParamPtr, Params, TypedParam};
     pub use rift_plugin_shared::utils;
-    pub use rift_plugin_shared::*;
 
     pub use params::param_bool::BoolParam;
     pub use params::param_enum::{EnumParam, EnumValues};
     pub use params::param_float::FloatParam;
     pub use params::param_int::IntParam;
-    pub use params::param_ptr::ParamPtr;
-    pub use params::param_trait::{ClapParam, Params, TypedParam};
 
     pub use super::export_clap_plugin;
 
@@ -51,9 +50,9 @@ pub mod prelude {
 
     pub use type_wrapper::{AudioPort, MainAudioPort};
 
-    pub use gui::elements;
-    pub use gui::utils as gui_utils;
-    pub use gui::{ClapGui, GuiFactory, GuiParamEvent, ViziaGui};
+    // pub use gui::elements;
+    // pub use gui::utils as gui_utils;
+    // pub use gui::{ClapGui, GuiFactory, GuiParamEvent, ViziaGui};
 
     pub use context::*;
     pub use processing::*;
@@ -68,5 +67,5 @@ pub mod _sealed {
     //! otherwise it can't be implemented by client side but that should NEVER be used
     //! for ant Plugin that uses Rift. Meant only for internal stuff.
     #[doc(hidden)]
-    pub use super::params::param_trait::{__ParamInitializer, __ParamsInitializer};
+    pub use rift_plugin_shared::params::{__ParamInitializer, __ParamsInitializer};
 }

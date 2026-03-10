@@ -1,6 +1,6 @@
 use vizia::prelude::*;
 
-use crate::prelude::ClapParam;
+use rift_plugin_shared::params::ClapParam;
 
 /// A function that transform struct like Map<...> into impl Lens<...>
 ///

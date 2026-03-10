@@ -11,10 +11,7 @@ use std::sync::{
 use vizia::prelude::*;
 use vizia_baseview::WindowHandle;
 
-use crate::{
-    context::GuiContext,
-    gui::{ClapGui, GuiFactory, GuiParamEvent, events::GuiParamEventKind},
-};
+use rift_plugin_shared::gui::*;
 
 pub struct ViziaGuiFactory<F> {
     app_fn: Arc<F>,
@@ -23,10 +20,10 @@ pub struct ViziaGuiFactory<F> {
 
 impl<F> GuiFactory for ViziaGuiFactory<F>
 where
-    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
     #[allow(private_interfaces)]
-    fn build(self: Box<Self>, context: Arc<GuiContext>) -> Box<dyn ClapGui> {
+    fn build(self: Box<Self>, context: Arc<dyn GuiContext>) -> Box<dyn ClapGui> {
         Box::new(ViziaGui {
             parent: None,
             handle: None,
@@ -40,14 +37,14 @@ where
 
 #[derive(Lens)]
 struct ViziaData {
-    ctx: Arc<GuiContext>,
+    ctx: Arc<dyn GuiContext>,
 }
 
 impl Model for ViziaData {
     fn event(&mut self, _cx: &mut EventContext, event: &mut Event) {
         event.map(|app_event: &GuiParamEvent, _| {
             if let GuiParamEventKind::Value(v) = app_event.kind {
-                self.ctx.params.set_value(app_event.param_id, v)
+                self.ctx.params().set_value(app_event.param_id, v)
             }
             self.ctx.param_event(*app_event);
         });
@@ -66,7 +63,7 @@ pub struct ViziaGui<F> {
     /// (width, height)
     size: (u32, u32),
     /// States
-    context: Arc<GuiContext>,
+    context: Arc<dyn GuiContext>,
 }
 
 unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
@@ -77,7 +74,7 @@ unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
 
 impl<F> ViziaGui<F>
 where
-    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
     pub fn factory(size: (u32, u32), app_fn: F) -> ViziaGuiFactory<F> {
         ViziaGuiFactory {
@@ -89,7 +86,7 @@ where
 
 impl<F> ViziaGui<F>
 where
-    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
     fn _handle(&self) -> &WindowHandle {
         // this should be set anyway
@@ -99,7 +96,7 @@ where
 
 impl<F> ClapGui for ViziaGui<F>
 where
-    F: Fn(&mut Context, Arc<GuiContext>) + Send + Sync + 'static,
+    F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
     fn spawn(&mut self) {
         let app_fn = self.app_fn.clone();

@@ -2487,7 +2487,6 @@ dependencies = [
  "log",
  "parking_lot",
  "paste",
- "raw-window-handle 0.5.2",
  "rift-plugin-accumulator",
  "rift-plugin-derive",
  "rift-plugin-shared",
@@ -2526,6 +2525,25 @@ dependencies = [
 [[package]]
 name = "rift-plugin-shared"
 version = "0.1.0"
+dependencies = [
+ "clack-extensions",
+ "clack-plugin",
+]
+
+[[package]]
+name = "rift-plugin-vizia"
+version = "0.1.0"
+dependencies = [
+ "clack-extensions",
+ "clack-plugin",
+ "log",
+ "raw-window-handle 0.5.2",
+ "rift-plugin-accumulator",
+ "rift-plugin-derive",
+ "rift-plugin-shared",
+ "vizia",
+ "vizia_baseview",
+]
 
 [[package]]
 name = "rustc-hash"

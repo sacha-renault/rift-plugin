@@ -1,6 +1,6 @@
 use clack_extensions::params::ParamInfoFlags;
 
-use crate::prelude::ClapParam;
+use super::traits::ClapParam;
 
 /// A zero-cost wrapper around a raw pointer to a [`ClapParam`].
 /// The underlying parameter lives in the host and outlives this wrapper.
@@ -10,7 +10,13 @@ pub struct ParamPtr {
     /// than the program and is handled by the host.
     /// We can safely deref those params and make it much easier for
     /// gui to use any params
-    pub(crate) ptr: *const dyn ClapParam,
+    ptr: *const dyn ClapParam,
+}
+
+impl ParamPtr {
+    pub fn new(ptr: *const dyn ClapParam) -> Self {
+        Self { ptr }
+    }
 }
 
 unsafe impl Send for ParamPtr {}

@@ -11,7 +11,7 @@ use main_thread_context_traits::HostStatesGetter;
 pub use default::RequestRestartImpl;
 pub use featured::ChangeLatencyImpl;
 
-pub use gui_context::GuiContext;
+pub use gui_context::GuiContextImpl;
 pub use init_context::InitContext;
 pub use process_context::ProcessContext;
 

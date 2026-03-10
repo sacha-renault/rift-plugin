@@ -2,14 +2,12 @@ use clack_extensions::params::*;
 use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
+use rift_plugin_shared::gui::{GuiParamEvent, GuiParamEventKind};
+use rift_plugin_shared::params::Params;
+
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};
-use crate::gui::GuiParamEventKind;
-use crate::{
-    gui::GuiParamEvent,
-    params::param_trait::Params,
-    prelude::Buffers,
-    wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared},
-};
+use crate::prelude::Buffers;
+use crate::wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
 
 pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,

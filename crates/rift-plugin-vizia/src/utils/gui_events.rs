@@ -1,9 +1,8 @@
 use vizia::prelude::*;
 
-use crate::{
-    gui::GuiParamEvent,
-    prelude::{ClapParam, ParamPtr},
-};
+use rift_plugin_shared::params::{ClapParam, ParamPtr};
+
+use rift_plugin_shared::gui::GuiParamEvent;
 
 /// Signals the start of a user gesture on a [`ClapParam`] (e.g., drag or wheel move began).
 pub fn gesture_start(param_ptr: ParamPtr, cx: &mut EventContext) {

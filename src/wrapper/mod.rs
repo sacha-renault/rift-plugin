@@ -2,10 +2,11 @@ use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
+use rift_plugin_shared::gui::GuiFactory;
+use rift_plugin_shared::params::Params;
+
 use crate::_sealed::__ParamsInitializer;
 use crate::context::{InitContext, ProcessContext};
-use crate::gui::GuiFactory;
-use crate::params::param_trait::Params;
 use crate::prelude::{Buffers, MainAudioPort};
 use crate::type_wrapper::AudioPort;
 

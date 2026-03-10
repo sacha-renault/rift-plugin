@@ -3,12 +3,10 @@ use std::sync::atomic::Ordering;
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
-use crate::params::param_ptr::ParamPtr;
-use crate::params::param_trait::__ParamInitializer;
-use crate::prelude::ClapParam;
+use crate::_sealed::__ParamInitializer;
+use crate::prelude::{ClapParam, ParamPtr, TypedParam};
 
 use super::atomic_f32::AtomicF32;
-use super::param_trait::TypedParam;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
@@ -117,9 +115,7 @@ impl ClapParam for FloatParam {
     }
 
     fn as_ptr(&self) -> ParamPtr {
-        ParamPtr {
-            ptr: self as *const dyn ClapParam,
-        }
+        ParamPtr::new(self as *const dyn ClapParam)
     }
 }
 
