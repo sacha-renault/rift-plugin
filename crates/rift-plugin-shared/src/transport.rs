@@ -87,3 +87,83 @@ impl BlockTime {
         self.beats().map(|b| b.floor() as i64)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::assert_approx_eq;
+
+    #[test]
+    fn test_channel_info_not_last() {
+        let infos = ChannelsInfo {
+            current: 0,
+            total_channels: 2,
+        };
+
+        assert!(!infos.is_last_channel())
+    }
+
+    #[test]
+    fn test_channel_info_last() {
+        let infos = ChannelsInfo {
+            // Starting at index 0, this is last
+            current: 1,
+            total_channels: 2,
+        };
+
+        assert!(infos.is_last_channel())
+    }
+
+    #[test]
+    fn test_block_info_advance() {
+        let mut infos = BlockInfo {
+            seconds: 0.,
+            beats: 0.,
+            samplerate: 44100.,
+            seconds_per_beat: 1., // Case BPM = 60
+        };
+
+        // Advance by a full second
+        infos.advance_by_samples(44100);
+
+        assert_approx_eq!(infos.seconds, 1.);
+        assert_approx_eq!(infos.beats, 1.);
+
+        // Shouldn't change
+        assert_approx_eq!(infos.samplerate, 44100.);
+        assert_approx_eq!(infos.seconds_per_beat, 1.);
+    }
+
+    #[test]
+    fn test_block_time_none() {
+        let block = BlockTime::none();
+
+        assert_eq!(block.seconds(), None);
+        assert_eq!(block.beats(), None);
+        assert_eq!(block.beat_num(), None);
+        assert_eq!(block.beat_phase(), None);
+    }
+
+    #[test]
+    fn test_block_time_some() {
+        let block = BlockTime::new(1.5, 1.5);
+
+        assert_eq!(block.seconds(), Some(1.5));
+        assert_eq!(block.beats(), Some(1.5));
+        assert_eq!(block.beat_num(), Some(1));
+        assert_eq!(block.beat_phase(), Some(0.5));
+    }
+
+    #[test]
+    fn test_block_time_opt() {
+        let block = BlockTime::new_opt(None, None);
+
+        assert_eq!(block.seconds(), None);
+        assert_eq!(block.beats(), None);
+
+        let block = BlockTime::new_opt(Some(1.), Some(1.));
+
+        assert!(block.seconds().is_some());
+        assert!(block.beats().is_some());
+    }
+}
