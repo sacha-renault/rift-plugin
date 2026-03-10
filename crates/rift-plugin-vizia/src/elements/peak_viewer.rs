@@ -1,100 +1,133 @@
 use rift_plugin_accumulator::AudioPeaks;
-use rift_plugin_shared::{RcCell, utils::db_conversion::linear_to_db};
-use vizia::vg::{self, Rect};
+use rift_plugin_shared::{
+    RcCell,
+    utils::conversion::{linear_to_db, normalize_by_range},
+};
+use vizia::vg::{Paint, PaintCap, PaintStyle, Rect};
 
 use super::gui_prelude::*;
 
-#[derive(HandleExtension)]
-pub struct PeakViewer {
+#[derive(ParamViewBuilder)]
+pub struct PeaksViewer {
+    #[builder(new)]
     data: RcCell<AudioPeaks>,
 
-    #[extension(ext)]
-    box_width: f32,
+    /// Range of the peak meter (in db).
+    #[builder(default = (-120., 6.))]
+    range: (f32, f32),
 
-    #[extension(ext)]
-    spacing: f32,
+    /// A vec representing the graduations
+    #[builder(default = vec![])]
+    graduations: Vec<f32>,
+}
 
-    #[extension(ext)]
+impl PeaksViewer {
+    pub fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
+        let Self {
+            data,
+            range,
+            graduations,
+        } = self;
+
+        ZStack::new(cx, |cx| {
+            PeakGraduation {
+                range,
+                graduations: graduations,
+            }
+            .build(cx, |_| {})
+            .class("peak-graduation");
+
+            HStack::new(cx, |cx| {
+                for i in 0..data.borrow().num_channels() {
+                    PeakAmplitude::new(cx, data.clone(), i, range).class("peak-amplitude");
+                }
+            })
+            .class("peak-viewer-inner");
+        })
+        .class("peak-viewer")
+    }
+}
+
+struct PeakAmplitude {
+    data: RcCell<AudioPeaks>,
+    channel: usize,
     range: (f32, f32),
 }
 
-impl View for PeakViewer {
-    fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let num_channels = self.data.borrow().num_channels();
-        self.draw_outer_rect(cx, canvas, num_channels);
-        self.draw_peaks(cx, canvas, num_channels);
-    }
-}
-
-impl PeakViewer {
-    pub fn new(cx: &mut Context, data: RcCell<AudioPeaks>) -> Handle<'_, Self> {
+impl PeakAmplitude {
+    fn new(
+        cx: &mut Context,
+        data: RcCell<AudioPeaks>,
+        channel: usize,
+        range: (f32, f32),
+    ) -> Handle<'_, Self> {
         Self {
             data,
-            box_width: 1.0,
-            spacing: 0.05,
-            range: (-120., 6.),
+            channel,
+            range,
         }
         .build(cx, |_| {})
     }
+}
 
-    pub fn draw_outer_rect(&self, cx: &mut DrawContext, canvas: &Canvas, num_channels: usize) {
-        let vtransform = ViewportTransform::new(cx.bounds());
-        let mut paint = vg::Paint::default();
-        paint.set_color(cx.font_color());
-        paint.set_stroke_cap(vg::PaintCap::Square);
-        paint.set_style(vg::PaintStyle::Stroke);
-        paint.set_stroke_width(self.box_width);
+impl View for PeakAmplitude {
+    fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
+        let Some(peak) = self.data.borrow().peak(self.channel) else {
+            return;
+        };
 
-        let num_spaces = (num_channels - 1) as f32;
-        let width_per_viewer = (1.0 - num_spaces * self.spacing) / num_channels as f32;
-        let mut current_position = 0.0;
-
-        for _ in 0..num_channels {
-            let (left, bottom) = vtransform.transform(current_position, 0.);
-            let (right, top) = vtransform.transform(current_position + width_per_viewer, 1.0);
-
-            let rect = Rect {
-                left,
-                top,
-                right,
-                bottom,
-            };
-            canvas.draw_rect(rect, &paint);
-
-            current_position += width_per_viewer + self.spacing;
-        }
-    }
-
-    pub fn draw_peaks(&self, cx: &mut DrawContext, canvas: &Canvas, num_channels: usize) {
-        let vtransform = ViewportTransform::with_range(cx.bounds(), (0., 1.), self.range);
         let (min, max) = self.range;
-        let mut paint = vg::Paint::default();
+        let vtransform = ViewportTransform::with_range(cx.bounds(), (0., 1.), self.range);
+        let mut paint = Paint::default();
+
         paint.set_color(cx.font_color());
-        paint.set_stroke_cap(vg::PaintCap::Square);
-        paint.set_style(vg::PaintStyle::StrokeAndFill);
-        paint.set_stroke_width(self.box_width);
+        paint.set_stroke_cap(PaintCap::Square);
+        paint.set_style(PaintStyle::Fill);
+        let db_peak = linear_to_db(peak).clamp(min, max);
 
-        let num_spaces = (num_channels - 1) as f32;
-        let width_per_viewer = (1.0 - num_spaces * self.spacing) / num_channels as f32;
-        let mut current_position = 0.0;
+        let (left, bottom) = vtransform.transform(0., min);
+        let (right, top) = vtransform.transform(1., db_peak);
 
-        for channel in 0..num_channels {
-            let Some(peak) = self.data.borrow().peak(channel) else {
-                break;
-            };
-            let db_peak = linear_to_db(peak).clamp(min, max);
+        let rect = Rect {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        canvas.draw_rect(rect, &paint);
+    }
+}
 
-            let (left, bottom) = vtransform.transform(current_position, min);
-            let (right, top) = vtransform.transform(current_position + width_per_viewer, db_peak);
+struct PeakGraduation {
+    graduations: Vec<f32>,
+    range: (f32, f32),
+}
 
-            let rect = Rect {
-                left,
-                top,
-                right,
-                bottom,
-            };
-            canvas.draw_rect(rect, &paint);
-            current_position += width_per_viewer + self.spacing;
+impl View for PeakGraduation {
+    fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
+        let vtransform = ViewportTransform::new(cx.bounds());
+
+        let mut paint = Paint::default();
+        paint.set_color(cx.font_color());
+        paint.set_stroke_cap(PaintCap::Square);
+        paint.set_style(PaintStyle::Fill);
+        paint.set_stroke_width(cx.border_width());
+
+        let (start, end) = self.range;
+        let range = end - start;
+
+        let chunk_start = cx.padding_left().to_px(cx.bounds().w, 0.);
+        let chunk_end = cx.padding_right().to_px(cx.bounds().w, 0.);
+
+        for &graduation in self.graduations.iter() {
+            let grad_height = normalize_by_range(graduation, start, range);
+
+            let mut left = vtransform.transform(0., grad_height);
+            let mut right = vtransform.transform(1.0, grad_height);
+            left.0 += chunk_start;
+            right.0 -= chunk_end;
+
+            canvas.draw_line(left, right, &paint);
         }
     }
 }

@@ -1,3 +1,3 @@
-pub mod db_conversion;
+pub mod conversion;
 pub mod interpo;
 pub mod spaces;
