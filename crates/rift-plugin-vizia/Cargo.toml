@@ -15,4 +15,4 @@ vizia = { workspace = true }
 vizia_baseview = { workspace = true }
 
 log = { workspace = true }
-raw-window-handle = "0.5.0"
+raw-window-handle = { workspace = true }
