@@ -88,3 +88,71 @@ impl AsRef<UnknownEvent> for RawParamEvent {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn id(n: u32) -> ClapId {
+        ClapId::from(n)
+    }
+
+    #[test]
+    fn test_value_event() {
+        let e = GuiParamEvent::value(id(1), 0.75);
+        assert_eq!(e.param_id, id(1));
+        assert!(matches!(e.kind, GuiParamEventKind::Value(v) if v == 0.75));
+    }
+
+    #[test]
+    fn test_gesture_start() {
+        let e = GuiParamEvent::gesture_start(id(2));
+        assert_eq!(e.param_id, id(2));
+        assert!(matches!(e.kind, GuiParamEventKind::GestureBegin));
+    }
+
+    #[test]
+    fn test_gesture_end() {
+        let e = GuiParamEvent::gesture_end(id(3));
+        assert_eq!(e.param_id, id(3));
+        assert!(matches!(e.kind, GuiParamEventKind::GestureEnd));
+    }
+
+    #[test]
+    fn test_to_raw_value() {
+        let e = GuiParamEvent::value(id(1), 0.5);
+        assert!(matches!(e.to_raw(), RawParamEvent::Value(_)));
+    }
+
+    #[test]
+    fn test_to_raw_gesture_begin() {
+        let e = GuiParamEvent::gesture_start(id(1));
+        assert!(matches!(e.to_raw(), RawParamEvent::GestureBegin(_)));
+    }
+
+    #[test]
+    fn test_to_raw_gesture_end() {
+        let e = GuiParamEvent::gesture_end(id(1));
+        assert!(matches!(e.to_raw(), RawParamEvent::GestureEnd(_)));
+    }
+
+    #[test]
+    fn test_raw_as_ref_unknown_event() {
+        // just verifying AsRef doesn't panic for each variant
+        let events = [
+            GuiParamEvent::value(id(1), 1.0),
+            GuiParamEvent::gesture_start(id(1)),
+            GuiParamEvent::gesture_end(id(1)),
+        ];
+        for e in events {
+            let _: &UnknownEvent = e.to_raw().as_ref();
+        }
+    }
+
+    #[test]
+    fn test_copy_clone() {
+        let e = GuiParamEvent::value(id(42), 0.3);
+        let e2 = e;
+        assert!(matches!(e2.kind, GuiParamEventKind::Value(v) if v == 0.3));
+    }
+}
