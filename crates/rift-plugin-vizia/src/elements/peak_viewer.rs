@@ -40,12 +40,9 @@ impl DestructThenBuildView for PeaksViewer {
         } = self;
 
         ZStack::new(cx, |cx| {
-            PeakGraduation {
-                range,
-                graduations: graduations,
-            }
-            .build(cx, |_| {})
-            .class("peak-graduation");
+            PeakGraduation { range, graduations }
+                .build(cx, |_| {})
+                .class("peak-graduation");
 
             HStack::new(cx, |cx| {
                 for i in 0..data.borrow().num_channels() {
