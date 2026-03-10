@@ -6,3 +6,6 @@ pub mod transport;
 pub mod utils;
 
 pub type RcCell<T> = Rc<RefCell<T>>;
+
+#[cfg(test)]
+mod test_macros;
