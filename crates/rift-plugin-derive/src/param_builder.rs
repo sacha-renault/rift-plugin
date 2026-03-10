@@ -121,10 +121,6 @@ pub fn derive_param_builder(input: TokenStream) -> TokenStream {
             }
             #(#setters)*
         }
-
-        impl #impl_generics View for #name #impl_generics #where_clause
-        {
-        }
     }
     .into()
 }

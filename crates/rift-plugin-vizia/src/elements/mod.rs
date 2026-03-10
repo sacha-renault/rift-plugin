@@ -26,4 +26,4 @@ pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;
 pub use param_slider::ParamSlider;
 pub use param_xy::ParamPadXY;
-pub use peak_viewer::{PeakViewer, PeakViewerExt};
+pub use peak_viewer::PeaksViewer;
