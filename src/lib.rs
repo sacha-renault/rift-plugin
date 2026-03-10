@@ -1,7 +1,4 @@
-pub(crate) mod utils;
-
 mod context;
-// mod gui;
 mod params;
 mod processing;
 mod type_wrapper;
@@ -49,10 +46,6 @@ pub mod prelude {
     pub use wrapper::ClapPlugin;
 
     pub use type_wrapper::{AudioPort, MainAudioPort};
-
-    // pub use gui::elements;
-    // pub use gui::utils as gui_utils;
-    // pub use gui::{ClapGui, GuiFactory, GuiParamEvent, ViziaGui};
 
     pub use context::*;
     pub use processing::*;
