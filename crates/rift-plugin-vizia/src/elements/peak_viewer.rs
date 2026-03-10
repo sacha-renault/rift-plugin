@@ -7,6 +7,16 @@ use vizia::vg::{Paint, PaintCap, PaintStyle, Rect};
 
 use super::gui_prelude::*;
 
+/// A UI Element to display audio peaks on one or more channels
+///
+/// # Examples:
+/// ```ignore
+/// PeaksViewer::new(audio_peaks.clone())
+///     .range((-54., 6.))
+///     .graduations(vec![3., 0., -3., -6., -12., -18., -30.].into())
+///     .build_view(cx)
+///     .redraw_on(redraw_lens);
+/// ```
 #[derive(ParamViewBuilder)]
 pub struct PeaksViewer {
     #[builder(new)]
@@ -21,8 +31,8 @@ pub struct PeaksViewer {
     graduations: Vec<f32>,
 }
 
-impl PeaksViewer {
-    pub fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
+impl DestructThenBuildView for PeaksViewer {
+    fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {
             data,
             range,
@@ -48,6 +58,10 @@ impl PeaksViewer {
     }
 }
 
+/// Draw the amplitude of a single peak
+///
+/// # TODO:
+/// This component might overlap on the border of parent if no padding is added.
 struct PeakAmplitude {
     data: RcCell<AudioPeaks>,
     channel: usize,
@@ -70,6 +84,10 @@ impl PeakAmplitude {
     }
 }
 
+/// Simply draw the amplitude based on peak value
+///
+/// # TODO:
+/// We might wanna add some color palette here!
 impl View for PeakAmplitude {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
         let Some(peak) = self.data.borrow().peak(self.channel) else {
@@ -98,6 +116,7 @@ impl View for PeakAmplitude {
     }
 }
 
+/// Graduation to be draw under the peaks
 struct PeakGraduation {
     graduations: Vec<f32>,
     range: (f32, f32),
@@ -108,7 +127,7 @@ impl View for PeakGraduation {
         let vtransform = ViewportTransform::new(cx.bounds());
 
         let mut paint = Paint::default();
-        paint.set_color(cx.font_color());
+        paint.set_color(cx.border_color());
         paint.set_stroke_cap(PaintCap::Square);
         paint.set_style(PaintStyle::Fill);
         paint.set_stroke_width(cx.border_width());

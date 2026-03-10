@@ -32,6 +32,9 @@ where
     #[builder(default = 1e-6)]
     step: f32,
 
+    #[builder(default = Orientation::Vertical)]
+    orientation: Orientation,
+
     /// Function to map the param to a value in the UI.
     ///
     /// Composing [`ParamSlider::taper`] with [`ParamSlider::taper_inverse`]
@@ -48,13 +51,13 @@ where
     taper_inverse: Option<fn(f32) -> f32>,
 }
 
-impl<L, MapFn> ParamSlider<L, MapFn>
+impl<L, MapFn> DestructThenBuildView for ParamSlider<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
     MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
 {
-    pub fn build_view(self, cx: &mut Context, orientation: Orientation) -> Handle<'_, impl View> {
+    fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {
             lens,
             accessor,
@@ -67,6 +70,7 @@ where
             step,
             taper_inverse,
             taper,
+            orientation,
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);

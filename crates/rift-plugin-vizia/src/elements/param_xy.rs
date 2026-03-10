@@ -4,6 +4,7 @@ use rift_plugin_shared::params::ParamPtr;
 
 use super::gui_prelude::*;
 
+/// Internal lens to track and update param values
 #[derive(Lens)]
 struct DataXY {
     param_ptr_x: ParamPtr,
@@ -46,6 +47,14 @@ enum SetPadValue {
 }
 
 /// A control for mapping two [`ClapParam`] to a PAD.
+///
+/// # Examples:
+/// ```ignore
+/// ParamPadXY::new(AppData::params, |p| &p.clip, |p| &p.gain)
+///     .build_view(cx)
+///     .height(Pixels(100.))
+///     .width(Pixels(100.));
+/// ```
 #[derive(ParamViewBuilder)]
 pub struct ParamPadXY<L, MapFnX, MapFnY>
 where
