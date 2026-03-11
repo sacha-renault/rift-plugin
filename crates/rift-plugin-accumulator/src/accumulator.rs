@@ -261,4 +261,12 @@ mod tests {
         assert!(vec_consume.len() < channel.len());
         assert_eq!(vec_consume, channel[..40]);
     }
+
+    #[test]
+    fn test_no_channels() {
+        let acc = AudioAccumulator::<10>::new(0, 4);
+        let channel: Vec<f32> = (0..50).map(|i| i as f32).collect();
+        acc.push_slices([channel.as_slice()].into_iter(), None);
+        acc.drain(|_, _, _| {});
+    }
 }
