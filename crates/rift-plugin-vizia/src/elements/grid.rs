@@ -1,4 +1,4 @@
-use rift_plugin_shared::utils::spaces::Linespace;
+use rift_plugin_shared::utils::spaces::Linspace;
 use vizia::vg;
 
 use super::gui_prelude::*;
@@ -67,7 +67,7 @@ impl GridScale {
         }
 
         let range = end - start;
-        let values = Linespace::new(0.0, 1.0, count)
+        let values = Linspace::new(0.0, 1.0, count)
             .map(|t| GridValue {
                 normalized: t,
                 value: start + t * range,

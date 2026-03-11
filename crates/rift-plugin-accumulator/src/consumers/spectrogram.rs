@@ -4,7 +4,7 @@ use std::sync::Arc;
 use super::AudioConsumer;
 use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 use rift_plugin_shared::utils::dequeue_buffer::DequeBuffer;
-use rift_plugin_shared::utils::spaces::Linespace;
+use rift_plugin_shared::utils::spaces::Linspace;
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
 pub struct StftChannelConsumer {
@@ -84,7 +84,7 @@ impl AudioConsumer for StftChannelConsumer {
 }
 
 fn hanning(fft_size: usize) -> Vec<f32> {
-    Linespace::new(0.0, f32::consts::TAU, fft_size)
+    Linspace::new(0.0, f32::consts::TAU, fft_size)
         .map(|w| 0.5 * (1.0 - w.cos()))
         .collect()
 }
