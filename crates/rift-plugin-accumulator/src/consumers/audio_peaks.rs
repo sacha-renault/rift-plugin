@@ -30,7 +30,7 @@ impl AudioPeaks {
         Self {
             channel_peaks,
             decay_fn: default_decay,
-            lerp_factor: 0.8,
+            lerp_factor: 0.8 * 1e-3,
         }
     }
 
@@ -95,4 +95,111 @@ impl AudioConsumer for AudioPeaks {
 
 fn default_decay(peak: f32, block_size: usize) -> f32 {
     peak * 0.9985_f32.powi(block_size as i32)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_acc() -> AudioPeaks {
+        AudioPeaks::new(1)
+    }
+
+    #[test]
+    fn test_basic() {
+        let mut acc = make_acc();
+        acc.consume(
+            &vec![1., 1., 1., 1.],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+
+        assert!(acc.true_peak(0).unwrap() > acc.peak(0).unwrap());
+        assert_eq!(acc.num_channels(), 1);
+    }
+
+    #[test]
+    fn test_higher_lerp_factor() {
+        let mut acc1 = make_acc();
+        let mut acc2 = make_acc().lerp_factor(0.9);
+        acc1.consume(
+            &vec![1., 1., 1., 1.],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+        acc2.consume(
+            &vec![1., 1., 1., 1.],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+
+        assert_eq!(acc1.true_peak(0).unwrap(), acc2.true_peak(0).unwrap());
+        assert!(acc1.peak(0).unwrap() < acc2.peak(0).unwrap());
+    }
+
+    #[test]
+    fn test_higher_lerp_decay() {
+        let mut acc1 = make_acc();
+        let mut acc2 =
+            make_acc().set_decay(|peak, block_size| peak * 0.9f32.powi(block_size as i32));
+        acc1.consume(
+            &vec![0.5, 0.5],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+        acc2.consume(
+            &vec![0.5, 0.5],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+
+        acc1.consume(
+            &vec![0.0, 0.0],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+        acc2.consume(
+            &vec![0.0, 0.0],
+            ChannelsInfo {
+                current: 0,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+
+        assert!(acc1.true_peak(0).unwrap() > acc2.true_peak(0).unwrap());
+    }
+
+    #[test]
+    fn test_out_of_bounds() {
+        let mut acc = make_acc();
+        acc.consume(
+            &vec![0.0, 0.0],
+            ChannelsInfo {
+                current: 1,
+                total_channels: 1,
+            },
+            BlockTime::none(),
+        );
+
+        assert_eq!(acc.peak(0), Some(0.))
+    }
 }
