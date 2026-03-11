@@ -158,3 +158,143 @@ impl AudioConsumer for WindowBuffer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rift_plugin_shared::assert_approx_eq;
+    use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
+
+    use super::*;
+
+    fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuffer {
+        WindowBuffer::new(44100.0, n_buckets, seconds)
+    }
+
+    fn make_channels(current: usize, total: usize) -> ChannelsInfo {
+        ChannelsInfo {
+            current,
+            total_channels: total,
+        }
+    }
+
+    fn feed_block(buffer: &mut WindowBuffer, block: &[f32], total_channels: usize) {
+        for ch in 0..total_channels {
+            buffer.consume(block, make_channels(ch, total_channels), BlockTime::none());
+        }
+    }
+
+    #[test]
+    fn test_initial_peaks_are_zero() {
+        let b = make_buffer(64, 1.0);
+        assert!(b.iter_peaks().all(|p| p == 0.0));
+    }
+
+    #[test]
+    fn test_num_points_matches_n_buckets() {
+        for &n in &[16_usize, 64, 256] {
+            assert_eq!(make_buffer(n, 1.0).num_points(), n);
+        }
+    }
+
+    #[test]
+    fn test_averaged_mode_produces_nonzero_peaks() {
+        let mut b = make_buffer(64, 1.0);
+        let block = vec![1.0_f32; 512];
+        feed_block(&mut b, &block, 2);
+        assert!(b.iter_peaks().any(|p| p > 0.0));
+    }
+
+    #[test]
+    fn test_averaged_mode_averages_channels() {
+        let mut b = make_buffer(64, 1.0);
+
+        // ch0 = 1.0, ch1 = 0.0 → average should be 0.5
+        let ones = vec![1.0_f32; 512];
+        let zeros = vec![0.0_f32; 512];
+        b.consume(&ones, make_channels(0, 2), BlockTime::none());
+        b.consume(&zeros, make_channels(1, 2), BlockTime::none());
+
+        let max_peak = b.iter_peaks().fold(0.0_f32, f32::max);
+        assert_approx_eq!(max_peak, 0.5, 1e-4);
+    }
+
+    #[test]
+    fn test_averaged_ignores_incomplete_channel_pass() {
+        // Only feeding channel 0 out of 2 — intermediate should not be pushed yet
+        let mut b = make_buffer(64, 1.0);
+        let block = vec![1.0_f32; 512];
+        b.consume(&block, make_channels(0, 2), BlockTime::none());
+
+        // Peaks should still be zero since channel 1 hasn't come in
+        assert!(b.iter_peaks().all(|p| p == 0.0));
+    }
+
+    #[test]
+    fn test_channel_mode_captures_correct_channel() {
+        let mut b = make_buffer(64, 1.0);
+        b.set_mode(WindowBufferMode::Channel(1));
+
+        let silence = vec![0.0_f32; 512];
+        let signal = vec![1.0_f32; 512];
+
+        // ch0 = silence, ch1 = signal
+        b.consume(&silence, make_channels(0, 2), BlockTime::none());
+        b.consume(&signal, make_channels(1, 2), BlockTime::none());
+
+        assert!(b.iter_peaks().any(|p| p > 0.0));
+    }
+
+    #[test]
+    fn test_channel_mode_ignores_wrong_channel() {
+        let mut b = make_buffer(64, 1.0);
+        b.set_mode(WindowBufferMode::Channel(1));
+
+        let signal = vec![1.0_f32; 512];
+        b.consume(&signal, make_channels(0, 2), BlockTime::none());
+
+        assert!(b.iter_peaks().all(|p| p == 0.0));
+    }
+
+    #[test]
+    fn test_set_mode_to_channel_deallocates_intermediate() {
+        let mut b = make_buffer(64, 1.0);
+
+        // Trigger intermediate allocation via averaged mode
+        let block = vec![1.0_f32; 512];
+        feed_block(&mut b, &block, 2);
+
+        b.set_mode(WindowBufferMode::Channel(0));
+
+        // Channel mode should work fine after switching
+        b.consume(&block, make_channels(0, 1), BlockTime::none());
+        assert!(b.iter_peaks().any(|p| p > 0.0));
+    }
+
+    #[test]
+    fn test_iter_peaks_length_is_always_n_buckets() {
+        let b = make_buffer(32, 1.0);
+        assert_eq!(b.iter_peaks().count(), 32);
+    }
+
+    #[test]
+    fn test_peaks_update_after_new_data() {
+        let mut b = make_buffer(64, 1.0);
+        let block = vec![1.0_f32; 2048];
+
+        feed_block(&mut b, &block, 1);
+        let first: Vec<f32> = b.iter_peaks().collect();
+
+        let silence = vec![0.0_f32; 44100];
+        feed_block(&mut b, &silence, 1);
+        let second: Vec<f32> = b.iter_peaks().collect();
+
+        assert_ne!(first, second, "peaks should change after new data");
+    }
+
+    #[test]
+    fn test_set_num_buckets_updates_num_points() {
+        let mut b = make_buffer(64, 1.0);
+        b.set_num_buckets(128);
+        assert_eq!(b.num_points(), 128);
+    }
+}
