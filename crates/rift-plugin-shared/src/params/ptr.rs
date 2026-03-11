@@ -113,7 +113,6 @@ impl ClapParam for ParamPtr {
 mod tests {
     use super::*;
     use clack_plugin::prelude::ClapId;
-    use std::fmt::Write;
 
     struct MockParam {
         value: std::cell::Cell<f64>,
@@ -170,12 +169,6 @@ mod tests {
         fn flags(&self) -> ParamInfoFlags {
             ParamInfoFlags::empty()
         }
-        fn value_to_text(&self, value: f64, writer: &mut dyn Write) -> std::fmt::Result {
-            write!(writer, "{:.1}", value)
-        }
-        fn text_to_value(&self, text: &std::ffi::CStr) -> Option<f64> {
-            text.to_str().ok()?.parse().ok()
-        }
         fn as_ptr(&self) -> ParamPtr {
             ParamPtr::new(self as *const dyn ClapParam)
         }
@@ -222,19 +215,26 @@ mod tests {
 
     #[test]
     fn test_value_to_text() {
-        let mock = MockParam::new(0.0);
+        let mock = MockParam::new(3.14);
         let ptr = make_ptr(&mock);
-        let mut buf = String::new();
-        ptr.value_to_text(3.14, &mut buf).unwrap();
-        assert_eq!(buf, "3.1");
+        let text = ptr.to_text();
+        assert_eq!(&text, "3.14dB");
     }
 
     #[test]
     fn test_text_to_value() {
         let mock = MockParam::new(0.0);
         let ptr = make_ptr(&mock);
-        let cstr = std::ffi::CString::new("42.0").unwrap();
+        let cstr = std::ffi::CString::new("42.0dB").unwrap();
         assert_eq!(ptr.text_to_value(&cstr), Some(42.0));
+    }
+
+    #[test]
+    fn test_text_to_value_no_unit() {
+        let mock = MockParam::new(0.0);
+        let ptr = make_ptr(&mock);
+        let cstr = std::ffi::CString::new("42.0").unwrap();
+        assert_eq!(ptr.text_to_value(&cstr), None);
     }
 
     #[test]
@@ -266,5 +266,13 @@ mod tests {
 
         assert_eq!(mock.id(), ClapId::from(1u32));
         assert_eq!(mock.flags(), ParamInfoFlags::empty());
+    }
+
+    #[test]
+    fn test_param_info() {
+        let mock = MockParam::new(77.0);
+        let infos = mock.param_info();
+
+        assert_eq!(infos.id, ClapId::from(1u32));
     }
 }
