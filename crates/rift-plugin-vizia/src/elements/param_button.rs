@@ -8,11 +8,11 @@ use super::gui_prelude::*;
 /// When the underlying parameter's normalized value exceeds `0.5`, the button is highlighted.
 /// Pressing the button snaps the parameter value to the opposite side of the range.
 ///
-/// # Fields
-/// - `lens`: The data source for the button state.
-/// - `accessor`: Function to extract the parameter object from the lens target.
-/// - `on_press`: Callback invoked when the user confirms the toggle action.
-/// - `button_modifiers`: Optional function to customize the [`Handle`] of the inner button.
+/// # Example:
+/// ```ignore
+/// ParamSlider::new(AppData::params, |p| &p.gain)
+///     .build_view(cx, Orientation::Horizontal);
+/// ```
 #[derive(ParamViewBuilder)]
 pub struct ParamButton<L, MapFn>
 where
@@ -34,13 +34,13 @@ where
     button_modifiers: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
 }
 
-impl<L, MapFn> ParamButton<L, MapFn>
+impl<L, MapFn> DestructThenBuildView for ParamButton<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
     MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
 {
-    pub fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
+    fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {
             lens,
             accessor,

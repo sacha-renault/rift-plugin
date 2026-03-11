@@ -63,3 +63,10 @@ where
         self
     }
 }
+
+/// Generic trait so that any UI Element that uses the
+/// builder then destruct then build view can be consistant together
+pub trait DestructThenBuildView {
+    /// Destructure the builder and create the view for the UI Element.
+    fn build_view(self, cx: &mut Context) -> Handle<'_, impl View>;
+}

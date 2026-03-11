@@ -55,13 +55,13 @@ where
     has_name_label: bool,
 }
 
-impl<L, MapFn> ParamKnob<L, MapFn>
+impl<L, MapFn> DestructThenBuildView for ParamKnob<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
     MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
 {
-    pub fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
+    fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {
             lens,
             accessor,
