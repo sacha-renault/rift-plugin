@@ -53,3 +53,48 @@ impl PeakBucket {
         self.count
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_creation() {
+        let bucket = PeakBucket::new(5.);
+
+        assert_eq!(bucket.max, 5.);
+        assert_eq!(bucket.min, 5.);
+        assert_eq!(bucket.count, 1);
+    }
+
+    #[test]
+    fn test_empty() {
+        let bucket = PeakBucket::empty();
+
+        assert_eq!(bucket.max, 0.);
+        assert_eq!(bucket.min, 0.);
+        assert_eq!(bucket.count(), 0);
+    }
+
+    #[test]
+    fn test_add() {
+        let mut bucket = PeakBucket::empty();
+
+        bucket.add_sample(1.);
+        assert_eq!(bucket.max, 1.);
+        assert_eq!(bucket.min, 1.);
+        assert_eq!(bucket.count(), 1);
+
+        bucket.add_sample(2.);
+        assert_eq!(bucket.max, 2.);
+        assert_eq!(bucket.min, 1.);
+        assert_eq!(bucket.count(), 2);
+        assert_eq!(bucket.peak(), 2.);
+
+        bucket.add_sample(-3.);
+        assert_eq!(bucket.max, 2.);
+        assert_eq!(bucket.min, -3.);
+        assert_eq!(bucket.count(), 3);
+        assert_eq!(bucket.peak(), -3.);
+    }
+}
