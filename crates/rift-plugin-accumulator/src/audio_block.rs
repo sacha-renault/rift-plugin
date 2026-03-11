@@ -45,3 +45,32 @@ impl<const N: usize> TimedAudioBlock<N> {
         self.time
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_too_long_slice() {
+        TimedAudioBlock::<10>::new(&vec![0.; 11], BlockTime::none());
+    }
+
+    #[test]
+    fn test_correct_length() {
+        let audio = vec![0.; 5];
+        let block = TimedAudioBlock::<10>::new(&audio, BlockTime::none());
+        assert_eq!(block.len(), audio.len());
+        assert_eq!(block.as_slice().len(), audio.len());
+        assert_eq!(block.time().beats(), None);
+        assert!(!block.is_empty());
+    }
+
+    #[test]
+    fn test_assert_iter() {
+        fn with_iter<I: Iterator>(_: I) {}
+        let audio = vec![0.; 5];
+        let block = TimedAudioBlock::<10>::new(&audio, BlockTime::none());
+        with_iter(block.iter())
+    }
+}
