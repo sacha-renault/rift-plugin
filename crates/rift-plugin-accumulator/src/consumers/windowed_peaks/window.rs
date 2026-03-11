@@ -115,7 +115,7 @@ impl WindowBuffer {
         }
     }
 
-    // Private helper for averaging mode logic
+    /// Private helper for averaging mode logic
     fn consume_avg(&mut self, block: &[f32], channels: ChannelsInfo) {
         let total_channel = channels.total_channels as f32;
 
@@ -137,9 +137,9 @@ impl WindowBuffer {
         }
     }
 
-    // Private helper for single-channel mode logic
-    //
-    // must be called only on the correct channel
+    /// Private helper for single-channel mode logic
+    ///
+    /// must be called only on the correct channel
     fn consume_channel(&mut self, block: &[f32]) {
         for &value in block.iter() {
             self.push_point(value);
