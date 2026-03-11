@@ -35,8 +35,8 @@ impl ViewportTransform {
         let y_norm = 1.0 - normalize_by_range(y, self.y_min, self.y_range);
         let x_norm = normalize_by_range(x, self.x_min, self.x_range);
         (
-            x_norm * self.bounds.w + self.bounds.x,
-            y_norm * self.bounds.h + self.bounds.y,
+            x_norm.clamp(0., 1.) * self.bounds.w + self.bounds.x,
+            y_norm.clamp(0., 1.) * self.bounds.h + self.bounds.y,
         )
     }
 }
