@@ -7,7 +7,7 @@ use rift_plugin_shared::utils::spaces::Linespace;
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
 fn hanning(fft_size: usize) -> Vec<f32> {
-    Linespace::new(0.0, 2.0 * f32::consts::PI, fft_size)
+    Linespace::new(0.0, f32::consts::TAU, fft_size)
         .map(|w| 0.5 * (1.0 - w.cos()))
         .collect()
 }
