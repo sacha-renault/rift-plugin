@@ -39,3 +39,17 @@ fn f32_to_u32_bytes(value: f32) -> u32 {
 fn f32_from_u32_bytes(bytes: u32) -> f32 {
     f32::from_ne_bytes(bytes.to_ne_bytes())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_atomic_f32() {
+        let value = AtomicF32::new(10.);
+        assert_eq!(value.load(Ordering::Relaxed), 10.);
+
+        value.store(15., Ordering::Relaxed);
+        assert_eq!(value.load(Ordering::Relaxed), 15.);
+    }
+}
