@@ -151,3 +151,114 @@ impl<const N: usize> InnerAudioAccumulator<N> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn init_audio_accumulator() -> AudioAccumulator<10> {
+        // 1 channel and 4 max blocks
+        AudioAccumulator::<10>::new(1, 4)
+    }
+
+    #[test]
+    fn test_add_slice() {
+        let acc = init_audio_accumulator();
+        let channel: Vec<f32> = vec![0., 1., 2., 3.];
+        acc.push_slices([channel.as_slice()].into_iter(), None);
+
+        let mut vec_consume = Vec::new();
+        let mut n_calls = 0;
+        let mut time = None;
+
+        acc.drain(|block, _, inner_time| {
+            vec_consume.extend_from_slice(block);
+            time = Some(inner_time);
+            n_calls += 1;
+        });
+
+        assert_eq!(acc.channels(), 1);
+        assert_eq!(n_calls, 1);
+        assert_eq!(vec_consume.len(), channel.len());
+        assert_eq!(vec_consume, channel);
+        assert!(time.is_some()); // Even if we pass none, this must be some, just no data inside
+        assert_eq!(time.map(|t| t.seconds()), Some(None))
+    }
+
+    #[test]
+    fn test_add_slice_with_time_info() {
+        let acc = init_audio_accumulator();
+        let channel: Vec<f32> = vec![0., 1., 2., 3.];
+        let infos = BlockInfo {
+            seconds: 0.,
+            beats: 0.,
+            samplerate: 44100.,
+            seconds_per_beat: 60.,
+        };
+        acc.push_slices([channel.as_slice()].into_iter(), Some(infos));
+
+        let mut vec_consume = Vec::new();
+        let mut n_calls = 0;
+        let mut time = None;
+
+        acc.drain(|block, _, inner_time| {
+            vec_consume.extend_from_slice(block);
+            time = Some(inner_time);
+            n_calls += 1;
+        });
+
+        assert_eq!(time.map(|t| t.seconds()), Some(Some(0.)));
+        assert_eq!(acc.num_writes(), 1);
+    }
+
+    #[test]
+    fn test_clear() {
+        let acc = init_audio_accumulator();
+        let channel: Vec<f32> = vec![0., 1., 2., 3.];
+        acc.push_slices([channel.as_slice()].into_iter(), None);
+        acc.clear();
+
+        let mut n_calls = 0;
+
+        acc.drain(|_, _, _| n_calls += 1);
+        assert_eq!(n_calls, 0);
+    }
+
+    #[test]
+    fn test_push_slice_more_than_block_size() {
+        let acc = init_audio_accumulator();
+        let channel: Vec<f32> = (0..40).map(|i| i as f32).collect();
+        acc.push_slices([channel.as_slice()].into_iter(), None);
+
+        let mut vec_consume = Vec::new();
+        let mut n_calls = 0;
+
+        acc.drain(|block, _, _| {
+            vec_consume.extend_from_slice(block);
+            n_calls += 1;
+        });
+
+        assert_eq!(acc.channels(), 1);
+        assert_eq!(n_calls, 4);
+        assert_eq!(vec_consume, channel);
+    }
+
+    #[test]
+    fn test_push_slice_exceed_queue() {
+        let acc = init_audio_accumulator();
+        let channel: Vec<f32> = (0..50).map(|i| i as f32).collect();
+        acc.push_slices([channel.as_slice()].into_iter(), None);
+
+        let mut vec_consume = Vec::new();
+        let mut n_calls = 0;
+
+        acc.drain(|block, _, _| {
+            vec_consume.extend_from_slice(block);
+            n_calls += 1;
+        });
+
+        assert_eq!(n_calls, 4);
+        assert!(vec_consume.len() < channel.len());
+        assert_eq!(vec_consume, channel[..40]);
+    }
+}
