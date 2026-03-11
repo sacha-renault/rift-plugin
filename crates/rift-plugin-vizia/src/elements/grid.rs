@@ -129,7 +129,7 @@ impl GridScale {
         base: f32,
     ) {
         let t = (val.log(base) - l_start) / l_range;
-        if t >= -0.0001 && t <= 1.0001 {
+        if (-0.0001..=1.0001).contains(&t) {
             storage.push(GridValue {
                 normalized: t.clamp(0.0, 1.0),
                 value: val,

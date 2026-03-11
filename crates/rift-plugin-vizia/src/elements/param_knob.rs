@@ -104,7 +104,7 @@ where
                     .class("knob-name-label");
             }
 
-            Knob::custom(cx, default_value as f32, value_lens, move |cx, lens| {
+            Knob::custom(cx, default_value, value_lens, move |cx, lens| {
                 ZStack::new(cx, |cx| {
                     ArcTrack::new(
                         cx,

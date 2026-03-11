@@ -99,7 +99,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
         paint.set_stroke_cap(vg::PaintCap::Round);
         paint.set_style(vg::PaintStyle::Stroke);
         paint.set_anti_alias(true);
-        canvas.draw_path(&path, &paint);
+        canvas.draw_path(path, &paint);
     }
 
     /// Draw the filled path (lower opacity)
@@ -121,7 +121,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
         let rect = vg::Rect::new(bounds.x, bounds.y, bounds.x + bounds.w, bounds.y + bounds.h);
 
         canvas.save();
-        canvas.clip_path(&path, vg::ClipOp::Intersect, false);
+        canvas.clip_path(path, vg::ClipOp::Intersect, false);
         canvas.draw_rect(rect, &fill_paint);
         canvas.restore();
     }

@@ -123,9 +123,9 @@ impl StftChannelConsumer {
 
         if self.samples.len() >= self.fft_size {
             let contiguous_samples = self.samples.as_contiguous_latest(self.fft_size);
-            for i in 0..self.fft_size {
+            for (i, sample) in contiguous_samples.iter().enumerate().take(self.fft_size) {
                 self.fft_workspace[i] = Complex {
-                    re: contiguous_samples[i] * self.window[i],
+                    re: sample * self.window[i],
                     im: 0.0,
                 };
             }

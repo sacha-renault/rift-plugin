@@ -21,9 +21,9 @@ impl ViewportTransform {
     ) -> Self {
         Self {
             bounds,
-            x_min: x_min,
+            x_min,
             x_range: x_max - x_min,
-            y_min: y_min,
+            y_min,
             y_range: y_max - y_min,
         }
     }

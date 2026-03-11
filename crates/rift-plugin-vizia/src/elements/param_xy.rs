@@ -14,8 +14,8 @@ struct DataXY {
 
 impl Model for DataXY {
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
-        event.map(|evt, _| match evt {
-            &SetPadValue::XY(x, y) => {
+        event.map(|evt, _| match *evt {
+            SetPadValue::XY(x, y) => {
                 if self.xy.0 != x {
                     self.xy.0 = x;
                     set_value_normalized(self.param_ptr_x, cx, x as f64);
@@ -26,8 +26,8 @@ impl Model for DataXY {
                     set_value_normalized(self.param_ptr_y, cx, y as f64);
                 }
             }
-            &SetPadValue::X(x) => self.xy.0 = x,
-            &SetPadValue::Y(y) => self.xy.1 = y,
+            SetPadValue::X(x) => self.xy.0 = x,
+            SetPadValue::Y(y) => self.xy.1 = y,
         });
     }
 }
