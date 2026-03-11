@@ -1,7 +1,7 @@
 use rift_plugin_accumulator::{StftChannelConsumer, WindowBuffer};
 use rift_plugin_shared::RcCell;
 use rift_plugin_shared::utils::interpo::cubic_interpolate;
-use rift_plugin_shared::utils::spaces::Linespace;
+use rift_plugin_shared::utils::spaces::Linspace;
 
 use vizia::vg;
 
@@ -186,7 +186,7 @@ where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
         let num_points = width.ceil() as usize;
-        let mut iterator = Linespace::new(0., 1., num_points).map(|x| (x, self(x)));
+        let mut iterator = Linspace::new(0., 1., num_points).map(|x| (x, self(x)));
         f(&mut iterator)
     }
 }
@@ -242,7 +242,9 @@ impl OscilloscopeData for RcCell<StftChannelConsumer> {
         let log_ratio: f32 = f_max / f_min;
         let num_points = width.ceil() as usize;
 
-        let mut iterator = Linespace::new(0.0, 1.0, num_points).map(|x| {
+        // Would be preferable to use logspace here, but we need the normalized linear value
+        // of x for visual mapping, so we'll stick with linspace.
+        let mut iterator = Linspace::new(0.0, 1.0, num_points).map(|x| {
             let freq = f_min * log_ratio.powf(x);
             let bin_idx = (freq * fft_size) / samplerate;
             let val = sample_spectrum(bins, bin_idx);

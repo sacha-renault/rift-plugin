@@ -1,15 +1,15 @@
 /// Return evenly spaced numbers over a specified interval.
 ///
 /// Returns num evenly spaced samples, calculated over the interval [start, stop].
-pub struct Linespace {
+pub struct Linspace {
     start: f32,
     step: f32,
     num_points: usize,
     current_index: usize,
 }
 
-impl Linespace {
-    /// Create the [`Linespace`] iterator.
+impl Linspace {
+    /// Create the [`Linspace`] iterator.
     ///
     /// # Arguments:
     /// - start: starting value of the sequence
@@ -30,7 +30,7 @@ impl Linespace {
     }
 }
 
-impl Iterator for Linespace {
+impl Iterator for Linspace {
     type Item = f32;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -49,7 +49,7 @@ impl Iterator for Linespace {
 /// The sequence is generated between `start` and `end`
 /// with `num_points` points, using the specified `base` for the logarithm.
 pub struct Logspace {
-    linespace: Linespace,
+    linspace: Linspace,
     start: f32,
     ratio: f32,
 }
@@ -72,7 +72,7 @@ impl Logspace {
         let ratio = end / start;
         Self {
             ratio,
-            linespace: Linespace::new(0.0, 1.0, num_points),
+            linspace: Linspace::new(0.0, 1.0, num_points),
             start,
         }
     }
@@ -83,7 +83,7 @@ impl Iterator for Logspace {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.linespace
+        self.linspace
             .next()
             .map(|exp| self.start * self.ratio.powf(exp))
     }
@@ -94,21 +94,21 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_linespace() {
-        let iterator = Linespace::new(0., 1., 3);
+    fn test_linspace() {
+        let iterator = Linspace::new(0., 1., 3);
         assert_eq!(iterator.collect::<Vec<_>>(), vec![0., 0.5, 1.]);
     }
 
     #[test]
-    fn test_linespace_rev() {
-        let iterator = Linespace::new(1., 0., 3);
+    fn test_linspace_rev() {
+        let iterator = Linspace::new(1., 0., 3);
         assert_eq!(iterator.collect::<Vec<_>>(), vec![1., 0.5, 0.,]);
     }
 
     #[test]
     #[should_panic]
-    fn test_linespace_panic() {
-        // Panics for linespace on a single point or less
-        Linespace::new(1., 0., 1);
+    fn test_linspace_panic() {
+        // Panics for linspace on a single point or less
+        Linspace::new(1., 0., 1);
     }
 }
