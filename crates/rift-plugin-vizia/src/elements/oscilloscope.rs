@@ -193,12 +193,16 @@ where
 
 /// Given a stft, retrieve a value at a fractional index using
 /// cubic interpolation
+///
+/// # Panis:
+/// - bins.len() == 0
 #[inline]
 fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
     let len = bins.len();
+    assert_ne!(len, 0, "Bins array must not be empty");
 
     // Safety checks
-    if len <= 1 {
+    if len == 1 {
         return bins[0];
     }
 
