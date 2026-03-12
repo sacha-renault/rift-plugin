@@ -16,9 +16,9 @@ pub trait ViewApplyModifiers<'a>: Sized {
         F: Fn(Handle<'a, FView>) -> Handle<'a, FView>;
 }
 
-impl<'a, T> ViewApplyModifiers<'a> for Handle<'a, T>
+impl<'a, V> ViewApplyModifiers<'a> for Handle<'a, V>
 where
-    T: View,
+    V: View,
 {
     fn maybe_apply_modifiers<F>(self, func: Option<F>) -> Handle<'a, FView>
     where
@@ -35,6 +35,8 @@ where
         }
     }
 }
+
+struct RedrawLensEvent;
 
 pub trait RedrawOnExt: Sized {
     /// Binds a [`Lens`] to this Handle to trigger redraws when the lens output changes.
@@ -59,6 +61,7 @@ where
         let entity = self.entity();
         Binding::new(self.context(), lens, move |cx, _| {
             cx.needs_redraw(entity);
+            cx.emit_to(entity, RedrawLensEvent);
         });
         self
     }
