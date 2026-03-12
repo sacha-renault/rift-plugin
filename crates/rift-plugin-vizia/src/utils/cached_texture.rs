@@ -39,7 +39,7 @@ fn create_texture<F>(cx: &mut DrawContext, canvas: &Canvas, draw_fn: F) -> Optio
 where
     F: Fn(&mut DrawContext, &Canvas),
 {
-    let BoundingBox { w, h, .. } = cx.bounds();
+    let BoundingBox { w, h, x, y } = cx.bounds();
 
     // Create the new texture
     let size = ISize::new(w.ceil() as i32, h.ceil() as i32);
@@ -48,6 +48,9 @@ where
     let render_canvas = surface.canvas();
 
     // Draw in the render canvas
+    let scale_factor = 1. / cx.scale_factor();
+    render_canvas.scale((scale_factor, scale_factor));
+    render_canvas.translate((-x, -y));
     render_canvas.clear(Color::TRANSPARENT);
     draw_fn(cx, render_canvas);
     let image = surface.image_snapshot();
