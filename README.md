@@ -10,3 +10,7 @@ cargo llvm-cov --workspace --lcov --output-path ./target/lcov.info
 ```
 cargo llvm-cov -p <package-name>
 ```
+- HTML Output
+```
+cargo llvm-cov --workspace --html --output-path ./target/cover.html
+```
