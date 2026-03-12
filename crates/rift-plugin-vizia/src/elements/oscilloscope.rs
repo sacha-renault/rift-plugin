@@ -43,6 +43,9 @@ pub struct Oscilloscope<D: 'static> {
     resolution: f32,
 
     #[extension(ext)]
+    fill_opacity: f32,
+
+    #[extension(ext)]
     filter_transform: Option<Box<dyn Fn(f32, f32) -> Option<(f32, f32)>>>,
 
     #[extension(ext, set = CachedTexture::new(), setter_name = use_cache_texture)]
@@ -78,6 +81,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
             y_range: (0., 1.),
             resolution: 1.0,
             cache: None,
+            fill_opacity: 0.4,
         }
         .build(cx, |_| {})
     }
@@ -101,7 +105,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
             font_color.r(),
             font_color.g(),
             font_color.b(),
-            (font_color.a() as f32 * 0.4) as u8,
+            (font_color.a() as f32 * self.fill_opacity) as u8,
         );
         fill_paint.set_color(color);
         fill_paint.set_stroke_cap(vg::PaintCap::Round);
@@ -277,5 +281,89 @@ impl OscilloscopeData for RcCell<StftChannelConsumer> {
         });
 
         f(&mut iterator)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rift_plugin_shared::assert_approx_eq;
+
+    #[test]
+    fn test_sample_spectrum_single_bin() {
+        assert_eq!(sample_spectrum(&[0.5], 0.0), 0.5);
+    }
+
+    #[test]
+    fn test_sample_spectrum_exact_index() {
+        let bins = [0.0, 1.0, 2.0, 3.0];
+        assert_approx_eq!(sample_spectrum(&bins, 0.0), 0.0);
+        assert_approx_eq!(sample_spectrum(&bins, 1.0), 1.0);
+        assert_approx_eq!(sample_spectrum(&bins, 2.0), 2.0);
+    }
+
+    #[test]
+    fn test_sample_spectrum_clamps_below_zero() {
+        let bins = [1.0, 2.0, 3.0];
+        assert_approx_eq!(sample_spectrum(&bins, -1.0), 1.0);
+    }
+
+    #[test]
+    fn test_sample_spectrum_clamps_above_max() {
+        let bins = [1.0, 2.0, 3.0];
+        assert_approx_eq!(sample_spectrum(&bins, 99.0), 3.0);
+    }
+
+    #[test]
+    fn test_sample_spectrum_interpolates_midpoint() {
+        // For a linear ramp, cubic interpolation at 0.5 between two points should be ~midpoint
+        let bins = [0.0, 0.0, 1.0, 1.0];
+        let mid = sample_spectrum(&bins, 1.5);
+        assert!((0.0..=1.0).contains(&mid));
+    }
+
+    #[test]
+    fn test_vec_f32_points_normalized_x() {
+        let data = vec![0.0, 0.5, 1.0];
+        data.with_points(0.0, |iter| {
+            let pts: Vec<_> = iter.collect();
+            assert_eq!(pts.len(), 3);
+            assert_approx_eq!(pts[0].0, 0.0);
+            assert_approx_eq!(pts[1].0, 1.0 / 3.0);
+            assert_approx_eq!(pts[2].0, 2.0 / 3.0);
+        });
+    }
+
+    #[test]
+    fn test_vec_f32_points_y_values_preserved() {
+        let data = vec![0.1, 0.5, 0.9];
+        data.with_points(0.0, |iter| {
+            let ys: Vec<f32> = iter.map(|(_, y)| y).collect();
+            assert_approx_eq!(ys[0], 0.1);
+            assert_approx_eq!(ys[1], 0.5);
+            assert_approx_eq!(ys[2], 0.9);
+        });
+    }
+
+    #[test]
+    fn test_vec_tuple_points_passthrough() {
+        let data = vec![(0.1, 0.2), (0.5, 0.6), (0.9, 1.0)];
+        data.with_points(0.0, |iter| {
+            let pts: Vec<_> = iter.collect();
+            assert_eq!(pts, vec![(0.1, 0.2), (0.5, 0.6), (0.9, 1.0)]);
+        });
+    }
+
+    #[test]
+    fn test_fn_data_samples_at_resolution() {
+        let f = |x: f32| x * 2.0;
+        f.with_points(5.0, |iter| {
+            let pts: Vec<_> = iter.collect();
+            assert_eq!(pts.len(), 5);
+            for (x, y) in pts {
+                assert_approx_eq!(y, x * 2.0);
+            }
+        });
     }
 }
