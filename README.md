@@ -12,5 +12,5 @@ cargo llvm-cov -p <package-name>
 ```
 - HTML Output
 ```
-cargo llvm-cov --workspace --html --output-path ./target/cover.html
+cargo llvm-cov --workspace --html
 ```
