@@ -17,6 +17,15 @@ struct ParamField {
 
     #[darling(default)]
     ext: bool,
+
+    #[darling(default)]
+    with: Option<syn::Expr>,
+
+    #[darling(default)]
+    set: Option<syn::Expr>,
+
+    #[darling(default)]
+    setter_name: Option<syn::Ident>,
 }
 
 #[derive(FromDeriveInput)]
@@ -44,32 +53,20 @@ pub fn derive_extensions(input: TokenStream) -> TokenStream {
     let setters: Vec<_> = extensions_field
         .iter()
         .map(|field| {
-            let field_name = &field.ident;
-            let ty = &field.ty;
+            let signature = define_signature(field);
+            let body = define_body(field);
 
-            if let Some(peeled_option_type) = inner_type_of_option(ty) {
-                quote! { fn #field_name (self, value: #peeled_option_type) -> Self {
-                    self.modify(|view| view.#field_name = Some(value))
-                } }
-            } else {
-                quote! { fn #field_name (self, value: #ty) -> Self {
-                    self.modify(|view| view.#field_name = value)
-                } }
-            }
+            quote! { #signature {
+                #body
+            }}
         })
         .collect();
 
     let defs: Vec<_> = extensions_field
         .iter()
         .map(|field| {
-            let field_name = &field.ident;
-            let ty = &field.ty;
-
-            if let Some(peeled_option_type) = inner_type_of_option(ty) {
-                quote! { fn #field_name (self, value: #peeled_option_type) -> Self; }
-            } else {
-                quote! { fn #field_name (self, value: #ty) -> Self; }
-            }
+            let signature = define_signature(field);
+            quote! { #signature; }
         })
         .collect();
 
@@ -83,4 +80,50 @@ pub fn derive_extensions(input: TokenStream) -> TokenStream {
         }
     }
     .into()
+}
+
+/// Define the signature of the builder like function
+fn define_signature(field: &ParamField) -> proc_macro2::TokenStream {
+    let field_name = &field.ident;
+    let ty = &field.ty;
+    let fn_name = field
+        .setter_name
+        .as_ref()
+        .map(|name| quote! { #name })
+        .unwrap_or(quote! { #field_name });
+
+    // SET, in case set is defined, the function takes no input and just set
+    // to the defined value
+    if field.set.is_some() {
+        quote! { fn #fn_name (self) -> Self }
+    } else if let Some(peeled_option_type) = inner_type_of_option(ty) {
+        quote! { fn #fn_name (self, value: #peeled_option_type) -> Self }
+    } else {
+        quote! { fn #fn_name (self, value: #ty) -> Self }
+    }
+}
+
+/// Define the body of the builder like function
+fn define_body(field: &ParamField) -> proc_macro2::TokenStream {
+    let field_name = &field.ident;
+    let ty = &field.ty;
+
+    let mut value = quote! { value };
+
+    if let Some(const_value) = &field.set {
+        // Override, we don't take value from
+        // the fn argument, we have our own defined
+        // value, constant for the struct
+        value = quote! { #const_value };
+    }
+
+    if let Some(with) = &field.with {
+        value = quote! { (#with)(#value) }
+    }
+
+    if inner_type_of_option(ty).is_some() {
+        value = quote! { Some(#value) };
+    }
+
+    quote! { self.modify(|view| view.#field_name = #value ) }
 }

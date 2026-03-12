@@ -22,25 +22,20 @@ impl CachedTexture {
         self.texture.borrow().is_some()
     }
 
-    pub fn draw_cache(&self, cx: &mut DrawContext, canvas: &mut Canvas, image: &Image) {
-        let BoundingBox { x, y, .. } = cx.bounds();
-        canvas.draw_image(image, (x, y), None);
-    }
-
-    pub fn draw<F>(&self, cx: &mut DrawContext, canvas: &mut Canvas, draw_fn: F)
+    pub fn draw<F>(&self, cx: &mut DrawContext, canvas: &Canvas, draw_fn: F)
     where
         F: Fn(&mut DrawContext, &Canvas),
     {
         if let Some(image) = self.texture.borrow().as_ref() {
-            self.draw_cache(cx, canvas, image);
+            draw_image(cx, canvas, image);
         } else if let Some(image) = create_texture(cx, canvas, draw_fn) {
-            self.draw_cache(cx, canvas, &image);
+            draw_image(cx, canvas, &image);
             *self.texture.borrow_mut() = Some(image);
         }
     }
 }
 
-fn create_texture<F>(cx: &mut DrawContext, canvas: &mut Canvas, draw_fn: F) -> Option<Image>
+fn create_texture<F>(cx: &mut DrawContext, canvas: &Canvas, draw_fn: F) -> Option<Image>
 where
     F: Fn(&mut DrawContext, &Canvas),
 {
@@ -57,4 +52,9 @@ where
     draw_fn(cx, render_canvas);
     let image = surface.image_snapshot();
     Some(image)
+}
+
+fn draw_image(cx: &mut DrawContext, canvas: &Canvas, image: &Image) {
+    let BoundingBox { x, y, .. } = cx.bounds();
+    canvas.draw_image(image, (x, y), None);
 }

@@ -12,7 +12,7 @@ pub use cached_texture::CachedTexture;
 pub use draw_utils::{clip_bounds, make_strokepath};
 pub use gui_events::{gesture_end, gesture_start, set_value, set_value_normalized};
 pub use handle_generic_extensions::{
-    DestructThenBuildView, FView, RedrawOnExt, ViewApplyModifiers,
+    DestructThenBuildView, FView, RedrawLensEvent, RedrawOnExt, ViewApplyModifiers,
 };
 pub use lens::make_lens;
 pub use viewport_transform::ViewportTransform;

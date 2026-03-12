@@ -36,7 +36,7 @@ where
     }
 }
 
-struct RedrawLensEvent;
+pub struct RedrawLensEvent;
 
 pub trait RedrawOnExt: Sized {
     /// Binds a [`Lens`] to this Handle to trigger redraws when the lens output changes.
