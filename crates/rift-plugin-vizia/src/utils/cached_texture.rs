@@ -3,25 +3,36 @@ use std::cell::RefCell;
 use vizia::prelude::{BoundingBox, Canvas, DrawContext};
 use vizia::vg::{AlphaType, Color, ColorType, ISize, Image, ImageInfo};
 
+/// A struct to cache a draw to avoid re-resterize complexe vector
+///
+/// # Notes:
+/// This store the image behind a RefCell as the view in
+/// [`vizia::prelude::View::draw`] is immuatble. Be aware this can
 pub struct CachedTexture {
     texture: RefCell<Option<Image>>,
 }
 
 impl CachedTexture {
+    /// Create a new empty texture cache.
     pub fn new() -> Self {
         Self {
             texture: RefCell::new(None),
         }
     }
 
+    /// Invalidate the previous cached texture if there was any.
     pub fn invalidate(&self) {
         *self.texture.borrow_mut() = None;
     }
 
+    /// Check wether the cache contains a texture or not.
     pub fn has_cache(&self) -> bool {
         self.texture.borrow().is_some()
     }
 
+    /// Draw either from the cache if [`Self::has_cache`] is true.
+    /// Otherwise, fallbacks to `draw_fn` function and save the result to be
+    /// new cache.
     pub fn draw<F>(&self, cx: &mut DrawContext, canvas: &Canvas, draw_fn: F)
     where
         F: Fn(&mut DrawContext, &Canvas),
