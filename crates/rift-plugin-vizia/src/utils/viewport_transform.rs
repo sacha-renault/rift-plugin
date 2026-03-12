@@ -40,3 +40,21 @@ impl ViewportTransform {
         )
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_transform() {
+        let view_transform = ViewportTransform::new(BoundingBox {
+            x: 0.,
+            y: 0.,
+            w: 10.,
+            h: 10.,
+        });
+
+        assert_eq!(view_transform.transform(0.5, 0.), (5., 10.)); // y is flipped
+        assert_eq!(view_transform.transform(1.5, -1.0), (10., 10.)); // x and y are clamped
+    }
+}
