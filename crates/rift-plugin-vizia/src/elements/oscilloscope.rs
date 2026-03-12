@@ -44,36 +44,26 @@ pub struct Oscilloscope<D: 'static> {
 
     #[extension(ext)]
     filter_transform: Option<Box<dyn Fn(f32, f32) -> Option<(f32, f32)>>>,
+
+    #[extension(ext, set = CachedTexture::new(), setter_name = use_cache_texture)]
+    cache: Option<CachedTexture>,
 }
 
 impl<D: OscilloscopeData> View for Oscilloscope<D> {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        cx.draw_background(canvas);
-        clip_bounds(cx, canvas);
-
-        let bounds = cx.bounds();
-        let vtransform = ViewportTransform::with_range(bounds, self.x_range, self.y_range);
-        let scaled_width = bounds.width() * self.resolution;
-        let Some(path_with_closing) = self.data.with_points(scaled_width, |points| {
-            if let Some(transform) = &self.filter_transform {
-                let points = points.filter_map(|(x, y)| transform(x, y));
-                make_strokepath(points, vtransform, self.fill_lign_height)
-            } else {
-                make_strokepath(points, vtransform, self.fill_lign_height)
-            }
-        }) else {
-            return;
-        };
-
-        self.draw_stroke(cx, canvas, &path_with_closing.path);
-        if self.filled_path {
-            let mut path = path_with_closing.path;
-            let [pt1, pt2] = path_with_closing.closing_points;
-            path.line_to(pt1);
-            path.line_to(pt2);
-            path.close();
-            self.draw_fill(cx, canvas, &path);
+        if let Some(cache) = self.cache.as_ref() {
+            cache.draw(cx, canvas, |cx, canvas| self.draw_all(cx, canvas));
+        } else {
+            self.draw_all(cx, canvas);
         }
+    }
+
+    fn event(&mut self, _: &mut EventContext, event: &mut Event) {
+        event.map(|_: &RedrawLensEvent, _| {
+            if let Some(cache) = self.cache.as_ref() {
+                cache.invalidate();
+            }
+        });
     }
 }
 
@@ -87,6 +77,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
             x_range: (0., 1.),
             y_range: (0., 1.),
             resolution: 1.0,
+            cache: None,
         }
         .build(cx, |_| {})
     }
@@ -124,6 +115,35 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
         canvas.clip_path(path, vg::ClipOp::Intersect, false);
         canvas.draw_rect(rect, &fill_paint);
         canvas.restore();
+    }
+
+    fn draw_all(&self, cx: &mut DrawContext, canvas: &Canvas) {
+        cx.draw_background(canvas);
+        clip_bounds(cx, canvas);
+
+        let bounds = cx.bounds();
+        let vtransform = ViewportTransform::with_range(bounds, self.x_range, self.y_range);
+        let scaled_width = bounds.width() * self.resolution;
+        let Some(path_with_closing) = self.data.with_points(scaled_width, |points| {
+            if let Some(transform) = &self.filter_transform {
+                let points = points.filter_map(|(x, y)| transform(x, y));
+                make_strokepath(points, vtransform, self.fill_lign_height)
+            } else {
+                make_strokepath(points, vtransform, self.fill_lign_height)
+            }
+        }) else {
+            return;
+        };
+
+        self.draw_stroke(cx, canvas, &path_with_closing.path);
+        if self.filled_path {
+            let mut path = path_with_closing.path;
+            let [pt1, pt2] = path_with_closing.closing_points;
+            path.line_to(pt1);
+            path.line_to(pt2);
+            path.close();
+            self.draw_fill(cx, canvas, &path);
+        }
     }
 }
 
