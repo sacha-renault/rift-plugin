@@ -54,3 +54,42 @@ pub fn clip_bounds(cx: &mut DrawContext, canvas: &Canvas) {
     );
     canvas.clip_path(&clip_path, ClipOp::Intersect, true);
 }
+
+#[cfg(test)]
+mod tests {
+    use vizia::layout::BoundingBox;
+
+    use super::*;
+    use crate::utils::ViewportTransform;
+
+    fn identity() -> ViewportTransform {
+        ViewportTransform::new(BoundingBox {
+            x: 0.,
+            y: 0.,
+            w: 1.,
+            h: 1.,
+        })
+    }
+
+    #[test]
+    fn empty_iterator_returns_none() {
+        assert!(make_strokepath(std::iter::empty(), identity(), 0.0).is_none());
+    }
+
+    #[test]
+    fn single_point_closing_uses_same_x() {
+        let res = make_strokepath(std::iter::once((3.0, 5.0)), identity(), 0.0).unwrap();
+        let [a, b] = res.closing_points;
+        assert_eq!(a.0, b.0);
+        assert_eq!(a.1, b.1);
+    }
+
+    #[test]
+    fn multiple_points_closing_spans_first_to_last() {
+        let pts = vec![(0.0, 1.0), (1.0, 2.0), (2.0, 0.5)];
+        let res = make_strokepath(pts.into_iter(), identity(), 0.0).unwrap();
+        let [a, b] = res.closing_points;
+        assert!(a.0 > b.0);
+        assert_eq!(a.1, b.1);
+    }
+}
