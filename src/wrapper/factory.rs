@@ -1,16 +1,19 @@
 use std::sync::Once;
 use std::{marker::PhantomData, sync::Arc};
 
-use clack_extensions::{
-    audio_ports::PluginAudioPorts, gui::PluginGui, latency::PluginLatency, params::PluginParams,
-    state::PluginState,
-};
+use clack_extensions::audio_ports::PluginAudioPorts;
+use clack_extensions::context_menu::PluginContextMenu;
+use clack_extensions::gui::PluginGui;
+use clack_extensions::latency::PluginLatency;
+use clack_extensions::params::PluginParams;
+use clack_extensions::state::PluginState;
 use clack_plugin::prelude::*;
 
 use crate::context::GuiContextImpl;
-use crate::wrapper::{
-    ClapPlugin, main_thread::WrapperMainThread, processor::WrapperProcessor, shared::WrapperShared,
-};
+use crate::wrapper::ClapPlugin;
+use crate::wrapper::main_thread::WrapperMainThread;
+use crate::wrapper::processor::WrapperProcessor;
+use crate::wrapper::shared::WrapperShared;
 
 static INIT: Once = Once::new();
 
@@ -38,6 +41,7 @@ impl<P: ClapPlugin> Plugin for PluginWrapper<P> {
         builder.register::<PluginGui>();
         builder.register::<PluginParams>();
         builder.register::<PluginLatency>();
+        builder.register::<PluginContextMenu>();
     }
 }
 

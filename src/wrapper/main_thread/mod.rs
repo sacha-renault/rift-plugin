@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use clack_extensions::context_menu::{ContextMenuTarget, HostContextMenu};
 use clack_extensions::latency::HostLatency;
 use clack_plugin::prelude::*;
 
@@ -10,6 +11,7 @@ use crate::prelude::*;
 use crate::wrapper::shared_states::PluginSharedState;
 use crate::wrapper::{ClapPlugin, shared::WrapperShared};
 
+mod context_menu;
 mod latency;
 mod params;
 mod ports;
@@ -35,6 +37,30 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
             log::error!("Error when requesting latency change")
         }
     }
+
+    fn open_context_menu(&mut self, param_ctx_menu: ParamContextMenu) {
+        if let Some(ext) = self.host.get_extension::<HostContextMenu>() {
+            let ParamContextMenu {
+                param_id,
+                x,
+                y,
+                screen,
+            } = param_ctx_menu;
+            let host = &mut self.host;
+
+            if !ext.can_popup(host) {
+                log::error!("Couldn't open popup");
+                return;
+            }
+
+            let target = ContextMenuTarget::Param(param_id);
+            if let Err(err) = ext.popup(host, target, screen, x, y) {
+                log::error!("Couldn't open popup {err}")
+            }
+        } else {
+            log::error!("Error when requesting latency change")
+        }
+    }
 }
 
 impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainThread<'a, P> {
@@ -49,6 +75,7 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
                     self.notify_latency_changed();
                 }
                 RequestRestart => self.host.request_restart(),
+                ParamContextMenu(ctx) => self.open_context_menu(ctx),
             }
         }
     }

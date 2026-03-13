@@ -42,7 +42,7 @@ rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
 
-clack-plugin = { git = "https://github.com/prokopyl/clack"}
+clack-plugin = { git = "https://github.com/prokopyl/clack" }
 clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "audio-ports",
   "clack-plugin",
@@ -51,7 +51,8 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "params",
   "raw-window-handle_05",
   "state",
-  "latency"
+  "latency",
+  "context-menu",
 ] }
 
 crossbeam-queue = "0.3.12"
