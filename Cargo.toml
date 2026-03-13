@@ -21,7 +21,6 @@ paste = "1.0.15"
 crossbeam-queue = {workspace = true}
 parking_lot = { workspace = true }
 
-
 [workspace]
 resolver = "2"
 members = [

@@ -26,6 +26,12 @@ struct ParamField {
 
     #[darling(default)]
     setter_name: Option<syn::Ident>,
+
+    #[darling(default)]
+    call_method: Option<syn::Expr>,
+
+    #[darling(default)]
+    arg_ty: Option<syn::Expr>,
 }
 
 #[derive(FromDeriveInput)]
@@ -96,6 +102,8 @@ fn define_signature(field: &ParamField) -> proc_macro2::TokenStream {
     // to the defined value
     if field.set.is_some() {
         quote! { fn #fn_name (self) -> Self }
+    } else if let Some(override_type) = &field.arg_ty {
+        quote! { fn #fn_name (self, value: #override_type) -> Self }
     } else if let Some(peeled_option_type) = inner_type_of_option(ty) {
         quote! { fn #fn_name (self, value: #peeled_option_type) -> Self }
     } else {
@@ -125,5 +133,9 @@ fn define_body(field: &ParamField) -> proc_macro2::TokenStream {
         value = quote! { Some(#value) };
     }
 
-    quote! { self.modify(|view| view.#field_name = #value ) }
+    if let Some(method) = &field.call_method {
+        quote! { self.modify(|view| view.#field_name.#method (#value) ) }
+    } else {
+        quote! { self.modify(|view| view.#field_name = #value ) }
+    }
 }

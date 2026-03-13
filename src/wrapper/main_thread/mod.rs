@@ -46,19 +46,18 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
                 y,
                 screen,
             } = param_ctx_menu;
-            let host = &mut self.host;
 
-            if !ext.can_popup(host) {
+            if !ext.can_popup(&mut self.host) {
                 log::error!("Couldn't open popup");
                 return;
             }
 
             let target = ContextMenuTarget::Param(param_id);
-            if let Err(err) = ext.popup(host, target, screen, x, y) {
+            if let Err(err) = ext.popup(&mut self.host, target, screen, x, y) {
                 log::error!("Couldn't open popup {err}")
             }
         } else {
-            log::error!("Error when requesting latency change")
+            log::error!("Error when requesting popup open")
         }
     }
 }
