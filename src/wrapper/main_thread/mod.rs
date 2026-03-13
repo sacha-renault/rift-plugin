@@ -38,7 +38,7 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
         }
     }
 
-    fn open_context_menu(&mut self, param_ctx_menu: ParamContextMenu) {
+    fn open_param_menu(&mut self, param_ctx_menu: ParamContextMenu) {
         if let Some(ext) = self.host.get_extension::<HostContextMenu>() {
             let ParamContextMenu {
                 param_id,
@@ -74,7 +74,7 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
                     self.notify_latency_changed();
                 }
                 RequestRestart => self.host.request_restart(),
-                ParamContextMenu(ctx) => self.open_context_menu(ctx),
+                ParamContextMenu(ctx) => self.open_param_menu(ctx),
             }
         }
     }

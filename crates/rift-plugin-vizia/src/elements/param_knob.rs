@@ -150,10 +150,7 @@ where
                         f(cx, mb)
                     }
                 }
-                MouseButton::Right => {
-                    cx.release();
-                    cx.emit(ContextMenuEvent(param_ptr.id()));
-                }
+                MouseButton::Right => cx.emit(ContextMenuEvent(param_ptr.id())),
                 _ => {}
             })
             .maybe_apply_modifiers(knob_modifiers.as_deref())

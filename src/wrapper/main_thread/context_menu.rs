@@ -1,9 +1,38 @@
+use std::ffi::{CStr, CString};
+
 use clack_extensions::context_menu::{
-    ContextMenuBuilder, ContextMenuTarget, PluginContextMenuImpl,
+    ContextMenuBuilder, ContextMenuTarget, Item, ItemKind, PluginContextMenuImpl,
 };
 use clack_plugin::{plugin::PluginError, utils::ClapId};
 
 use crate::wrapper::{ClapPlugin, main_thread::WrapperMainThread};
+
+impl<'a, P> WrapperMainThread<'a, P>
+where
+    P: ClapPlugin,
+{
+    fn populate_param_menu(
+        &self,
+        builder: &mut ContextMenuBuilder,
+        id: ClapId,
+    ) -> Result<(), PluginError> {
+        let _ = builder.add_item(&Item::BeginSubmenu {
+            label: &CString::new(b"TITLE").unwrap(),
+            enabled: true,
+        });
+        let _ = builder.add_item(&Item::Title {
+            title: &CString::new(b"TITLE").unwrap(),
+            enabled: true,
+        });
+        let _ = builder.add_item(&Item::EndSubmenu);
+
+        Ok(())
+    }
+
+    fn populate_global_menu(&self, _: &mut ContextMenuBuilder) -> Result<(), PluginError> {
+        Ok(())
+    }
+}
 
 impl<'a, P> PluginContextMenuImpl for WrapperMainThread<'a, P>
 where
@@ -11,13 +40,15 @@ where
 {
     fn populate(
         &mut self,
-        _: ContextMenuTarget,
-        _: &mut ContextMenuBuilder,
+        target: ContextMenuTarget,
+        builder: &mut ContextMenuBuilder,
     ) -> Result<(), PluginError> {
-        // todo!()
-        // maybe add new things later, for now host does it
-        log::info!("populate");
-        Ok(())
+        log::info!("POPULATE");
+        match target {
+            ContextMenuTarget::Global => self.populate_global_menu(builder),
+            ContextMenuTarget::Param(id) => self.populate_param_menu(builder, id),
+            _ => Ok(()),
+        }
     }
 
     fn perform(&mut self, _: ContextMenuTarget, _: ClapId) -> Result<(), PluginError> {
