@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use clack_extensions::gui::*;
-use clack_plugin::plugin::PluginError;
+use clack_plugin::{plugin::PluginError, utils::ClapId};
 
 use crate::params::Params;
 
@@ -10,6 +10,7 @@ use super::events::GuiParamEvent;
 pub trait GuiContext: Send + Sync {
     fn param_event(&self, event: GuiParamEvent);
     fn params(&self) -> Arc<dyn Params>;
+    fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
 }
 
 pub trait ClapGui {

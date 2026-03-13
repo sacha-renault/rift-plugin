@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use rift_plugin_shared::gui::{GuiContext, GuiParamEvent};
 
-use crate::context::AudioThreadTask;
+use crate::context::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use crate::prelude::Params;
 use crate::wrapper::shared_states::PluginSharedState;
 
@@ -25,5 +25,24 @@ impl GuiContext for GuiContextImpl {
 
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
+    }
+
+    fn param_context_menu(
+        &self,
+        param_id: clack_plugin::prelude::ClapId,
+        x: i32,
+        y: i32,
+        screen: i32,
+    ) {
+        let ctx = ParamContextMenu {
+            param_id,
+            x,
+            y,
+            screen,
+        };
+        let task = MainThreadTask::ParamContextMenu(ctx);
+        if self.states.push_main_thread_task(task).is_err() {
+            log::error!("Couldn't push new param event from gui");
+        }
     }
 }
