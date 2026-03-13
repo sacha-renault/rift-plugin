@@ -19,7 +19,8 @@ mod gui_prelude {
     pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
     pub use vizia::prelude::*;
 
-    pub use super::super::utils::*;
+    pub(crate) use crate::utils::gui_events::ContextMenuEvent;
+    pub use crate::utils::*;
 }
 
 pub use consumer_dispatch::{AudioConsumerDispatch, AudioConsumerDispatchExt};

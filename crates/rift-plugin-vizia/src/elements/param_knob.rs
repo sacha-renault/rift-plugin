@@ -134,17 +134,26 @@ where
                     f(cx, v)
                 }
             })
-            .on_mouse_down(move |cx, mb| {
-                gesture_start(param_ptr, cx);
-                if let Some(f) = on_mouse_down.as_ref() {
-                    f(cx, mb)
+            .on_mouse_down(move |cx, mb| match mb {
+                MouseButton::Left => {
+                    gesture_start(param_ptr, cx);
+                    if let Some(f) = on_mouse_down.as_ref() {
+                        f(cx, mb)
+                    }
                 }
+                MouseButton::Right => {
+                    cx.emit(ContextMenuEvent(param_ptr.id()));
+                }
+                _ => {}
             })
-            .on_mouse_up(move |cx, mb| {
-                gesture_end(param_ptr, cx);
-                if let Some(f) = on_mouse_up.as_ref() {
-                    f(cx, mb)
+            .on_mouse_up(move |cx, mb| match mb {
+                MouseButton::Left => {
+                    gesture_end(param_ptr, cx);
+                    if let Some(f) = on_mouse_up.as_ref() {
+                        f(cx, mb)
+                    }
                 }
+                _ => {}
             })
             .maybe_apply_modifiers(knob_modifiers.as_deref())
             .class("knob");

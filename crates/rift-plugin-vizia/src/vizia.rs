@@ -13,6 +13,8 @@ use vizia_baseview::WindowHandle;
 
 use rift_plugin_shared::gui::*;
 
+use crate::utils::gui_events::ContextMenuEvent;
+
 pub struct ViziaGuiFactory<F> {
     app_fn: Arc<F>,
     size: (u32, u32),
@@ -41,12 +43,22 @@ struct ViziaData {
 }
 
 impl Model for ViziaData {
-    fn event(&mut self, _cx: &mut EventContext, event: &mut Event) {
-        event.map(|app_event: &GuiParamEvent, _| {
+    fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
+        event.map(|app_event: &GuiParamEvent, meta| {
             if let GuiParamEventKind::Value(v) = app_event.kind {
                 self.ctx.params().set_value(app_event.param_id, v)
             }
             self.ctx.param_event(*app_event);
+            meta.consume();
+        });
+
+        event.map(|&ContextMenuEvent(param_id): &ContextMenuEvent, meta| {
+            let mouse = cx.mouse();
+
+            let x = mouse.cursor_x as i32;
+            let y = mouse.cursor_y as i32;
+            self.ctx.param_context_menu(param_id, x, y, 0);
+            meta.consume();
         });
     }
 }

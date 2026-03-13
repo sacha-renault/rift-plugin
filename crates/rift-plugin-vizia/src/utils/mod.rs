@@ -1,12 +1,12 @@
 //! Contains utility structs and functions. Should be used in
 //! [`super::elements`]
 
-mod cached_texture;
-mod draw_utils;
-mod gui_events;
-mod handle_generic_extensions;
-mod lens;
-mod viewport_transform;
+pub(crate) mod cached_texture;
+pub(crate) mod draw_utils;
+pub(crate) mod gui_events;
+pub(crate) mod handle_generic_extensions;
+pub(crate) mod lens;
+pub(crate) mod viewport_transform;
 
 pub use cached_texture::CachedTexture;
 pub use draw_utils::{change_color_opacity, clip_bounds, make_strokepath};
