@@ -1,5 +1,6 @@
 use vizia::{
     prelude::DrawContext,
+    style::Color,
     vg::{Canvas, ClipOp, Path, Point, Rect},
 };
 
@@ -43,6 +44,10 @@ pub fn make_strokepath(
     } else {
         None
     }
+}
+
+pub fn change_color_opacity(color: Color, opacity: u8) -> Color {
+    Color::rgba(color.r(), color.g(), color.b(), opacity)
 }
 
 pub fn clip_bounds(cx: &mut DrawContext, canvas: &Canvas) {

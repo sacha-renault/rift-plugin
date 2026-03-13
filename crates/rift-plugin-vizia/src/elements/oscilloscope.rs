@@ -43,7 +43,7 @@ pub struct Oscilloscope<D: 'static> {
     resolution: f32,
 
     #[extension(ext)]
-    fill_opacity: f32,
+    fill_opacity: u8,
 
     #[extension(ext)]
     filter_transform: Option<Box<dyn Fn(f32, f32) -> Option<(f32, f32)>>>,
@@ -81,7 +81,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
             y_range: (0., 1.),
             resolution: 1.0,
             cache: None,
-            fill_opacity: 0.4,
+            fill_opacity: 100,
         }
         .build(cx, |_| {})
     }
@@ -100,13 +100,8 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
     /// Draw the filled path (lower opacity)
     fn draw_fill(&self, cx: &mut DrawContext, canvas: &Canvas, path: &vg::Path) {
         let mut fill_paint = vg::Paint::default();
-        let font_color = cx.font_color();
-        let color = Color::rgba(
-            font_color.r(),
-            font_color.g(),
-            font_color.b(),
-            (font_color.a() as f32 * self.fill_opacity) as u8,
-        );
+        let color = change_color_opacity(cx.font_color(), self.fill_opacity);
+
         fill_paint.set_color(color);
         fill_paint.set_stroke_cap(vg::PaintCap::Round);
         fill_paint.set_style(vg::PaintStyle::Fill);
