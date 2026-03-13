@@ -141,9 +141,6 @@ where
                         f(cx, mb)
                     }
                 }
-                MouseButton::Right => {
-                    cx.emit(ContextMenuEvent(param_ptr.id()));
-                }
                 _ => {}
             })
             .on_mouse_up(move |cx, mb| match mb {
@@ -152,6 +149,10 @@ where
                     if let Some(f) = on_mouse_up.as_ref() {
                         f(cx, mb)
                     }
+                }
+                MouseButton::Right => {
+                    cx.release();
+                    cx.emit(ContextMenuEvent(param_ptr.id()));
                 }
                 _ => {}
             })

@@ -16,12 +16,14 @@ where
     ) -> Result<(), PluginError> {
         // todo!()
         // maybe add new things later, for now host does it
+        log::info!("populate");
         Ok(())
     }
 
     fn perform(&mut self, _: ContextMenuTarget, _: ClapId) -> Result<(), PluginError> {
         // todo!()
         // maybe add new things later, for now host does it
+        log::info!("perform");
         Ok(())
     }
 }

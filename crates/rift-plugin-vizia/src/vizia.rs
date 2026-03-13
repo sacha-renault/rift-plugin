@@ -121,8 +121,7 @@ where
             .build(cx);
             app_fn(cx, context.clone());
         })
-        .inner_size(self.size)
-        .on_idle(move |_| {});
+        .inner_size(self.size);
 
         self.handle = Some(application.open_parented(self));
         self.opened.store(true, Ordering::Relaxed);
@@ -143,6 +142,7 @@ where
 
     fn show(&mut self) -> Result<(), PluginError> {
         self.opened.store(true, Ordering::SeqCst);
+        self.spawn();
         Ok(())
     }
 
@@ -158,7 +158,6 @@ where
 
     fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
         self.parent = Some(window.raw_window_handle());
-        self.spawn();
         Ok(())
     }
 
