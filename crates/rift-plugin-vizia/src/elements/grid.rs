@@ -234,3 +234,79 @@ impl PlotGrid {
         .build(cx, |_| {})
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rift_plugin_shared::assert_approx_eq;
+
+    fn normalized_values(scale: &GridScale) -> Vec<f32> {
+        scale.compile().0.iter().map(|v| v.normalized).collect()
+    }
+
+    #[test]
+    fn test_linear_empty_when_count_less_than_2() {
+        assert!(normalized_values(&GridScale::linear(0.0, 1.0, 1)).is_empty());
+    }
+
+    #[test]
+    fn test_linear_empty_when_start_equals_end() {
+        assert!(normalized_values(&GridScale::linear(1.0, 1.0, 5)).is_empty());
+    }
+
+    #[test]
+    fn test_linear_starts_at_0_ends_at_1() {
+        let vals = normalized_values(&GridScale::linear(0.0, 10.0, 5));
+        assert_eq!(vals.len(), 5);
+        assert_approx_eq!(vals[0], 0.0);
+        assert_approx_eq!(vals[4], 1.0);
+    }
+
+    #[test]
+    fn test_linear_normalized_values_in_range() {
+        let vals = normalized_values(&GridScale::linear(-10.0, 10.0, 10));
+        assert!(vals.iter().all(|&v| (0.0..=1.0).contains(&v)));
+    }
+
+    #[test]
+    fn test_log_empty_on_invalid_inputs() {
+        assert!(normalized_values(&GridScale::logarithmic(0.0, 100.0, 10.0, 0)).is_empty());
+        assert!(normalized_values(&GridScale::logarithmic(10.0, 1.0, 10.0, 0)).is_empty());
+        assert!(normalized_values(&GridScale::logarithmic(1.0, 100.0, 1.0, 0)).is_empty());
+    }
+
+    #[test]
+    fn test_log_normalized_values_in_range() {
+        let vals = normalized_values(&GridScale::logarithmic(20.0, 20000.0, 10.0, 0));
+        assert!(vals.iter().all(|&v| (0.0..=1.0).contains(&v)));
+    }
+
+    #[test]
+    fn test_log_sub_ticks_increase_count() {
+        let without = normalized_values(&GridScale::logarithmic(1.0, 100.0, 10.0, 0));
+        let with_subs = normalized_values(&GridScale::logarithmic(1.0, 100.0, 10.0, 4));
+        assert!(with_subs.len() > without.len());
+    }
+
+    #[test]
+    fn test_log_major_ticks_at_powers_of_base() {
+        let vals = normalized_values(&GridScale::logarithmic(1.0, 100.0, 10.0, 0));
+        assert_eq!(vals.len(), 3);
+        assert_approx_eq!(vals[0], 0.0);
+        assert_approx_eq!(vals[1], 0.5);
+        assert_approx_eq!(vals[2], 1.0);
+    }
+
+    #[test]
+    fn test_manual_lines_clamps_normalized() {
+        let vals = normalized_values(&GridScale::lines(vec![(-0.5, 0.0), (1.5, 1.0)]));
+        assert_eq!(vals, vec![0.0, 1.0]);
+    }
+
+    #[test]
+    fn test_manual_lines_preserves_order_and_count() {
+        let vals = normalized_values(&GridScale::lines(vec![(0.25, 0.0), (0.75, 0.0)]));
+        assert_eq!(vals, vec![0.25, 0.75]);
+    }
+}
