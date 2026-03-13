@@ -1,7 +1,5 @@
-use std::ffi::{CStr, CString};
-
 use clack_extensions::context_menu::{
-    ContextMenuBuilder, ContextMenuTarget, Item, ItemKind, PluginContextMenuImpl,
+    ContextMenuBuilder, ContextMenuTarget, PluginContextMenuImpl,
 };
 use clack_plugin::{plugin::PluginError, utils::ClapId};
 
@@ -13,23 +11,15 @@ where
 {
     fn populate_param_menu(
         &self,
-        builder: &mut ContextMenuBuilder,
-        id: ClapId,
+        _: &mut ContextMenuBuilder,
+        _: ClapId,
     ) -> Result<(), PluginError> {
-        let _ = builder.add_item(&Item::BeginSubmenu {
-            label: &CString::new(b"TITLE").unwrap(),
-            enabled: true,
-        });
-        let _ = builder.add_item(&Item::Title {
-            title: &CString::new(b"TITLE").unwrap(),
-            enabled: true,
-        });
-        let _ = builder.add_item(&Item::EndSubmenu);
-
+        // todo!()
         Ok(())
     }
 
     fn populate_global_menu(&self, _: &mut ContextMenuBuilder) -> Result<(), PluginError> {
+        // todo!()
         Ok(())
     }
 }
