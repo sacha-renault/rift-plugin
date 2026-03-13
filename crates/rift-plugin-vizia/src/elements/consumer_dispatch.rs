@@ -58,19 +58,10 @@ where
         Some("audio-dispatcher")
     }
 
-    fn draw(&self, _: &mut DrawContext, _: &Canvas) {}
-
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
         event.map(|_: &NewData, _| {
             let acc = self.accumulator.get(cx);
-            acc.drain(|data_block, infos, time| {
-                for consumer_cell in self.consumers.iter() {
-                    match consumer_cell.try_borrow_mut() {
-                        Ok(mut consumer) => consumer.consume(data_block, infos, time),
-                        Err(err) => log::error!("Couldn't add data in consumer {err}"),
-                    }
-                }
-            });
+            dispatch_audio(acc, &self.consumers);
         });
     }
 }
@@ -99,8 +90,124 @@ where
 
     fn redraw_lens(&self) -> impl Lens<Target = u64> {
         self.data::<AudioConsumerDispatch<N, L>>()
-            .unwrap()
+            .expect("Handle<'_, Self> doesn't contain Self ?")
             .accumulator
             .map(|acc| acc.num_writes())
+    }
+}
+
+#[inline]
+fn dispatch_audio<const N: usize>(
+    acc: AudioAccumulator<N>,
+    consumers: &[RcCell<dyn AudioConsumer>],
+) {
+    acc.drain(|data_block, infos, time| {
+        for consumer_cell in consumers.iter() {
+            match consumer_cell.try_borrow_mut() {
+                Ok(mut consumer) => consumer.consume(data_block, infos, time),
+                Err(err) => log::error!("Couldn't add data in consumer {err}"),
+            }
+        }
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{cell::RefCell, rc::Rc};
+
+    use super::*;
+
+    const N_TEST: usize = 10;
+
+    #[derive(Lens)]
+    struct AccData {
+        acc: AudioAccumulator<N_TEST>,
+    }
+
+    impl Model for AccData {}
+
+    struct MockConsumer {
+        count: usize,
+    }
+
+    impl AudioConsumer for MockConsumer {
+        fn consume(
+            &mut self,
+            _: &[f32],
+            _: rift_plugin_shared::transport::ChannelsInfo,
+            _: rift_plugin_shared::transport::BlockTime,
+        ) {
+            self.count += 1;
+        }
+    }
+
+    fn push_audio(acc: AudioAccumulator<N_TEST>) {
+        let audio: Vec<f32> = vec![0., 0.25, 0.5, 0.4, 0.7];
+        acc.push_slices([audio.as_slice()].into_iter(), None);
+    }
+
+    #[test]
+    fn test_new() {
+        let mut ocx = Context::new();
+        let cx = &mut ocx;
+
+        AccData {
+            acc: AudioAccumulator::<N_TEST>::new(1, 3),
+        }
+        .build(cx);
+
+        let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
+        let acd = AudioConsumerDispatch::new(cx, AccData::acc).add_consumer(consumer.clone());
+        let redraw = acd.redraw_lens();
+
+        let mut consumer_count = 0;
+        acd.modify(|view| consumer_count = view.consumers.len());
+
+        let num_writes_before = redraw.get(cx);
+        push_audio(AccData::acc.get(cx));
+        let num_writes_after = redraw.get(cx);
+
+        assert_eq!(num_writes_before + 1, num_writes_after);
+        assert_eq!(consumer_count, 1);
+    }
+
+    #[test]
+    fn test_dispatch() {
+        let mut ocx = Context::new();
+        let cx = &mut ocx;
+
+        let acc = AudioAccumulator::<N_TEST>::new(1, 3);
+        AccData { acc: acc.clone() }.build(cx);
+
+        let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
+
+        let mut acd = AudioConsumerDispatch {
+            accumulator: AccData::acc,
+            consumers: vec![consumer.clone()],
+        };
+
+        push_audio(acc.clone());
+        push_audio(acc.clone());
+
+        let mut event = Event::new(NewData);
+        let mut evt_cx = EventContext::new(cx);
+        acd.event(&mut evt_cx, &mut event);
+
+        assert_eq!(consumer.borrow().count, 2);
+    }
+
+    #[test]
+    fn test_dispatch_skips_borrowed_consumer() {
+        let acc = AudioAccumulator::<N_TEST>::new(1, 3);
+        let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
+
+        push_audio(acc.clone());
+
+        let _guard = consumer.borrow_mut();
+        dispatch_audio(acc, &[consumer.clone()]);
+
+        // count stays 0 because consumer was borrowed
+        drop(_guard);
+        assert_eq!(consumer.borrow().count, 0);
     }
 }
