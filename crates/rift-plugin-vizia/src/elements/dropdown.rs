@@ -2,50 +2,6 @@ use std::sync::Arc;
 
 use super::gui_prelude::*;
 
-/// Trait providing a way to add a [`DropdownStyled`] to any arbitrary element.
-///
-/// # Important:
-/// Calling this will override the [`ActionModifiers::on_mouse_down`] of the target element.
-/// To safely use this on an element that already has click handlers, wrap it in a container
-/// like a [`VStack`] or [`HStack`].
-pub trait AddDropdown {
-    /// Add a dropdown to the receiver.
-    ///
-    /// # Arguments
-    /// * `trigger_btn` - The mouse button event that will trigger the dropdown to open.
-    /// * `dropdown` - The configuration instance for the dropdown content and behavior.
-    ///
-    /// # Returns
-    /// The modified handle with the dropdown attached.
-    fn add_dropdown(self, trigger_btn: MouseButton, dropdown: DropdownStyled) -> Self;
-}
-
-impl<V> AddDropdown for Handle<'_, V>
-where
-    V: View,
-{
-    fn add_dropdown(mut self, trigger_btn: MouseButton, dropdown: DropdownStyled) -> Self {
-        let trigger_entity = self.entity();
-        let entity = self.context().with_current(trigger_entity, |cx| {
-            // Build the view with 0 width/height initially (hidden)
-            dropdown
-                .build_view(cx)
-                .height(Pixels(0.))
-                .width(Pixels(0.))
-                .entity()
-        });
-
-        self = self.on_mouse_down(move |cx, mb| {
-            if mb == trigger_btn {
-                // Emit the open event to the unique popup entity
-                cx.emit_to(entity, PopupEvent::Open);
-            }
-        });
-
-        self
-    }
-}
-
 /// Builds the content for a dropdown.
 /// Iterates through items and creates labels with attached actions.
 fn build_popup_content(cx: &mut Context, items: &Vec<DropdownItem>) {
