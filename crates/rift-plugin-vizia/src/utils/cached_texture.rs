@@ -12,6 +12,12 @@ pub struct CachedTexture {
     texture: RefCell<Option<Image>>,
 }
 
+impl Default for CachedTexture {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CachedTexture {
     /// Create a new empty texture cache.
     pub fn new() -> Self {

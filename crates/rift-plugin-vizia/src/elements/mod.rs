@@ -11,6 +11,8 @@ mod param_xy;
 mod peak_viewer;
 
 mod gui_prelude {
+    //! this is an internal helper that gather
+    //! everything needed for ui elements
     pub use rift_plugin_shared::params::ClapParam;
 
     pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
@@ -20,7 +22,7 @@ mod gui_prelude {
 }
 
 pub use consumer_dispatch::{AudioConsumerDispatch, AudioConsumerDispatchExt};
-pub use dropdown::{AddDropdown, DropdownItem};
+pub use dropdown::{AddDropdown, DropdownItem, DropdownStyled};
 pub use grid::{GridScale, PlotGrid, PlotGridExt};
 pub use gui_prelude::RedrawOnExt;
 pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
