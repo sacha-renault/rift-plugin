@@ -43,6 +43,14 @@ impl GuiContext for GuiContextImpl {
         let task = MainThreadTask::ParamContextMenu(ctx);
         if self.states.push_main_thread_task(task).is_err() {
             log::error!("Couldn't push new param event from gui");
+            return;
+        }
+        if self
+            .states
+            .push_audio_thread_task(AudioThreadTask::RequestCallback)
+            .is_err()
+        {
+            log::error!("Couldn't push callback request");
         }
     }
 }

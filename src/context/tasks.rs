@@ -19,4 +19,10 @@ pub enum MainThreadTask {
 
 pub enum AudioThreadTask {
     GuiParamEvent(GuiParamEvent),
+
+    /// This means an action has been done. It will not be processed
+    /// by audio thread, but since he is the only one to always run
+    /// this is useful. Might be good to implement proper callback
+    /// so gui doesn't rely on audio thread to request a callback ...
+    RequestCallback,
 }

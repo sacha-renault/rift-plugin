@@ -1,8 +1,8 @@
+use clack_plugin::utils::ClapId;
 use vizia::prelude::*;
 
-use rift_plugin_shared::params::{ClapParam, ParamPtr};
-
 use rift_plugin_shared::gui::GuiParamEvent;
+use rift_plugin_shared::params::{ClapParam, ParamPtr};
 
 /// Signals the start of a user gesture on a [`ClapParam`] (e.g., drag or wheel move began).
 pub fn gesture_start(param_ptr: ParamPtr, cx: &mut EventContext) {
@@ -30,3 +30,5 @@ pub fn set_value_normalized(param_ptr: ParamPtr, cx: &mut EventContext, value: f
     let normalized = param_ptr.denormalize(value);
     cx.emit(GuiParamEvent::value(param_ptr.id(), normalized));
 }
+
+pub(crate) struct ContextMenuEvent(pub ClapId);
