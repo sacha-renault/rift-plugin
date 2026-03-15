@@ -22,7 +22,6 @@ pub mod prelude {
     // Reexport
     pub use clack_extensions;
     pub use clack_plugin;
-    pub use vizia;
 
     pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
     pub use clack_plugin::prelude::PluginError;

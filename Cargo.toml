@@ -11,9 +11,6 @@ rift-plugin-accumulator = { workspace = true }
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace =  true }
 
-vizia = { workspace = true }
-vizia_baseview = { workspace = true }
-
 bon = "3.8.2"
 serde_json = { version = "1" }
 log = { workspace = true }
@@ -38,8 +35,9 @@ rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-shared = { path = "crates/rift-plugin-shared" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 
-vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
-vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
+# vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
+# vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
+vizia = { path = "../vizia", default-features = false, features = [ "baseview", "rayon" ]}
 
 clack-plugin = { git = "https://github.com/prokopyl/clack" }
 clack-extensions = { git = "https://github.com/prokopyl/clack", features = [

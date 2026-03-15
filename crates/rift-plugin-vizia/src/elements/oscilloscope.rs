@@ -68,6 +68,10 @@ impl<D: OscilloscopeData> View for Oscilloscope<D> {
             }
         });
     }
+
+    fn element(&self) -> Option<&'static str> {
+        Some("oscilloscope")
+    }
 }
 
 impl<D: OscilloscopeData> Oscilloscope<D> {

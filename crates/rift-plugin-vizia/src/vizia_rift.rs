@@ -9,7 +9,6 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 use vizia::prelude::*;
-use vizia_baseview::WindowHandle;
 
 use rift_plugin_shared::gui::*;
 
@@ -96,16 +95,6 @@ where
     }
 }
 
-impl<F> ViziaGui<F>
-where
-    F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
-{
-    fn _handle(&self) -> &WindowHandle {
-        // this should be set anyway
-        self.handle.as_ref().expect("No window handle")
-    }
-}
-
 impl<F> ClapGui for ViziaGui<F>
 where
     F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
@@ -114,7 +103,7 @@ where
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
 
-        let application = vizia_baseview::Application::new(move |cx| {
+        let application = Application::new(move |cx| {
             ViziaData {
                 ctx: context.clone(),
             }
