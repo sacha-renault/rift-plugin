@@ -23,7 +23,6 @@ impl<F> GuiFactory for ViziaGuiFactory<F>
 where
     F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
-    #[allow(private_interfaces)]
     fn build(self: Box<Self>, context: Arc<dyn GuiContext>) -> Box<dyn ClapGui> {
         Box::new(ViziaGui {
             parent: None,

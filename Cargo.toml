@@ -35,9 +35,7 @@ rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-shared = { path = "crates/rift-plugin-shared" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 
-# vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
-# vizia_baseview = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance"}
-vizia = { path = "../vizia", default-features = false, features = [ "baseview", "rayon" ]}
+vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance", default-features = false, features = [ "baseview", "rayon" ]}
 
 clack-plugin = { git = "https://github.com/prokopyl/clack" }
 clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
