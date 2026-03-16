@@ -4,12 +4,12 @@ mod consumer_dispatch;
 mod control_points;
 mod dropdown;
 mod grid;
-mod oscilloscope;
 mod param_button;
 mod param_knob;
 mod param_slider;
 mod param_xy;
 mod peak_viewer;
+mod plot_xy;
 mod popup;
 
 mod gui_prelude {
@@ -29,10 +29,10 @@ pub use control_points::ControlPoints;
 pub use dropdown::{DropdownItem, DropdownStyled};
 pub use grid::{GridScale, PlotGrid, PlotGridExt};
 pub use gui_prelude::RedrawOnExt;
-pub use oscilloscope::{Oscilloscope, OscilloscopeExt};
 pub use param_button::ParamButton;
 pub use param_knob::ParamKnob;
 pub use param_slider::ParamSlider;
 pub use param_xy::ParamPadXY;
 pub use peak_viewer::PeaksViewer;
+pub use plot_xy::{PlotXY, PlotXYExt};
 pub use popup::PopupExt;
