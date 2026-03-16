@@ -9,13 +9,13 @@ struct BeginDrag {
     child_idx: usize,
 }
 
-struct Breakpoint {
+struct DraggablePoint {
     init_x: f32,
     init_y: f32,
     idx: usize,
 }
 
-impl View for Breakpoint {
+impl View for DraggablePoint {
     fn element(&self) -> Option<&'static str> {
         Some("point")
     }
@@ -43,7 +43,7 @@ impl View for Breakpoint {
     }
 }
 
-impl DestructThenBuildView for Breakpoint {
+impl DestructThenBuildView for DraggablePoint {
     fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let (init_x, init_y) = (self.init_x, self.init_y);
 
@@ -60,7 +60,7 @@ impl DestructThenBuildView for Breakpoint {
     }
 }
 
-impl Breakpoint {
+impl DraggablePoint {
     pub fn new(init_x: f32, init_y: f32, idx: usize) -> Self {
         Self {
             init_x,
@@ -84,7 +84,7 @@ impl ControlPoints {
         }
         .build(cx, move |cx| {
             for (idx, &(x, y)) in intial_values.iter().enumerate() {
-                Breakpoint::new(x, y, idx).build_view(cx);
+                DraggablePoint::new(x, y, idx).build_view(cx);
             }
         })
         .overflow(Overflow::Hidden)
