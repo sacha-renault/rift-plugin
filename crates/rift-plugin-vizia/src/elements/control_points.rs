@@ -1,14 +1,20 @@
 use super::gui_prelude::*;
 
+/// Internal event, ControlPoints sends to a child that
+/// it should update his position
 struct MovePoint {
     x: f32,
     y: f32,
 }
 
+/// The child points sends to the control that the point at idx
+/// started the drag action
 struct BeginDrag {
     child_idx: usize,
 }
 
+/// Struct containing the initial value of the point and it's idx in the array
+/// (todo!() define type of array)
 struct DraggablePoint {
     init_x: f32,
     init_y: f32,
@@ -60,19 +66,13 @@ impl DestructThenBuildView for DraggablePoint {
     }
 }
 
-impl DraggablePoint {
-    pub fn new(init_x: f32, init_y: f32, idx: usize) -> Self {
-        Self {
-            init_x,
-            init_y,
-            idx,
-        }
-    }
-}
-
+#[derive(HandleExtension)]
 pub struct ControlPoints {
     dragging: Option<(usize, Entity)>,
     points: Vec<(f32, f32)>,
+
+    #[extension(ext)]
+    on_change: Option<Box<dyn Fn(&mut EventContext, (f32, f32), usize)>>,
 }
 
 impl ControlPoints {
@@ -81,10 +81,16 @@ impl ControlPoints {
         Self {
             dragging: None,
             points,
+            on_change: None,
         }
         .build(cx, move |cx| {
-            for (idx, &(x, y)) in intial_values.iter().enumerate() {
-                DraggablePoint::new(x, y, idx).build_view(cx);
+            for (idx, &(init_x, init_y)) in intial_values.iter().enumerate() {
+                DraggablePoint {
+                    init_x,
+                    init_y,
+                    idx,
+                }
+                .build_view(cx);
             }
         })
         .overflow(Overflow::Hidden)
@@ -131,8 +137,14 @@ impl View for ControlPoints {
 
                 // validates some rules here, and send
                 // Update internal repr
-                self.points[idx] = (x, y);
-                cx.emit_to(entity, MovePoint { x, y });
+                if self.points[idx] != (x, y) {
+                    self.points[idx] = (x, y);
+                    cx.emit_to(entity, MovePoint { x, y });
+
+                    if let Some(on_change) = &self.on_change {
+                        on_change(cx, (x, y), idx)
+                    }
+                }
             }
             _ => {}
         });
