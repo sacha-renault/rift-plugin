@@ -1,4 +1,25 @@
+use vizia::vg::{Paint, PaintCap, PaintStyle};
+
 use super::gui_prelude::*;
+
+/// Representation of a point
+#[derive(Clone, Copy, PartialEq)]
+pub struct ControlPoint {
+    pub x: f32,
+    pub y: f32,
+}
+
+impl From<ControlPoint> for MovePoint {
+    fn from(ControlPoint { x, y }: ControlPoint) -> Self {
+        MovePoint { x, y }
+    }
+}
+
+impl From<(f32, f32)> for ControlPoint {
+    fn from((x, y): (f32, f32)) -> Self {
+        ControlPoint { x, y }
+    }
+}
 
 /// Internal event, ControlPoints sends to a child that
 /// it should update his position
@@ -69,31 +90,37 @@ impl DestructThenBuildView for DraggablePoint {
 #[derive(HandleExtension)]
 pub struct ControlPoints {
     dragging: Option<(usize, Entity)>,
-    points: Vec<(f32, f32)>,
+    points: Vec<ControlPoint>,
+    rule: fn(usize, ControlPoint, &Vec<ControlPoint>) -> ControlPoint,
 
     #[extension(ext)]
-    on_change: Option<Box<dyn Fn(&mut EventContext, (f32, f32), usize)>>,
+    on_change: Option<Box<dyn Fn(&mut EventContext, ControlPoint, usize)>>,
 }
 
 impl ControlPoints {
-    pub fn new(cx: &mut Context, points: Vec<(f32, f32)>) -> Handle<'_, ControlPoints> {
+    pub fn new(
+        cx: &mut Context,
+        points: impl Into<Vec<ControlPoint>>,
+        rule: fn(usize, ControlPoint, &Vec<ControlPoint>) -> ControlPoint,
+    ) -> Handle<'_, ControlPoints> {
+        let points = points.into();
         let intial_values = points.clone();
         Self {
             dragging: None,
             points,
             on_change: None,
+            rule: rule,
         }
         .build(cx, move |cx| {
-            for (idx, &(init_x, init_y)) in intial_values.iter().enumerate() {
+            for (idx, &ControlPoint { x, y }) in intial_values.iter().enumerate() {
                 DraggablePoint {
-                    init_x,
-                    init_y,
+                    init_x: x,
+                    init_y: y,
                     idx,
                 }
                 .build_view(cx);
             }
         })
-        .overflow(Overflow::Hidden)
     }
 }
 
@@ -121,32 +148,48 @@ impl View for ControlPoints {
                     return;
                 };
 
-                let previous_x = if idx > 0 { self.points[idx - 1].0 } else { 0. };
-
-                // todo!()
-                // Use some custom validation rules
-                let next_x = if idx < self.points.len() - 1 {
-                    self.points[idx + 1].0
-                } else {
-                    1.
-                };
-
                 let pbounds = cx.bounds();
-                let x = ((x - pbounds.x) / pbounds.w).clamp(previous_x, next_x);
+                let x = ((x - pbounds.x) / pbounds.w).clamp(0.0, 1.0);
                 let y = ((pbounds.y + pbounds.h - y) / pbounds.h).clamp(0.0, 1.0);
 
                 // validates some rules here, and send
                 // Update internal repr
-                if self.points[idx] != (x, y) {
-                    self.points[idx] = (x, y);
-                    cx.emit_to(entity, MovePoint { x, y });
+                let point = (self.rule)(idx, ControlPoint { x, y }, &self.points);
+
+                if self.points[idx] != point {
+                    self.points[idx] = point;
+                    cx.emit_to(entity, MovePoint::from(point));
 
                     if let Some(on_change) = &self.on_change {
-                        on_change(cx, (x, y), idx)
+                        on_change(cx, point, idx)
                     }
                 }
             }
             _ => {}
         });
+    }
+
+    fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
+        let viewport_transform = ViewportTransform::new(cx.bounds());
+        let mut paint = Paint::default();
+        paint
+            .set_color(cx.font_color())
+            .set_stroke_width(cx.border_width())
+            .set_stroke_cap(PaintCap::Round)
+            .set_style(PaintStyle::Stroke)
+            .set_anti_alias(true);
+
+        let Some(path_with_closing) = make_strokepath(
+            self.points
+                .iter()
+                .copied()
+                .map(|ControlPoint { x, y }| (x, y)),
+            viewport_transform,
+            0.,
+        ) else {
+            return;
+        };
+
+        canvas.draw_path(&path_with_closing.path, &paint);
     }
 }
