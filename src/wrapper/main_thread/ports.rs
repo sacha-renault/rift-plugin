@@ -11,6 +11,7 @@ impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P>
     /// Counts 1 for the main port (if it exists in the requested direction)
     /// plus any auxiliary ports declared in `P::AUX_AUDIO_PORTS`.
     fn count(&mut self, is_input: bool) -> u32 {
+        log::debug!("count (port)");
         let aux_number = P::AUX_AUDIO_PORTS
             .iter()
             .filter(|port| port.is_input == is_input)
@@ -37,6 +38,8 @@ impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P>
     /// Panics if `index` is out of range for the given direction. This should never
     /// happen if the host respects the count returned by [`count`]
     fn get(&mut self, index: u32, is_input: bool, writer: &mut AudioPortInfoWriter) {
+        log::debug!("get (port)");
+
         let main_port = match (P::MAIN_AUDIO_PORTS, is_input) {
             (MainAudioPort::InputOnly(channels), true) => {
                 Some(AudioPort::input(b"Input", channels).set_port_flags(AudioPortFlags::IS_MAIN))

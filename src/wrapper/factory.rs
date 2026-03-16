@@ -47,6 +47,8 @@ impl<P: ClapPlugin> Plugin for PluginWrapper<P> {
 
 impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
     fn get_descriptor() -> PluginDescriptor {
+        log::debug!("get_descriptor");
+
         // Add some compile time panics!
         const {
             if P::ID.is_empty() {
@@ -80,7 +82,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         host: HostMainThreadHandle<'a>,
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
-        log::info!("Create new MainThread<'a>");
+        log::debug!("Create new MainThread<'a>");
         let into_gui = P::gui(shared.params.clone(), shared.other.clone());
         let context = Arc::new(GuiContextImpl {
             states: shared.states.clone(),

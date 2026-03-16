@@ -9,6 +9,8 @@ use crate::wrapper::ClapPlugin;
 
 impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
     fn load(&mut self, input: &mut InputStream) -> Result<(), PluginError> {
+        log::debug!("load (state)");
+
         let mut bytes = Vec::new();
         input
             .read_to_end(&mut bytes)
@@ -37,6 +39,8 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
     }
 
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
+        log::debug!("save (state)");
+
         let params = &self.shared.params;
         let count = params.count();
 
