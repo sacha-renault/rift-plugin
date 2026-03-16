@@ -1,6 +1,7 @@
 //! A collection of event that can be use on Vizia GUI.
 
 mod consumer_dispatch;
+mod control_points;
 mod dropdown;
 mod grid;
 mod oscilloscope;
@@ -24,6 +25,7 @@ mod gui_prelude {
 }
 
 pub use consumer_dispatch::{AudioConsumerDispatch, AudioConsumerDispatchExt};
+pub use control_points::ControlPoints;
 pub use dropdown::{DropdownItem, DropdownStyled};
 pub use grid::{GridScale, PlotGrid, PlotGridExt};
 pub use gui_prelude::RedrawOnExt;
