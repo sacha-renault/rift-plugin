@@ -190,23 +190,13 @@ impl PlotData for RcCell<WindowBuffer> {
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
-        let borrow = self.borrow();
-        let len = borrow.num_points();
-        let num_point_f32 = width.ceil();
-
-        let mut iterator = Linspace::new(0., num_point_f32, num_point_f32 as usize).map(|i| {
-            let x = i / num_point_f32 - 1.;
-            let xu = x as usize;
-            let t = x.fract();
-
-            // SAFETY: unwrap will never panic, idx are strictly in 0..len() - 1
-            let x0 = borrow.get_peak(xu.saturating_sub(1)).unwrap();
-            let x1 = borrow.get_peak(xu).unwrap();
-            let x2 = borrow.get_peak((xu + 1).min(len - 1)).unwrap();
-            let x3 = borrow.get_peak((xu + 2).min(len - 1)).unwrap();
-
-            return (x, cubic_interpolate(x0, x1, x2, x3, t.fract()));
-        });
+        let mut borrow = self.borrow_mut();
+        borrow.set_num_buckets(width.ceil() as usize);
+        let length = (borrow.num_points() - 1) as f32;
+        let mut iterator = borrow
+            .iter_peaks()
+            .enumerate()
+            .map(|(i, y)| ((i as f32) / length, y));
 
         f(&mut iterator)
     }
