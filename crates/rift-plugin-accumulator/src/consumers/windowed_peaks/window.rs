@@ -92,6 +92,17 @@ impl WindowBuffer {
             .map(|idx| self.buckets[idx].peak())
     }
 
+    /// Get peak at `idx`.
+    ///
+    /// 0 means oldest while len() - 1 is most recent
+    pub fn get_peak(&self, idx: usize) -> Option<f32> {
+        if idx >= self.n_buckets {
+            None
+        } else {
+            Some(self.buckets[(self.write_idx + 1 + idx).rem_euclid(self.n_buckets)].peak())
+        }
+    }
+
     /// Returns the total number of peaks (buckets) currently stored.
     pub fn num_points(&self) -> usize {
         self.n_buckets

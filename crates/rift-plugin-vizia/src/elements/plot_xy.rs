@@ -21,7 +21,7 @@ use super::gui_prelude::*;
 /// This struct will redraw only if a lens for redraw is given. You must have [`RedrawOnExt`] trait in
 /// scope to add the lens.
 #[derive(HandleExtension)]
-pub struct Oscilloscope<D: 'static> {
+pub struct PlotXY<D: 'static> {
     data: D,
 
     #[extension(ext)]
@@ -52,7 +52,7 @@ pub struct Oscilloscope<D: 'static> {
     cache: Option<CachedTexture>,
 }
 
-impl<D: OscilloscopeData> View for Oscilloscope<D> {
+impl<D: PlotData> View for PlotXY<D> {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
         if let Some(cache) = self.cache.as_ref() {
             cache.draw(cx, canvas, |cx, canvas| self.draw_all(cx, canvas));
@@ -74,7 +74,7 @@ impl<D: OscilloscopeData> View for Oscilloscope<D> {
     }
 }
 
-impl<D: OscilloscopeData> Oscilloscope<D> {
+impl<D: PlotData> PlotXY<D> {
     pub fn new(cx: &mut Context, data: D) -> Handle<'_, Self> {
         Self {
             data,
@@ -150,7 +150,7 @@ impl<D: OscilloscopeData> Oscilloscope<D> {
     }
 }
 
-pub trait OscilloscopeData {
+pub trait PlotData {
     /// This function return raw values for x and y
     /// You may choose [`Oscilloscope::x_range`] and [`Oscilloscope::y_range`]
     /// so it fits what u wanna display
@@ -160,7 +160,7 @@ pub trait OscilloscopeData {
 }
 
 // Must implement for useage in oscilloscope
-impl OscilloscopeData for Vec<f32> {
+impl PlotData for Vec<f32> {
     fn with_points<F, R>(&self, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
@@ -175,7 +175,7 @@ impl OscilloscopeData for Vec<f32> {
     }
 }
 
-impl OscilloscopeData for Vec<(f32, f32)> {
+impl PlotData for Vec<(f32, f32)> {
     fn with_points<F, R>(&self, _: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
@@ -185,22 +185,34 @@ impl OscilloscopeData for Vec<(f32, f32)> {
     }
 }
 
-impl OscilloscopeData for RcCell<WindowBuffer> {
-    fn with_points<F, R>(&self, _: f32, f: F) -> R
+impl PlotData for RcCell<WindowBuffer> {
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
         let borrow = self.borrow();
-        let length = (borrow.num_points() - 1) as f32;
-        let mut iterator = borrow
-            .iter_peaks()
-            .enumerate()
-            .map(|(i, y)| ((i as f32) / length, y));
+        let len = borrow.num_points();
+        let num_point_f32 = width.ceil();
+
+        let mut iterator = Linspace::new(0., num_point_f32, num_point_f32 as usize).map(|i| {
+            let x = i / num_point_f32 - 1.;
+            let xu = x as usize;
+            let t = x.fract();
+
+            // SAFETY: unwrap will never panic, idx are strictly in 0..len() - 1
+            let x0 = borrow.get_peak(xu.saturating_sub(1)).unwrap();
+            let x1 = borrow.get_peak(xu).unwrap();
+            let x2 = borrow.get_peak((xu + 1).min(len - 1)).unwrap();
+            let x3 = borrow.get_peak((xu + 2).min(len - 1)).unwrap();
+
+            return (x, cubic_interpolate(x0, x1, x2, x3, t.fract()));
+        });
+
         f(&mut iterator)
     }
 }
 
-impl<Func> OscilloscopeData for Func
+impl<Func> PlotData for Func
 where
     Func: Fn(f32) -> f32,
 {
@@ -253,7 +265,7 @@ fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
 
 /// Yes, we do display spectrogram in the oscilloscope, it works the same
 /// anyway, we can use Oscilloscope for any data that for y has <= 1 x.
-impl OscilloscopeData for RcCell<StftChannelConsumer> {
+impl PlotData for RcCell<StftChannelConsumer> {
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
