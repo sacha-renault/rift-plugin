@@ -14,3 +14,6 @@ cargo llvm-cov -p <package-name>
 ```
 cargo llvm-cov --workspace --html
 ```
+
+## Notes:
+Rayon seems to make FLCrashes if rebuilding a new version of .CLAP without restarting FLStudio entirely. Using rayon in a release build is safe, but on dev it must not be used !!

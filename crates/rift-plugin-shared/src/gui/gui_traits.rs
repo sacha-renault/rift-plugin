@@ -14,8 +14,6 @@ pub trait GuiContext: Send + Sync {
 }
 
 pub trait ClapGui {
-    fn spawn(&mut self);
-
     /// Set absolute scaling factor for GUI
     ///
     /// Overrides OS settings, and should not be used if the windowing API uses logical pixels. Can

@@ -76,6 +76,28 @@ pub struct ViziaGui<F> {
     context: Arc<dyn GuiContext>,
 }
 
+impl<F> ViziaGui<F>
+where
+    F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
+{
+    fn spawn(&mut self) {
+        let app_fn = self.app_fn.clone();
+        let context = self.context.clone();
+
+        let application = Application::new(move |cx| {
+            ViziaData {
+                ctx: context.clone(),
+            }
+            .build(cx);
+            app_fn(cx, context.clone());
+        })
+        .inner_size(self.size);
+
+        self.handle = Some(application.open_parented(self));
+        log::debug!("ClapGui::spawn was called")
+    }
+}
+
 unsafe impl<F> HasRawWindowHandle for ViziaGui<F> {
     fn raw_window_handle(&self) -> RawWindowHandle {
         self.parent.unwrap()
@@ -98,24 +120,6 @@ impl<F> ClapGui for ViziaGui<F>
 where
     F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
-    fn spawn(&mut self) {
-        let app_fn = self.app_fn.clone();
-        let context = self.context.clone();
-
-        let application = Application::new(move |cx| {
-            ViziaData {
-                ctx: context.clone(),
-            }
-            .build(cx);
-            app_fn(cx, context.clone());
-        })
-        .inner_size(self.size);
-
-        self.handle = Some(application.open_parented(self));
-        self.opened.store(true, Ordering::Relaxed);
-        log::info!("ClapGui::spawn was called")
-    }
-
     fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
         Err(PluginError::Message("Not Supported"))
     }
@@ -129,8 +133,8 @@ where
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
-        self.opened.store(true, Ordering::SeqCst);
         self.spawn();
+        self.opened.store(true, Ordering::SeqCst);
         Ok(())
     }
 

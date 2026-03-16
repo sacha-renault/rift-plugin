@@ -33,7 +33,7 @@ where
         target: ContextMenuTarget,
         builder: &mut ContextMenuBuilder,
     ) -> Result<(), PluginError> {
-        log::info!("POPULATE");
+        log::debug!("POPULATE");
         match target {
             ContextMenuTarget::Global => self.populate_global_menu(builder),
             ContextMenuTarget::Param(id) => self.populate_param_menu(builder, id),
@@ -44,7 +44,7 @@ where
     fn perform(&mut self, _: ContextMenuTarget, _: ClapId) -> Result<(), PluginError> {
         // todo!()
         // maybe add new things later, for now host does it
-        log::info!("perform");
+        log::debug!("perform");
         Ok(())
     }
 }
