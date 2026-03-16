@@ -71,14 +71,15 @@ impl WindowBuffer {
     /// Adjusting seconds automatically recalculates `sample_per_bucket` based on the current `n_buckets`.
     pub fn set_seconds(&mut self, seconds: f64) {
         self.seconds = seconds;
-        self.recalculate_sample_per_bucket();
+        self.recalculate_buckets();
     }
 
     /// Updates the number of buckets (visual segments) then  recalculate the number of sample required per bucket.
     pub fn set_num_buckets(&mut self, num_buckets: usize) {
         if num_buckets != self.n_buckets {
             self.n_buckets = num_buckets;
-            self.recalculate_sample_per_bucket();
+            self.recalculate_buckets();
+            self.buckets = vec![PeakBucket::empty(); self.n_buckets];
         }
     }
 
@@ -118,7 +119,7 @@ impl WindowBuffer {
     }
 
     // Private helper for calculate the number of sample per bucket based on samplerate and seconds
-    fn recalculate_sample_per_bucket(&mut self) {
+    fn recalculate_buckets(&mut self) {
         let sample_count = self.samplerate * self.seconds;
         self.sample_per_bucket = (sample_count / self.n_buckets as f64).ceil() as usize;
     }
