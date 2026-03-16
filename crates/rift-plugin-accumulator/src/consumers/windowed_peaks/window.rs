@@ -37,14 +37,14 @@ pub struct WindowBuffer {
 }
 
 impl WindowBuffer {
-    pub fn new(samplerate: f64, n_buckets: usize, seconds: f64) -> Self {
+    pub fn new(samplerate: f64, seconds: f64) -> Self {
         // number of total sample that would be displayed
-        let buckets = vec![PeakBucket::empty(); n_buckets];
+        let buckets = vec![PeakBucket::empty(); 10];
 
         let mut buffer = Self {
             buckets,
             mode: WindowBufferMode::Averaged,
-            n_buckets,
+            n_buckets: 10,
             samplerate,
             sample_per_bucket: 0,
             write_idx: 0,
@@ -76,8 +76,10 @@ impl WindowBuffer {
 
     /// Updates the number of buckets (visual segments) then  recalculate the number of sample required per bucket.
     pub fn set_num_buckets(&mut self, num_buckets: usize) {
-        self.n_buckets = num_buckets;
-        self.recalculate_sample_per_bucket();
+        if num_buckets != self.n_buckets {
+            self.n_buckets = num_buckets;
+            self.recalculate_sample_per_bucket();
+        }
     }
 
     /// Returns an iterator over the peak values of all buckets.
@@ -101,6 +103,13 @@ impl WindowBuffer {
         } else {
             Some(self.buckets[(self.write_idx + 1 + idx).rem_euclid(self.n_buckets)].peak())
         }
+    }
+
+    pub fn aligned_start(&self, num_points: usize) -> usize {
+        let group_size = self.n_buckets / num_points;
+        let oldest = self.write_idx + 1;
+        let offset = oldest % group_size;
+        if offset == 0 { 0 } else { group_size - offset }
     }
 
     /// Returns the total number of peaks (buckets) currently stored.
@@ -178,7 +187,9 @@ mod tests {
     use super::*;
 
     fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuffer {
-        WindowBuffer::new(44100.0, n_buckets, seconds)
+        let mut buf = WindowBuffer::new(44100.0, seconds);
+        buf.set_num_buckets(n_buckets);
+        buf
     }
 
     fn make_channels(current: usize, total: usize) -> ChannelsInfo {
