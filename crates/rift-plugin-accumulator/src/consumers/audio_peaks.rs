@@ -3,8 +3,11 @@ use rift_plugin_shared::utils::interpo::lerp_n;
 
 use crate::prelude::AudioConsumer;
 
+/// Per-channel peak state tracked by [`AudioPeaks`].
 struct ChannelAudioPeaks {
+    /// The peak level, decay each block.
     true_peak: f32,
+    /// An smoothed version of `true_peak`, used for display.
     smooth_peak: f32,
 }
 
@@ -17,13 +20,34 @@ impl ChannelAudioPeaks {
     }
 }
 
+/// An [`AudioConsumer`] that tracks true and smoothed peak levels per channel.
+///
+/// # Examples
+///
+/// ```rust
+/// let mut peaks = AudioPeaks::new(2)
+///     .lerp_factor(0.5)
+///     .decay(|peak, block_size| peak * 0.999_f32.powi(block_size as i32));
+///
+/// // true_peak snaps immediately; smooth_peak trails behind
+/// let true_peak  = peaks.true_peak(0);
+/// let smooth_peak = peaks.peak(0);
+/// ```
 pub struct AudioPeaks {
     channel_peaks: Vec<ChannelAudioPeaks>,
+    /// User-supplied decay function applied once per block to `true_peak`.
+    /// Receives the current peak and the block length; returns the decayed peak.
     decay_fn: fn(f32, usize) -> f32,
+    /// Pre-scaled lerp coefficient (user value × 1e-3) applied per sample via [`lerp_n`].
     lerp_factor: f32,
 }
 
 impl AudioPeaks {
+    /// Creates a new `AudioPeaks` instance with `channels` independent peak trackers.
+    ///
+    /// Both `true_peak` and `smooth_peak` start at `0.0` for every channel.
+    /// The default decay function is [`default_decay`] and the default lerp
+    /// factor is `0.8e-3`.
     pub fn new(channels: usize) -> Self {
         let mut channel_peaks = Vec::new();
         channel_peaks.resize_with(channels, ChannelAudioPeaks::new);
@@ -40,24 +64,36 @@ impl AudioPeaks {
     /// The provided value is scaled by 1e-3 internally. Since this function is called
     /// tons of times per second to update audio peaks, the raw lerp factor would be too large
     /// without this scaling.
+    ///
+    /// Higher values make `smooth_peak` follow `true_peak` more closely.
     pub fn lerp_factor(mut self, factor: f32) -> Self {
         self.lerp_factor = factor * 1e-3;
         self
     }
 
+    /// Replaces the decay function applied to `true_peak` at the start of each block.
+    ///
+    /// The function receives `(current_peak, block_size)` and should return the
+    /// decayed peak. The default is [`default_decay`], which multiplies by
+    /// `0.9985 ^ block_size`.
     pub fn decay(mut self, func: fn(f32, usize) -> f32) -> Self {
         self.decay_fn = func;
         self
     }
 
+    /// Returns the number of channels this instance was created with.
     pub fn num_channels(&self) -> usize {
         self.channel_peaks.len()
     }
 
+    /// Returns the instantaneous (decayed) peak for `channel`, or `None` if
+    /// `channel` is out of bounds.
     pub fn true_peak(&self, channel: usize) -> Option<f32> {
         self.channel_peaks.get(channel).map(|ch| ch.true_peak)
     }
 
+    /// Returns the smoothed peak for `channel`, or `None` if `channel` is out
+    /// of bounds.
     pub fn peak(&self, channel: usize) -> Option<f32> {
         self.channel_peaks.get(channel).map(|ch| ch.smooth_peak)
     }
