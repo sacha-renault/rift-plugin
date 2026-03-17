@@ -16,4 +16,4 @@ pub trait ChangeLatencyImpl: HostStatesGetter {
 }
 
 impl<'a> ChangeLatencyImpl for super::InitContext<'a> {}
-impl<'a, P: ClapPlugin> ChangeLatencyImpl for super::ProcessContext<'a, P> {}
+impl<'a, 'e, P: ClapPlugin> ChangeLatencyImpl for super::ProcessContext<'a, 'e, P> {}

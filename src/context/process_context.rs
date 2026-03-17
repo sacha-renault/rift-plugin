@@ -1,13 +1,15 @@
 use std::sync::Arc;
 
-use clack_plugin::{
-    events::event_types::TransportFlags, host::HostAudioProcessorHandle, process::Process,
-};
+use clack_plugin::events::event_types::{MidiEvent, TransportFlags};
+use clack_plugin::host::HostAudioProcessorHandle;
+use clack_plugin::prelude::OutputEvents;
+use clack_plugin::process::Process;
+
 use rift_plugin_shared::transport::BlockInfo;
 
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 
-pub struct ProcessContext<'a, P: ClapPlugin> {
+pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) host: &'a HostAudioProcessorHandle<'a>,
     pub(crate) states: Arc<PluginSharedState>,
     pub(crate) shared: Arc<P::SharedType>,
@@ -17,9 +19,10 @@ pub struct ProcessContext<'a, P: ClapPlugin> {
     /// Count of pending events to be drained. MUST be initialized to 0; dropping with >0
     /// triggers a callback request to the host via the destructor.
     pub(crate) num_events: usize,
+    pub(crate) outputs_events: &'e mut OutputEvents<'e>,
 }
 
-impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
+impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
     pub fn shared(&self) -> Arc<P::SharedType> {
         Arc::clone(&self.shared)
     }
@@ -40,9 +43,14 @@ impl<'a, P: ClapPlugin> ProcessContext<'a, P> {
             None
         }
     }
+
+    /// Add a midi message as output event
+    pub fn add_output_midi_event(&mut self) {
+        todo!()
+    }
 }
 
-impl<'a, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, P> {
+impl<'a, 'e, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, 'e, P> {
     #[inline]
     fn increment_event_count(&mut self) {
         self.num_events += 1;
@@ -54,7 +62,7 @@ impl<'a, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, P> {
     }
 }
 
-impl<'a, P: ClapPlugin> Drop for ProcessContext<'a, P> {
+impl<'a, 'e, P: ClapPlugin> Drop for ProcessContext<'a, 'e, P> {
     fn drop(&mut self) {
         if self.num_events > 0 {
             // Drains the event count buffer by requesting a final callback on drop.

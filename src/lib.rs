@@ -44,7 +44,7 @@ pub mod prelude {
     pub use super::wrapper::factory::PluginWrapper;
     pub use wrapper::ClapPlugin;
 
-    pub use type_wrapper::{AudioPort, MainAudioPort};
+    pub use type_wrapper::*;
 
     pub use context::*;
     pub use processing::*;
