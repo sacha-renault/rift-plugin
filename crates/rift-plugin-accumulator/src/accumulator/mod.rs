@@ -19,23 +19,59 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
     /// Number of channel allocated for this [`AudioAccumulator`]
     fn channels(&self) -> usize;
 
-    /// This function is totally lock free, audio thread
-    /// can push slices here with no lock, mutex guard or alloc
+    /// Copies each slice from `slices` into the corresponding channel's block ring.
+    ///
+    /// Channels and slices are paired by position: the first slice goes into
+    /// channel 0, the second into channel 1, and so on. Extra slices beyond
+    /// the number of allocated channels are silently ignored; channels with no
+    /// corresponding slice receive nothing.
+    ///
+    /// `block_info_opt` is forwarded to every block. Pass `Some` when transport
+    /// timing information is available, `None` otherwise.
+    ///
+    /// The `num_writes` counter is incremented **once** per call regardless of
+    /// how many channels were actually written, so consumers can use it as a
+    /// per-render-cycle dirty flag.
+    ///
+    /// # Real-time safety
+    ///
+    /// This function is lock-free and allocation-free and may be called from
+    /// the audio thread.
     fn push_slices<'a>(
         &self,
         slices: &mut dyn Iterator<Item = &'a [f32]>,
         block_info_opt: Option<BlockInfo>,
     );
 
-    /// Return the number of writes that occures on the audio accumulator since
-    /// the beginning. Used to check when there is new data coming in the accumulator.
+    /// Returns the current write counter.
+    ///
+    /// it is intended as a lightweight change-detection signal for the UI thread
     fn num_writes(&self) -> u64;
 
-    /// This function is meant to be called on the UI thread
-    /// locks are fine here
+    /// Drains all pending blocks from every channel and dispatches them to each consumer.
+    ///
+    /// Blocks are consumed one full round at a time: one block is popped from
+    /// each channel in index order before moving to the next round. If any
+    /// channel runs out of blocks mid-round, [`Self::clear`] is called to flush
+    /// the remaining channels and the drain loop exits, keeping all channels
+    /// in sync.
+    ///
+    /// Each block is delivered to every registered consumer via
+    /// [`AudioConsumer::consume`], tagged with a [`ChannelsInfo`] describing the
+    /// channel's index and the total channel count. Consumers that cannot be
+    /// borrowed (because they are already mutably borrowed elsewhere) are
+    /// silently skipped for that block.
+    ///
+    /// # Thread safety
+    ///
+    /// Intended for the UI thread only.
     fn drain(&self, consumers: &[RcCell<dyn AudioConsumer>]);
 
-    /// Clear all buffers in the accumulator
+    /// Discards all buffered blocks across every channel.
+    ///
+    /// Called automatically by [`Self::drain`] when channels fall out of sync, but
+    /// can also be called directly to reset the accumulator to a clean state
+    /// (e.g. on transport stop or plugin deactivation).
     fn clear(&self);
 }
 
