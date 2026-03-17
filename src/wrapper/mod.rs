@@ -6,9 +6,7 @@ use rift_plugin_shared::gui::GuiFactory;
 use rift_plugin_shared::params::Params;
 
 use crate::_sealed::__ParamsInitializer;
-use crate::context::{InitContext, ProcessContext};
-use crate::prelude::{Buffers, MainAudioPort};
-use crate::type_wrapper::AudioPort;
+use crate::prelude::*;
 
 pub mod factory;
 pub mod main_thread;
@@ -24,6 +22,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     type SharedType: Send + Sync + Default + 'static;
 
     fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
+
+    fn on_midi_message(&mut self, midi: MidiMessage);
 
     /// Processes audio data for one block of time.
     ///

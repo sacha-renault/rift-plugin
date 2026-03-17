@@ -16,4 +16,4 @@ pub trait RequestRestartImpl: HostStatesGetter {
 }
 
 impl<'a> RequestRestartImpl for super::InitContext<'a> {}
-impl<'a, P: ClapPlugin> RequestRestartImpl for super::ProcessContext<'a, P> {}
+impl<'a, 'e, P: ClapPlugin> RequestRestartImpl for super::ProcessContext<'a, 'e, P> {}
