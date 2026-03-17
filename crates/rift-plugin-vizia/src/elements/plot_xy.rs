@@ -1,4 +1,4 @@
-use rift_plugin_accumulator::{StftChannelConsumer, WindowBuffer};
+use rift_plugin_accumulator::{Bucket, StftChannelConsumer, WindowBuckets};
 use rift_plugin_shared::RcCell;
 use rift_plugin_shared::utils::interpo::cubic_interpolate;
 use rift_plugin_shared::utils::spaces::Linspace;
@@ -185,7 +185,7 @@ impl PlotData for Vec<(f32, f32)> {
     }
 }
 
-impl PlotData for RcCell<WindowBuffer> {
+impl<B: Bucket> PlotData for RcCell<WindowBuckets<B>> {
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
@@ -194,7 +194,7 @@ impl PlotData for RcCell<WindowBuffer> {
         borrow.set_num_buckets(width.ceil() as usize);
         let length = (borrow.num_points() - 1) as f32;
         let mut iterator = borrow
-            .iter_peaks()
+            .iter_values()
             .enumerate()
             .map(|(i, y)| ((i as f32) / length, y));
 
