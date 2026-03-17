@@ -8,8 +8,18 @@ use rift_plugin_shared::{
 use super::channel::ChannelProducer;
 use crate::prelude::*;
 
+/// The concrete, const-generic implementation behind [`AudioAccumulator`].
+///
+/// Each channel gets its own [`ChannelProducer<N>`] ring, where `N` is the
+/// fixed frame-block size chosen at compile time. The struct is intentionally
+/// kept private; callers interact with it only through the type-erased
+/// [`AudioAccumulatorErased`] trait, which hides `N` behind an [`Arc`].
 pub struct InnerAudioAccumulator<const N: usize> {
+    /// One producer ring per allocated channel
     channels: Vec<ChannelProducer<N>>,
+
+    /// Monotonically increasing counter incremented on every [`push_slices`] call.
+    /// Read by the UI thread to detect new data without holding a lock.
     num_writes: AtomicU64,
     // TODO
     // We might want here to add a scratch to wait when buffer is smaller than N
@@ -18,6 +28,11 @@ pub struct InnerAudioAccumulator<const N: usize> {
 }
 
 impl<const N: usize> InnerAudioAccumulator<N> {
+    /// Allocates `max_channels` channel rings, each with a queue depth of
+    /// `max_block_in_queue` blocks of `N` frames.
+    ///
+    /// This is the only place where heap allocation occurs for the accumulator;
+    /// all subsequent push operations are lock-free and allocation-free.
     pub fn new(max_channels: usize, max_block_in_queue: usize) -> Self {
         let mut channels = Vec::with_capacity(max_channels);
         channels.resize_with(max_channels, || ChannelProducer::new(max_block_in_queue));
@@ -57,8 +72,6 @@ impl<const N: usize> AudioAccumulatorErased for InnerAudioAccumulator<N> {
         self.num_writes.load(Ordering::Relaxed)
     }
 
-    /// This function is meant to be called on the UI thread
-    /// locks are fine here
     fn drain(&self, consumers: &[RcCell<dyn AudioConsumer>]) {
         let total_channels = self.channels();
         if total_channels == 0 {
