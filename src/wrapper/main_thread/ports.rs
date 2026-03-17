@@ -42,10 +42,10 @@ impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P>
 
         let main_port = match (P::MAIN_AUDIO_PORTS, is_input) {
             (MainAudioPort::InputOnly(channels), true) => {
-                Some(AudioPort::input(b"Input", channels).set_port_flags(AudioPortFlags::IS_MAIN))
+                Some(AudioPort::input(b"Input", channels).port_flags(AudioPortFlags::IS_MAIN))
             }
             (MainAudioPort::OutputOnly(channels), false) => {
-                Some(AudioPort::output(b"Output", channels).set_port_flags(AudioPortFlags::IS_MAIN))
+                Some(AudioPort::output(b"Output", channels).port_flags(AudioPortFlags::IS_MAIN))
             }
             (MainAudioPort::InputOutput(channels), _) => Some(
                 AudioPort::new(
@@ -53,8 +53,8 @@ impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P>
                     channels,
                     is_input,
                 )
-                .set_port_flags(AudioPortFlags::IS_MAIN)
-                .set_in_place(PAIR_PORT_ID),
+                .port_flags(AudioPortFlags::IS_MAIN)
+                .in_place(PAIR_PORT_ID),
             ),
             _ => None,
         };
