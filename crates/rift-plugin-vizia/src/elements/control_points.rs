@@ -55,14 +55,14 @@ impl View for DraggablePoint {
             }
         });
 
-        event.map(|window_event, _| match window_event {
-            &WindowEvent::MouseDown(btn) if btn == MouseButton::Left && !cx.is_disabled() => {
+        event.map(|window_event, _| match *window_event {
+            WindowEvent::MouseDown(btn) if btn == MouseButton::Left && !cx.is_disabled() => {
                 cx.toggle_class("dragging", true);
                 cx.emit(BeginDrag {
                     child_idx: self.idx,
                 });
             }
-            &WindowEvent::MouseUp(btn) if btn == MouseButton::Left => {
+            WindowEvent::MouseUp(btn) if btn == MouseButton::Left => {
                 cx.toggle_class("dragging", false);
             }
             _ => {}
@@ -109,7 +109,7 @@ impl ControlPoints {
             dragging: None,
             points,
             on_change: None,
-            rule: rule,
+            rule,
         }
         .build(cx, move |cx| {
             for (idx, &ControlPoint { x, y }) in intial_values.iter().enumerate() {
@@ -134,8 +134,8 @@ impl View for ControlPoints {
             }
         });
 
-        event.map(|window_event, _| match window_event {
-            &WindowEvent::MouseUp(btn) if btn == MouseButton::Left => {
+        event.map(|window_event, _| match *window_event {
+            WindowEvent::MouseUp(btn) if btn == MouseButton::Left => {
                 cx.release();
 
                 // We resend an event to be sure points receives it
@@ -143,7 +143,7 @@ impl View for ControlPoints {
                     cx.emit_to(entity, WindowEvent::MouseUp(MouseButton::Left));
                 }
             }
-            &WindowEvent::MouseMove(x, y) => {
+            WindowEvent::MouseMove(x, y) => {
                 let Some((idx, entity)) = self.dragging else {
                     return;
                 };

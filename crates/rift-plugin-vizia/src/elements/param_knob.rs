@@ -134,14 +134,11 @@ where
                     f(cx, v)
                 }
             })
-            .on_mouse_down(move |cx, mb| match mb {
-                MouseButton::Left => {
-                    gesture_start(param_ptr, cx);
-                    if let Some(f) = on_mouse_down.as_ref() {
-                        f(cx, mb)
-                    }
+            .on_mouse_down(move |cx, mb| if mb == MouseButton::Left {
+                gesture_start(param_ptr, cx);
+                if let Some(f) = on_mouse_down.as_ref() {
+                    f(cx, mb)
                 }
-                _ => {}
             })
             .on_mouse_up(move |cx, mb| match mb {
                 MouseButton::Left => {

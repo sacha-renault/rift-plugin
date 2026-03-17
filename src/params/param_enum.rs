@@ -129,7 +129,7 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
 
     fn value_to_text(&self, value: f64, writer: &mut dyn std::fmt::Write) -> std::fmt::Result {
         let variant = E::from_index(value.round() as u32).unwrap_or_default();
-        writer.write_str(&format!("{}", variant))
+        writer.write_str(&format!("{variant}"))
     }
 }
 

@@ -55,7 +55,7 @@ pub fn derive_extensions(input: TokenStream) -> TokenStream {
         return quote! {}.into();
     }
 
-    let extension_name = syn::Ident::new(&format!("{}Ext", name), Span::call_site());
+    let extension_name = syn::Ident::new(&format!("{name}Ext"), Span::call_site());
     let setters: Vec<_> = extensions_field
         .iter()
         .map(|field| {

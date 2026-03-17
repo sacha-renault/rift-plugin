@@ -67,7 +67,7 @@ impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P>
         if let Some(port_info) = all_ports.nth(index as usize) {
             writer.set(&port_info.into_audio_port_info(index))
         } else {
-            panic!("Invalid port index {} for is_input={}", index, is_input);
+            panic!("Invalid port index {index} for is_input={is_input}");
         }
     }
 }

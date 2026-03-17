@@ -53,7 +53,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn test_too_long_slice() {
-        TimedAudioBlock::<10>::new(&vec![0.; 11], BlockTime::none());
+        TimedAudioBlock::<10>::new(&[0.; 11], BlockTime::none());
     }
 
     #[test]

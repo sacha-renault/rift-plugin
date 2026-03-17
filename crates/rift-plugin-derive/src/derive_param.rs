@@ -45,13 +45,13 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
         .map(|f| {
             if let Some(name) = f.name.clone() {
                 if unique_names.contains(&name) {
-                    panic!("Parameter name `{}` is not unique", name)
+                    panic!("Parameter name `{name}` is not unique")
                 }
                 unique_names.insert(name.clone());
                 name
             } else {
                 let ident = f.ident.as_ref().unwrap().to_string();
-                panic!("Parameter {} must have a `name`.", ident);
+                panic!("Parameter {ident} must have a `name`.");
             }
         })
         .collect();
