@@ -1,6 +1,7 @@
-use crate::AudioConsumer;
 use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 use rift_plugin_shared::utils::interpo::lerp_n;
+
+use crate::prelude::AudioConsumer;
 
 struct ChannelAudioPeaks {
     true_peak: f32,

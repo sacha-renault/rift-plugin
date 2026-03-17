@@ -1,4 +1,4 @@
-use rift_plugin_accumulator::{AudioAccumulator, AudioConsumer};
+use rift_plugin_accumulator::prelude::*;
 use rift_plugin_shared::RcCell;
 use vizia::prelude::*;
 
@@ -21,17 +21,17 @@ pub struct NewData;
 /// // The redraw lens allow any component to redraw only when there is fresh data
 /// let redraw_lens = dispatcher.redraw_lens();
 /// ```
-pub struct AudioConsumerDispatch<const N: usize, L>
+pub struct AudioConsumerDispatch<L>
 where
-    L: Lens<Target = AudioAccumulator<N>>,
+    L: Lens<Target = AudioAccumulator>,
 {
     consumers: Vec<RcCell<dyn AudioConsumer>>,
     accumulator: L,
 }
 
-impl<const N: usize, L> AudioConsumerDispatch<N, L>
+impl<L> AudioConsumerDispatch<L>
 where
-    L: Lens<Target = AudioAccumulator<N>>,
+    L: Lens<Target = AudioAccumulator>,
 {
     pub fn new(cx: &mut Context, accumulator: L) -> Handle<'_, Self> {
         Self {
@@ -50,9 +50,9 @@ where
     }
 }
 
-impl<const N: usize, L> View for AudioConsumerDispatch<N, L>
+impl<L> View for AudioConsumerDispatch<L>
 where
-    L: Lens<Target = AudioAccumulator<N>>,
+    L: Lens<Target = AudioAccumulator>,
 {
     fn element(&self) -> Option<&'static str> {
         Some("audio-dispatcher")
@@ -80,16 +80,16 @@ pub trait AudioConsumerDispatchExt {
     fn redraw_lens(&self) -> impl Lens<Target = u64>;
 }
 
-impl<const N: usize, L> AudioConsumerDispatchExt for Handle<'_, AudioConsumerDispatch<N, L>>
+impl<L> AudioConsumerDispatchExt for Handle<'_, AudioConsumerDispatch<L>>
 where
-    L: Lens<Target = AudioAccumulator<N>>,
+    L: Lens<Target = AudioAccumulator>,
 {
     fn add_consumer(self, consumer: RcCell<dyn AudioConsumer>) -> Self {
         self.modify(|acc_drain| acc_drain.consumers.push(consumer))
     }
 
     fn redraw_lens(&self) -> impl Lens<Target = u64> {
-        self.data::<AudioConsumerDispatch<N, L>>()
+        self.data::<AudioConsumerDispatch<L>>()
             .expect("Handle<'_, Self> doesn't contain Self ?")
             .accumulator
             .map(|acc| acc.num_writes())
@@ -106,7 +106,7 @@ mod tests {
 
     #[derive(Lens)]
     struct AccData {
-        acc: AudioAccumulator<N_TEST>,
+        acc: AudioAccumulator,
     }
 
     impl Model for AccData {}
@@ -126,9 +126,9 @@ mod tests {
         }
     }
 
-    fn push_audio(acc: AudioAccumulator<N_TEST>) {
+    fn push_audio(acc: AudioAccumulator) {
         let audio: Vec<f32> = vec![0., 0.25, 0.5, 0.4, 0.7];
-        acc.push_slices([audio.as_slice()].into_iter(), None);
+        acc.push_slices(&mut [audio.as_slice()].into_iter(), None);
     }
 
     #[test]
@@ -137,7 +137,7 @@ mod tests {
         let cx = &mut ocx;
 
         AccData {
-            acc: AudioAccumulator::<N_TEST>::new(1, 3),
+            acc: AudioAccumulator::new::<N_TEST>(1, 3),
         }
         .build(cx);
 
@@ -161,7 +161,7 @@ mod tests {
         let mut ocx = Context::new();
         let cx = &mut ocx;
 
-        let acc = AudioAccumulator::<N_TEST>::new(1, 3);
+        let acc = AudioAccumulator::new::<N_TEST>(1, 3);
         AccData { acc: acc.clone() }.build(cx);
 
         let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
