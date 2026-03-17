@@ -61,7 +61,7 @@ where
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
         event.map(|_: &NewData, _| {
             let acc = self.accumulator.get(cx);
-            dispatch_audio(acc, &self.consumers);
+            acc.drain(&self.consumers);
         });
     }
 }
@@ -94,21 +94,6 @@ where
             .accumulator
             .map(|acc| acc.num_writes())
     }
-}
-
-#[inline]
-fn dispatch_audio<const N: usize>(
-    acc: AudioAccumulator<N>,
-    consumers: &[RcCell<dyn AudioConsumer>],
-) {
-    acc.drain(|data_block, infos, time| {
-        for consumer_cell in consumers.iter() {
-            match consumer_cell.try_borrow_mut() {
-                Ok(mut consumer) => consumer.consume(data_block, infos, time),
-                Err(err) => log::error!("Couldn't add data in consumer {err}"),
-            }
-        }
-    });
 }
 
 #[cfg(test)]
@@ -194,20 +179,5 @@ mod tests {
         acd.event(&mut evt_cx, &mut event);
 
         assert_eq!(consumer.borrow().count, 2);
-    }
-
-    #[test]
-    fn test_dispatch_skips_borrowed_consumer() {
-        let acc = AudioAccumulator::<N_TEST>::new(1, 3);
-        let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
-
-        push_audio(acc.clone());
-
-        let _guard = consumer.borrow_mut();
-        dispatch_audio(acc, &[consumer.clone()]);
-
-        // count stays 0 because consumer was borrowed
-        drop(_guard);
-        assert_eq!(consumer.borrow().count, 0);
     }
 }
