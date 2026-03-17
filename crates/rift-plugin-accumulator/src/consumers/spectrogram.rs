@@ -7,6 +7,10 @@ use rift_plugin_shared::utils::dequeue_buffer::DequeBuffer;
 use rift_plugin_shared::utils::spaces::Linspace;
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
+/// Single-channel STFT consumer. Accumulates incoming samples into a rolling
+/// buffer and recomputes the magnitude spectrum whenever a full `fft_size`
+/// window is available. Only processes blocks tagged with `channel_target`;
+/// all others are ignored.
 pub struct StftChannelConsumer {
     channel_target: usize,
 
@@ -22,9 +26,10 @@ pub struct StftChannelConsumer {
 }
 
 impl StftChannelConsumer {
+    /// Creates a consumer for `channel` using a forward FFT of size `fft_size`
+    /// at the given `samplerate`. The FFT plan is computed once here.
     pub fn new(channel: usize, fft_size: usize, samplerate: f32) -> Self {
-        let mut fft_planner = FftPlanner::<f32>::new();
-        let fft = fft_planner.plan_fft_forward(fft_size);
+        let fft = FftPlanner::<f32>::new().plan_fft_forward(fft_size);
         let window = hanning(fft_size);
 
         Self {
@@ -39,6 +44,9 @@ impl StftChannelConsumer {
         }
     }
 
+    /// Pushes `block` into the rolling buffer. If the buffer now holds at
+    /// least `fft_size` samples, runs the windowed FFT and updates [`Self::bins`].
+    /// Does nothing until enough samples have accumulated.
     pub fn consume_samples(&mut self, block: &[f32]) {
         self.samples.push_block(block);
         let half_fft_size = 0.5 * self.fft_size as f32;
@@ -66,6 +74,8 @@ impl StftChannelConsumer {
         self.samplerate
     }
 
+    /// Normalized magnitude bins for the positive-frequency half of the spectrum.
+    /// All zeros until the first full window has been processed.
     pub fn bins(&self) -> &[f32] {
         &self.cache
     }
