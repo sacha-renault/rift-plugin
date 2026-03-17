@@ -3,8 +3,8 @@ use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 pub use super::bucket::Bucket;
 use crate::AudioConsumer;
 
-/// Represents the operating mode of a [`WindowBuffer`].
-pub enum WindowBufferMode {
+/// Represents the operating mode of a [`WindowBuckets`].
+pub enum WindowBucketsMode {
     /// Average all channels into a single one
     Averaged,
 
@@ -22,7 +22,7 @@ pub struct WindowBuckets<B: Bucket> {
     buckets: Vec<B>,
 
     /// The current operating mode (Averaged all channels vs. specific channel capture).
-    mode: WindowBufferMode,
+    mode: WindowBucketsMode,
 
     samplerate: f64,
     sample_per_bucket: usize,
@@ -32,7 +32,7 @@ pub struct WindowBuckets<B: Bucket> {
     /// The index in the buckets array where the next sample should be written.
     write_idx: usize,
 
-    /// Temporary buffer for accumulating samples when operating in [`WindowBufferMode::Averaged`] mode.
+    /// Temporary buffer for accumulating samples when operating in [`WindowBucketsMode::Averaged`] mode.
     intermediate: Vec<f32>,
 }
 
@@ -44,7 +44,7 @@ impl<B: Bucket> WindowBuckets<B> {
 
         let mut buffer = Self {
             buckets,
-            mode: WindowBufferMode::Averaged,
+            mode: WindowBucketsMode::Averaged,
             n_buckets,
             samplerate,
             sample_per_bucket: 0,
@@ -56,13 +56,13 @@ impl<B: Bucket> WindowBuckets<B> {
         buffer
     }
 
-    pub fn set_mode(&mut self, mode: WindowBufferMode) {
+    pub fn set_mode(&mut self, mode: WindowBucketsMode) {
         self.mode = mode;
 
         // if it's channel specific, we can deallocate
         // entirely the intermediate buffer. We don't use
         // it to sum up over channels
-        if matches!(self.mode, WindowBufferMode::Channel(_)) {
+        if matches!(self.mode, WindowBucketsMode::Channel(_)) {
             self.intermediate = Vec::new();
         }
     }
@@ -174,11 +174,11 @@ impl<B: Bucket> WindowBuckets<B> {
 impl<B: Bucket> AudioConsumer for WindowBuckets<B> {
     fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
         match self.mode {
-            WindowBufferMode::Averaged => self.consume_avg(block, channels),
-            WindowBufferMode::Channel(captured) if channels.current == captured => {
+            WindowBucketsMode::Averaged => self.consume_avg(block, channels),
+            WindowBucketsMode::Channel(captured) if channels.current == captured => {
                 self.consume_channel(block)
             }
-            WindowBufferMode::Channel(_) => {} // Might not be the right channel
+            WindowBucketsMode::Channel(_) => {} // Might not be the right channel
         }
     }
 }
@@ -260,7 +260,7 @@ mod tests {
     #[test]
     fn test_channel_mode_captures_correct_channel() {
         let mut b = make_buffer(64, 1.0);
-        b.set_mode(WindowBufferMode::Channel(1));
+        b.set_mode(WindowBucketsMode::Channel(1));
 
         let silence = vec![0.0_f32; 512];
         let signal = vec![1.0_f32; 512];
@@ -275,7 +275,7 @@ mod tests {
     #[test]
     fn test_channel_mode_ignores_wrong_channel() {
         let mut b = make_buffer(64, 1.0);
-        b.set_mode(WindowBufferMode::Channel(1));
+        b.set_mode(WindowBucketsMode::Channel(1));
 
         let signal = vec![1.0_f32; 512];
         b.consume(&signal, make_channels(0, 2), BlockTime::none());
@@ -291,7 +291,7 @@ mod tests {
         let block = vec![1.0_f32; 512];
         feed_block(&mut b, &block, 2);
 
-        b.set_mode(WindowBufferMode::Channel(0));
+        b.set_mode(WindowBucketsMode::Channel(0));
 
         // Channel mode should work fine after switching
         b.consume(&block, make_channels(0, 1), BlockTime::none());
