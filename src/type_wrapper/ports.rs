@@ -34,17 +34,17 @@ impl<'a> AudioPort<'a> {
         Self::new(name, channel_count, false)
     }
 
-    pub const fn set_port_flags(mut self, flags: AudioPortFlags) -> Self {
+    pub const fn port_flags(mut self, flags: AudioPortFlags) -> Self {
         self.flags = self.flags.union(flags);
         self
     }
 
-    pub const fn set_port_type(mut self, port_type: AudioPortType<'a>) -> Self {
+    pub const fn port_type(mut self, port_type: AudioPortType<'a>) -> Self {
         self.port_type = Some(port_type);
         self
     }
 
-    pub const fn set_in_place(mut self, in_place_id: ClapId) -> Self {
+    pub const fn in_place(mut self, in_place_id: ClapId) -> Self {
         self.in_place_pair = Some(in_place_id);
         self
     }

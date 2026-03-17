@@ -67,4 +67,5 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
 
     const MAIN_AUDIO_PORTS: MainAudioPort;
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
+    const MIDI_PORTS: &[MidiPort<'_>] = &[];
 }

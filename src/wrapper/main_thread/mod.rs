@@ -13,7 +13,7 @@ use crate::wrapper::{ClapPlugin, shared::WrapperShared};
 
 mod context_menu;
 mod latency;
-mod notes;
+mod midi;
 mod params;
 mod ports;
 mod state;
