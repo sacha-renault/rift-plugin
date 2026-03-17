@@ -1,10 +1,10 @@
-use std::sync::Once;
 use std::{marker::PhantomData, sync::Arc};
 
 use clack_extensions::audio_ports::PluginAudioPorts;
 use clack_extensions::context_menu::PluginContextMenu;
 use clack_extensions::gui::PluginGui;
 use clack_extensions::latency::PluginLatency;
+use clack_extensions::note_ports::PluginNotePorts;
 use clack_extensions::params::PluginParams;
 use clack_extensions::state::PluginState;
 use clack_plugin::prelude::*;
@@ -14,8 +14,6 @@ use crate::wrapper::ClapPlugin;
 use crate::wrapper::main_thread::WrapperMainThread;
 use crate::wrapper::processor::WrapperProcessor;
 use crate::wrapper::shared::WrapperShared;
-
-static INIT: Once = Once::new();
 
 /// Wrapper that declares audio ports, state, and GUI extensions, and validates descriptor fields at compile time.
 pub struct PluginWrapper<P: ClapPlugin>(PhantomData<P>);
@@ -29,19 +27,13 @@ impl<P: ClapPlugin> Plugin for PluginWrapper<P> {
         builder: &mut PluginExtensions<Self>,
         _shared: Option<&Self::Shared<'_>>,
     ) {
-        INIT.call_once(|| {
-            if let Some(func) = P::INIT_LOG_FN {
-                let _ = func();
-                log::info!("Plugin::declare_extensions Log was initialized");
-            }
-        });
-
         builder.register::<PluginAudioPorts>();
         builder.register::<PluginState>();
         builder.register::<PluginGui>();
         builder.register::<PluginParams>();
         builder.register::<PluginLatency>();
         builder.register::<PluginContextMenu>();
+        builder.register::<PluginNotePorts>();
     }
 }
 
