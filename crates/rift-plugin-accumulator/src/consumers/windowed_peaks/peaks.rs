@@ -1,3 +1,5 @@
+use crate::consumers::windowed_peaks::window::Bucket;
+
 #[derive(Clone)]
 pub struct PeakBucket {
     min: f32,
@@ -5,9 +7,9 @@ pub struct PeakBucket {
     count: usize,
 }
 
-impl PeakBucket {
+impl Bucket for PeakBucket {
     #[allow(dead_code)]
-    pub fn new(x: f32) -> Self {
+    fn new(x: f32) -> Self {
         Self {
             min: x,
             max: x,
@@ -15,7 +17,7 @@ impl PeakBucket {
         }
     }
 
-    pub fn empty() -> Self {
+    fn empty() -> Self {
         PeakBucket {
             min: 0.,
             max: 0.,
@@ -24,7 +26,7 @@ impl PeakBucket {
     }
 
     #[inline]
-    pub fn add_sample(&mut self, x: f32) {
+    fn add_sample(&mut self, x: f32) {
         if self.count == 0 {
             (self.min, self.max) = (x, x);
             self.count += 1;
@@ -40,7 +42,7 @@ impl PeakBucket {
     }
 
     #[inline]
-    pub fn peak(&self) -> f32 {
+    fn value(&self) -> f32 {
         if self.min.abs() > self.max.abs() {
             self.min
         } else {
@@ -49,7 +51,7 @@ impl PeakBucket {
     }
 
     #[inline]
-    pub fn count(&self) -> usize {
+    fn count(&self) -> usize {
         self.count
     }
 }
@@ -89,12 +91,12 @@ mod tests {
         assert_eq!(bucket.max, 2.);
         assert_eq!(bucket.min, 1.);
         assert_eq!(bucket.count(), 2);
-        assert_eq!(bucket.peak(), 2.);
+        assert_eq!(bucket.value(), 2.);
 
         bucket.add_sample(-3.);
         assert_eq!(bucket.max, 2.);
         assert_eq!(bucket.min, -3.);
         assert_eq!(bucket.count(), 3);
-        assert_eq!(bucket.peak(), -3.);
+        assert_eq!(bucket.value(), -3.);
     }
 }

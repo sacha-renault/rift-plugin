@@ -1,6 +1,6 @@
 use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 
-pub use super::peaks::PeakBucket;
+pub use super::bucket::Bucket;
 use crate::AudioConsumer;
 
 /// Represents the operating mode of a [`WindowBuffer`].
@@ -12,14 +12,14 @@ pub enum WindowBufferMode {
     Channel(usize),
 }
 
-/// A circular buffer that accumulates audio samples over a time window and exposes peak values.
+/// A circular buffer that accumulates audio samples over a time window and exposes [`Bucket::value`].
 ///
 /// This struct is designed for visualizing audio waveforms (e.g., in a VU meter or oscilloscope)
 /// where maintaining full sample precision isn't required, but tracking peaks over time is essential.
 /// It implements [`AudioConsumer`] to accept audio blocks from the accumulator chain.
-pub struct WindowBuffer {
+pub struct WindowBuckets<B: Bucket> {
     /// The circular list of buckets storing peak data for each visual segment.
-    buckets: Vec<PeakBucket>,
+    buckets: Vec<B>,
 
     /// The current operating mode (Averaged all channels vs. specific channel capture).
     mode: WindowBufferMode,
@@ -36,15 +36,16 @@ pub struct WindowBuffer {
     intermediate: Vec<f32>,
 }
 
-impl WindowBuffer {
+impl<B: Bucket> WindowBuckets<B> {
     pub fn new(samplerate: f64, seconds: f64) -> Self {
         // number of total sample that would be displayed
-        let buckets = vec![PeakBucket::empty(); 10];
+        let n_buckets = 1;
+        let buckets = vec![B::empty(); n_buckets];
 
         let mut buffer = Self {
             buckets,
             mode: WindowBufferMode::Averaged,
-            n_buckets: 10,
+            n_buckets,
             samplerate,
             sample_per_bucket: 0,
             write_idx: 0,
@@ -74,46 +75,47 @@ impl WindowBuffer {
         self.recalculate_buckets();
     }
 
-    /// Updates the number of buckets (visual segments) then  recalculate the number of sample required per bucket.
-    pub fn set_num_buckets(&mut self, num_buckets: usize) {
+    /// Updates the number of buckets (visual segments) then recalculate the number of sample required
+    /// per bucket and resize `buckets`.
+    ///
+    /// # Note:
+    /// - This function will allocate.
+    /// - if `num_buckets` is 0, it will be clamped to the minimal value: 1.
+    pub fn set_num_buckets(&mut self, mut num_buckets: usize) {
+        // Number of bucket should never be 0. Otherwise, we might crash later
+        // So even if request of resizing at 0, we don't.
+        num_buckets = num_buckets.min(1);
         if num_buckets != self.n_buckets {
             self.n_buckets = num_buckets;
             self.recalculate_buckets();
-            self.buckets = vec![PeakBucket::empty(); self.n_buckets];
+            self.buckets = vec![B::empty(); self.n_buckets];
         }
     }
 
-    /// Returns an iterator over the peak values of all buckets.
+    /// Returns an iterator over the values of all buckets.
     ///
     /// The iterator starts from the `write_idx` and wraps around to show the full history.
-    pub fn iter_peaks(&self) -> impl Iterator<Item = f32> {
+    pub fn iter_values(&self) -> impl Iterator<Item = f32> {
         // FIX: write_idx is the one we currently write on e.g. the most recent
         // it has to be at the very end so start must be +1
         let start = (self.write_idx + 1).rem_euclid(self.n_buckets);
         (start..self.n_buckets)
             .chain(0..start)
-            .map(|idx| self.buckets[idx].peak())
+            .map(|idx| self.buckets[idx].value())
     }
 
-    /// Get peak at `idx`.
+    /// Get value at `idx`.
     ///
     /// 0 means oldest while len() - 1 is most recent
-    pub fn get_peak(&self, idx: usize) -> Option<f32> {
+    pub fn get_value(&self, idx: usize) -> Option<f32> {
         if idx >= self.n_buckets {
             None
         } else {
-            Some(self.buckets[(self.write_idx + 1 + idx).rem_euclid(self.n_buckets)].peak())
+            Some(self.buckets[(self.write_idx + 1 + idx).rem_euclid(self.n_buckets)].value())
         }
     }
 
-    pub fn aligned_start(&self, num_points: usize) -> usize {
-        let group_size = self.n_buckets / num_points;
-        let oldest = self.write_idx + 1;
-        let offset = oldest % group_size;
-        if offset == 0 { 0 } else { group_size - offset }
-    }
-
-    /// Returns the total number of peaks (buckets) currently stored.
+    /// Returns the total number of [`Bucket`]s currently stored.
     pub fn num_points(&self) -> usize {
         self.n_buckets
     }
@@ -124,6 +126,7 @@ impl WindowBuffer {
         self.sample_per_bucket = (sample_count / self.n_buckets as f64).ceil() as usize;
     }
 
+    #[inline]
     fn push_point(&mut self, y: f32) {
         let bucket = &mut self.buckets[self.write_idx];
         bucket.add_sample(y);
@@ -132,7 +135,7 @@ impl WindowBuffer {
 
             // When we fill current bucket, we need to "remove" the next one
             // because the data becomes outdated and will be use for nexts writes
-            self.buckets[self.write_idx] = PeakBucket::empty();
+            self.buckets[self.write_idx] = B::empty();
         }
     }
 
@@ -168,7 +171,7 @@ impl WindowBuffer {
     }
 }
 
-impl AudioConsumer for WindowBuffer {
+impl<B: Bucket> AudioConsumer for WindowBuckets<B> {
     fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
         match self.mode {
             WindowBufferMode::Averaged => self.consume_avg(block, channels),
@@ -185,10 +188,12 @@ mod tests {
     use rift_plugin_shared::assert_approx_eq;
     use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 
+    use crate::consumers::windowed_peaks::peaks::PeakBucket;
+
     use super::*;
 
-    fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuffer {
-        let mut buf = WindowBuffer::new(44100.0, seconds);
+    fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuckets<PeakBucket> {
+        let mut buf = WindowBuckets::new(44100.0, seconds);
         buf.set_num_buckets(n_buckets);
         buf
     }
@@ -200,7 +205,7 @@ mod tests {
         }
     }
 
-    fn feed_block(buffer: &mut WindowBuffer, block: &[f32], total_channels: usize) {
+    fn feed_block(buffer: &mut WindowBuckets<PeakBucket>, block: &[f32], total_channels: usize) {
         for ch in 0..total_channels {
             buffer.consume(block, make_channels(ch, total_channels), BlockTime::none());
         }
@@ -209,7 +214,7 @@ mod tests {
     #[test]
     fn test_initial_peaks_are_zero() {
         let b = make_buffer(64, 1.0);
-        assert!(b.iter_peaks().all(|p| p == 0.0));
+        assert!(b.iter_values().all(|p| p == 0.0));
     }
 
     #[test]
@@ -224,7 +229,7 @@ mod tests {
         let mut b = make_buffer(64, 1.0);
         let block = vec![1.0_f32; 512];
         feed_block(&mut b, &block, 2);
-        assert!(b.iter_peaks().any(|p| p > 0.0));
+        assert!(b.iter_values().any(|p| p > 0.0));
     }
 
     #[test]
@@ -237,7 +242,7 @@ mod tests {
         b.consume(&ones, make_channels(0, 2), BlockTime::none());
         b.consume(&zeros, make_channels(1, 2), BlockTime::none());
 
-        let max_peak = b.iter_peaks().fold(0.0_f32, f32::max);
+        let max_peak = b.iter_values().fold(0.0_f32, f32::max);
         assert_approx_eq!(max_peak, 0.5, 1e-4);
     }
 
@@ -249,7 +254,7 @@ mod tests {
         b.consume(&block, make_channels(0, 2), BlockTime::none());
 
         // Peaks should still be zero since channel 1 hasn't come in
-        assert!(b.iter_peaks().all(|p| p == 0.0));
+        assert!(b.iter_values().all(|p| p == 0.0));
     }
 
     #[test]
@@ -264,7 +269,7 @@ mod tests {
         b.consume(&silence, make_channels(0, 2), BlockTime::none());
         b.consume(&signal, make_channels(1, 2), BlockTime::none());
 
-        assert!(b.iter_peaks().any(|p| p > 0.0));
+        assert!(b.iter_values().any(|p| p > 0.0));
     }
 
     #[test]
@@ -275,7 +280,7 @@ mod tests {
         let signal = vec![1.0_f32; 512];
         b.consume(&signal, make_channels(0, 2), BlockTime::none());
 
-        assert!(b.iter_peaks().all(|p| p == 0.0));
+        assert!(b.iter_values().all(|p| p == 0.0));
     }
 
     #[test]
@@ -290,13 +295,13 @@ mod tests {
 
         // Channel mode should work fine after switching
         b.consume(&block, make_channels(0, 1), BlockTime::none());
-        assert!(b.iter_peaks().any(|p| p > 0.0));
+        assert!(b.iter_values().any(|p| p > 0.0));
     }
 
     #[test]
     fn test_iter_peaks_length_is_always_n_buckets() {
         let b = make_buffer(32, 1.0);
-        assert_eq!(b.iter_peaks().count(), 32);
+        assert_eq!(b.iter_values().count(), 32);
     }
 
     #[test]
@@ -305,11 +310,11 @@ mod tests {
         let block = vec![1.0_f32; 2048];
 
         feed_block(&mut b, &block, 1);
-        let first: Vec<f32> = b.iter_peaks().collect();
+        let first: Vec<f32> = b.iter_values().collect();
 
         let silence = vec![0.0_f32; 44100];
         feed_block(&mut b, &silence, 1);
-        let second: Vec<f32> = b.iter_peaks().collect();
+        let second: Vec<f32> = b.iter_values().collect();
 
         assert_ne!(first, second, "peaks should change after new data");
     }

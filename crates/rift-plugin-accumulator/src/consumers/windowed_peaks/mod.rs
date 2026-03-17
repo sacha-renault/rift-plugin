@@ -1,4 +1,6 @@
+mod bucket;
 mod peaks;
 mod window;
 
-pub use window::{WindowBuffer, WindowBufferMode};
+pub use bucket::Bucket;
+pub use window::{WindowBuckets, WindowBufferMode};
