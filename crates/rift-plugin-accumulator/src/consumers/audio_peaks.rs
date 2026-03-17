@@ -109,7 +109,7 @@ mod tests {
     fn test_basic() {
         let mut acc = make_acc();
         acc.consume(
-            &vec![1., 1., 1., 1.],
+            &[1., 1., 1., 1.],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -126,7 +126,7 @@ mod tests {
         let mut acc1 = make_acc();
         let mut acc2 = make_acc().lerp_factor(0.9);
         acc1.consume(
-            &vec![1., 1., 1., 1.],
+            &[1., 1., 1., 1.],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -134,7 +134,7 @@ mod tests {
             BlockTime::none(),
         );
         acc2.consume(
-            &vec![1., 1., 1., 1.],
+            &[1., 1., 1., 1.],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -152,7 +152,7 @@ mod tests {
         let mut acc2 =
             make_acc().set_decay(|peak, block_size| peak * 0.9f32.powi(block_size as i32));
         acc1.consume(
-            &vec![0.5, 0.5],
+            &[0.5, 0.5],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -160,7 +160,7 @@ mod tests {
             BlockTime::none(),
         );
         acc2.consume(
-            &vec![0.5, 0.5],
+            &[0.5, 0.5],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -169,7 +169,7 @@ mod tests {
         );
 
         acc1.consume(
-            &vec![0.0, 0.0],
+            &[0.0, 0.0],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -177,7 +177,7 @@ mod tests {
             BlockTime::none(),
         );
         acc2.consume(
-            &vec![0.0, 0.0],
+            &[0.0, 0.0],
             ChannelsInfo {
                 current: 0,
                 total_channels: 1,
@@ -192,7 +192,7 @@ mod tests {
     fn test_out_of_bounds() {
         let mut acc = make_acc();
         acc.consume(
-            &vec![0.0, 0.0],
+            &[0.0, 0.0],
             ChannelsInfo {
                 current: 1,
                 total_channels: 1,

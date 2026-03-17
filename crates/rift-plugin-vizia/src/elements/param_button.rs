@@ -54,30 +54,24 @@ where
         HStack::new(cx, move |cx| {
             Button::new(cx, |cx| Label::new(cx, param_ptr.name()))
                 .toggle_class("accent", value_lens)
-                .on_mouse_down(move |cx, mb| match mb {
-                    MouseButton::Left => {
-                        let new_value = if param_ptr.get_normalized() > 0.5 {
-                            0.0
-                        } else {
-                            1.0
-                        };
+                .on_mouse_down(move |cx, mb| if mb == MouseButton::Left {
+                    let new_value = if param_ptr.get_normalized() > 0.5 {
+                        0.0
+                    } else {
+                        1.0
+                    };
 
-                        // Send gestures for param change
-                        gesture_start(param_ptr, cx);
-                        set_value_normalized(param_ptr, cx, new_value);
-                        gesture_end(param_ptr, cx);
+                    // Send gestures for param change
+                    gesture_start(param_ptr, cx);
+                    set_value_normalized(param_ptr, cx, new_value);
+                    gesture_end(param_ptr, cx);
 
-                        // use callback
-                        if let Some(f) = on_press.as_ref() {
-                            f(cx, new_value as f32)
-                        }
+                    // use callback
+                    if let Some(f) = on_press.as_ref() {
+                        f(cx, new_value as f32)
                     }
-                    _ => {}
                 })
-                .on_mouse_up(move |cx, mb| match mb {
-                    MouseButton::Right => cx.emit(ContextMenuEvent(param_ptr.id())),
-                    _ => {}
-                })
+                .on_mouse_up(move |cx, mb| if mb == MouseButton::Right { cx.emit(ContextMenuEvent(param_ptr.id())) })
                 .maybe_apply_modifiers(button_modifiers.as_deref())
                 .class("button");
         })
