@@ -44,7 +44,7 @@ impl AudioPeaks {
         self
     }
 
-    pub fn set_decay(mut self, func: fn(f32, usize) -> f32) -> Self {
+    pub fn decay(mut self, func: fn(f32, usize) -> f32) -> Self {
         self.decay_fn = func;
         self
     }
@@ -149,8 +149,7 @@ mod tests {
     #[test]
     fn test_higher_lerp_decay() {
         let mut acc1 = make_acc();
-        let mut acc2 =
-            make_acc().set_decay(|peak, block_size| peak * 0.9f32.powi(block_size as i32));
+        let mut acc2 = make_acc().decay(|peak, block_size| peak * 0.9f32.powi(block_size as i32));
         acc1.consume(
             &[0.5, 0.5],
             ChannelsInfo {

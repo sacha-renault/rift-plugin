@@ -45,9 +45,9 @@ pub struct AudioAccumulator<const N: usize> {
 }
 
 impl<const N: usize> AudioAccumulator<N> {
-    pub fn new(count: usize, block_count: usize) -> Self {
+    pub fn new(max_channels: usize, max_block_in_queue: usize) -> Self {
         Self {
-            inner: Arc::new(InnerAudioAccumulator::new(count, block_count)),
+            inner: Arc::new(InnerAudioAccumulator::new(max_channels, max_block_in_queue)),
         }
     }
 }
@@ -70,11 +70,9 @@ pub struct InnerAudioAccumulator<const N: usize> {
 }
 
 impl<const N: usize> InnerAudioAccumulator<N> {
-    pub fn new(count: usize, block_count: usize) -> Self {
-        let mut channels = Vec::with_capacity(count);
-        for _ in 0..count {
-            channels.push(ChannelProducer::new(block_count));
-        }
+    pub fn new(max_channels: usize, max_block_in_queue: usize) -> Self {
+        let mut channels = Vec::with_capacity(max_channels);
+        channels.resize_with(max_channels, || ChannelProducer::new(max_block_in_queue));
 
         Self {
             channels,
@@ -124,6 +122,12 @@ impl<const N: usize> InnerAudioAccumulator<N> {
         loop {
             // pop one block per channel
             for idx in 0..total_channels {
+                // todo!()
+                // This might cause problem if allocated channel > bus channels
+                // have to think about people allocating more than 2 channels "in case"
+                // the host provide more than 2 channels. Maybe a fix would be to allocate a max
+                // number of channel along with an Arc that define expected number of channels during
+                // process call. This might be changed during the plugin activation phase.
                 let Some(block) = self.channels[idx].buf.pop() else {
                     self.clear();
                     return;
@@ -139,10 +143,6 @@ impl<const N: usize> InnerAudioAccumulator<N> {
                 );
             }
         }
-
-        // guard lock will fall here, therefore
-        // the first UI element that comes here drains all
-        // data being written by audio thread.
     }
 
     fn clear(&self) {
