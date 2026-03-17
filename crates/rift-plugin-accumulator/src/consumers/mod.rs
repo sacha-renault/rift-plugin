@@ -10,4 +10,4 @@ pub trait AudioConsumer: 'static {
 
 pub use audio_peaks::AudioPeaks;
 pub use spectrogram::StftChannelConsumer;
-pub use windowed_peaks::{Bucket, WindowBuckets, WindowBufferMode};
+pub use windowed_peaks::{Bucket, PeakBucket, WindowBuckets, WindowBufferMode};
