@@ -39,12 +39,52 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
     fn clear(&self);
 }
 
+/// A cheaply cloneable handle to a lock-free audio accumulation queue.
+///
+/// `AudioAccumulator` wraps an [`Arc`]-backed, type-erased [`AudioAccumulatorErased`]
+/// implementation, allowing it to be shared freely across threads without additional
+/// synchronization. Cloning produces a new handle to the **same** underlying accumulator.
+///
+/// The const parameter `N` controls the internal capacity at construction time but is
+/// erased after [`AudioAccumulator::new`] returns, so all handles share a uniform type
+/// regardless of capacity.
+///
+/// # Thread safety
+///
+/// The push path ([`AudioAccumulatorErased::push_slices`]) is entirely lock-free and
+/// allocation-free, making it safe to call from a real-time audio thread. The drain
+/// path ([`AudioAccumulatorErased::drain`]) may take locks and is intended for the UI
+/// thread only.
+///
+/// # Examples
+///
+/// ```rust
+/// // Create an accumulator with up to 2 channels and a queue depth of 8 blocks.
+/// // N=512 sets the internal frame-block size at compile time.
+/// let accumulator = AudioAccumulator::new::<512>(2, 8);
+///
+/// // The handle is cheap to clone — both point to the same queue.
+/// let accumulator_ui = accumulator.clone();
+/// ```
 #[derive(Clone)]
 pub struct AudioAccumulator {
     inner: Arc<dyn AudioAccumulatorErased>,
 }
 
 impl AudioAccumulator {
+    /// Creates a new `AudioAccumulator` backed by an [`InnerAudioAccumulator<N>`].
+    ///
+    /// # Type parameters
+    ///
+    /// * `N` — the compile-time frame-block size used internally by the accumulator.
+    ///   This value is erased after construction; choose it to match your audio engine's
+    ///   maximum block size.
+    ///
+    /// # Arguments
+    ///
+    /// * `max_channels` — number of audio channels to allocate buffers for.
+    /// * `max_block_in_queue` — maximum number of audio blocks that can be buffered
+    ///   before the audio thread drop data.
     pub fn new<const N: usize>(max_channels: usize, max_block_in_queue: usize) -> Self {
         Self {
             inner: Arc::new(inner::InnerAudioAccumulator::<N>::new(
