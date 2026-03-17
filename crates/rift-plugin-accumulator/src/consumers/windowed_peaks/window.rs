@@ -1,7 +1,7 @@
 use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 
 pub use super::bucket::Bucket;
-use crate::AudioConsumer;
+use crate::prelude::AudioConsumer;
 
 /// Represents the operating mode of a [`WindowBuckets`].
 pub enum WindowBucketsMode {
@@ -84,7 +84,7 @@ impl<B: Bucket> WindowBuckets<B> {
     pub fn set_num_buckets(&mut self, mut num_buckets: usize) {
         // Number of bucket should never be 0. Otherwise, we might crash later
         // So even if request of resizing at 0, we don't.
-        num_buckets = num_buckets.min(1);
+        num_buckets = num_buckets.max(1);
         if num_buckets != self.n_buckets {
             self.n_buckets = num_buckets;
             self.recalculate_buckets();

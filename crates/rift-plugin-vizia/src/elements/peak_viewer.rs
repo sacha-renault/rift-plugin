@@ -1,4 +1,4 @@
-use rift_plugin_accumulator::AudioPeaks;
+use rift_plugin_accumulator::prelude::AudioPeaks;
 use rift_plugin_shared::{
     RcCell,
     utils::conversion::{linear_to_db, normalize_by_range},

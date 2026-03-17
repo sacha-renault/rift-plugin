@@ -1,4 +1,4 @@
-use rift_plugin_accumulator::{Bucket, StftChannelConsumer, WindowBuckets};
+use rift_plugin_accumulator::prelude::*;
 use rift_plugin_shared::RcCell;
 use rift_plugin_shared::utils::interpo::cubic_interpolate;
 use rift_plugin_shared::utils::spaces::Linspace;
