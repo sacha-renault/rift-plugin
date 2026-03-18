@@ -7,6 +7,7 @@ use clack_plugin::process::Process;
 
 use rift_plugin_shared::transport::BlockInfo;
 
+use crate::prelude::MidiMessage;
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
 
 pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
@@ -45,8 +46,8 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
     }
 
     /// Add a midi message as output event
-    pub fn add_output_midi_event(&mut self) {
-        todo!()
+    pub fn add_output_midi_event(&mut self, event: MidiMessage) {
+        let _ = self.outputs_events.try_push::<MidiEvent>(event.into());
     }
 }
 

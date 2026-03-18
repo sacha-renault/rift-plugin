@@ -7,7 +7,6 @@ use rift_plugin_shared::params::Params;
 
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};
 use crate::prelude::Buffers;
-use crate::type_wrapper::MidiMessage;
 use crate::wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
 
 pub struct WrapperProcessor<'a, P: ClapPlugin> {
@@ -48,9 +47,8 @@ impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
                 };
                 let value = param_event.value();
                 self.shared.params.set_value(id, value);
-            } else if let Some(midi_event) = event.as_event::<MidiEvent>() {
-                let midi_message = MidiMessage::from_bytes(midi_event.data(), midi_event.time());
-                self.plugin.on_midi_message(midi_message);
+            } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
+                self.plugin.on_midi_message(midi_event.into());
             }
 
             // todo!() ?
