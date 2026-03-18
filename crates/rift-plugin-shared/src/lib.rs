@@ -7,6 +7,7 @@ pub mod prelude {
     use super::*;
     use std::{cell::RefCell, rc::Rc};
 
+    /// Type alias of [`Rc<RefCell<T>>`]
     pub type ConsumerCell<T> = Rc<RefCell<T>>;
     pub use transport::{BlockInfo, BlockTime, ChannelsInfo};
 }

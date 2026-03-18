@@ -34,6 +34,10 @@ pub trait AudioConsumer: 'static {
 }
 
 pub trait WrapsConsumer {
+    /// Wraps an [`AudioConsumer`] into a [`ConsumerCell`].
+    ///
+    /// # Notes:
+    /// [`ConsumerCell`] is a pretty name for [`Rc<RefCell<_>>`]
     fn wraps_consumer(self) -> ConsumerCell<Self>;
 }
 
