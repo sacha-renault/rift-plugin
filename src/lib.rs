@@ -55,4 +55,8 @@ pub mod _sealed {
     //! for ant Plugin that uses Rift. Meant only for internal stuff.
     #[doc(hidden)]
     pub use rift_plugin_core::params::{__ParamInitializer, __ParamsInitializer};
+
+    // reexport of serde_json needed for derive
+    #[doc(hidden)]
+    pub use serde_json;
 }
