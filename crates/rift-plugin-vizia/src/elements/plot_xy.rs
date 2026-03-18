@@ -1,5 +1,5 @@
 use rift_plugin_accumulator::prelude::*;
-use rift_plugin_shared::RcCell;
+use rift_plugin_shared::prelude::ConsumerCell;
 use rift_plugin_shared::utils::interpo::cubic_interpolate;
 use rift_plugin_shared::utils::spaces::Linspace;
 
@@ -185,7 +185,7 @@ impl PlotData for Vec<(f32, f32)> {
     }
 }
 
-impl<B: Bucket> PlotData for RcCell<WindowBuckets<B>> {
+impl<B: Bucket> PlotData for ConsumerCell<WindowBuckets<B>> {
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
@@ -255,7 +255,7 @@ fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
 
 /// Yes, we do display spectrogram in the oscilloscope, it works the same
 /// anyway, we can use Oscilloscope for any data that for y has <= 1 x.
-impl PlotData for RcCell<StftChannelConsumer> {
+impl PlotData for ConsumerCell<StftChannelConsumer> {
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,

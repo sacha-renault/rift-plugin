@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rift_plugin_shared::{RcCell, transport::BlockInfo};
+use rift_plugin_shared::prelude::*;
 
 use crate::prelude::*;
 
@@ -65,7 +65,7 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
     /// # Thread safety
     ///
     /// Intended for the UI thread only.
-    fn drain(&self, consumers: &[RcCell<dyn AudioConsumer>]);
+    fn drain(&self, consumers: &[ConsumerCell<dyn AudioConsumer>]);
 
     /// Discards all buffered blocks across every channel.
     ///
@@ -159,7 +159,7 @@ impl AudioAccumulatorErased for AudioAccumulator {
     }
 
     #[inline]
-    fn drain(&self, consumers: &[RcCell<dyn AudioConsumer>]) {
+    fn drain(&self, consumers: &[ConsumerCell<dyn AudioConsumer>]) {
         self.inner.drain(consumers);
     }
 }

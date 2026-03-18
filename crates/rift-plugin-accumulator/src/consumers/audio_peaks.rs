@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
+use rift_plugin_shared::prelude::ConsumerCell;
 use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 use rift_plugin_shared::utils::interpo::lerp_n;
 

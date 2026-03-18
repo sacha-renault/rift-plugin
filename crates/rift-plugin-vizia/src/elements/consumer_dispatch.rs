@@ -1,5 +1,5 @@
 use rift_plugin_accumulator::prelude::*;
-use rift_plugin_shared::RcCell;
+use rift_plugin_shared::prelude::ConsumerCell;
 use vizia::prelude::*;
 
 /// Simple struct that is send when the binding over the redraw lens change
@@ -25,7 +25,7 @@ pub struct AudioConsumerDispatch<L>
 where
     L: Lens<Target = AudioAccumulator>,
 {
-    consumers: Vec<RcCell<dyn AudioConsumer>>,
+    consumers: Vec<ConsumerCell<dyn AudioConsumer>>,
     accumulator: L,
 }
 
@@ -71,7 +71,7 @@ pub trait AudioConsumerDispatchExt {
     ///
     /// The added [`AudioConsumer`] is registered with the dispatcher immediately.
     /// When a write event occurs, all registered consumers are notified in sequence.
-    fn add_consumer(self, consumer: RcCell<dyn AudioConsumer>) -> Self;
+    fn add_consumer(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
 
     /// Generates a redraw lens that fires whenever new data arrives in the accumulator.
     ///
@@ -84,7 +84,7 @@ impl<L> AudioConsumerDispatchExt for Handle<'_, AudioConsumerDispatch<L>>
 where
     L: Lens<Target = AudioAccumulator>,
 {
-    fn add_consumer(self, consumer: RcCell<dyn AudioConsumer>) -> Self {
+    fn add_consumer(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
         self.modify(|acc_drain| acc_drain.consumers.push(consumer))
     }
 
