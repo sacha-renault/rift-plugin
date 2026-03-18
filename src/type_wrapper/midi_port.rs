@@ -37,14 +37,14 @@ impl<'a> MidiPort<'a> {
         self
     }
 
-    /// Adds a dialect to the set of dialects this port can handle.
-    /// Call multiple times to support more than one.
-    pub const fn add_supported_dialect(mut self, dialect: NoteDialects) -> Self {
-        self.supported_dialects = self.supported_dialects.union(dialect);
+    /// Sets supported dialects
+    pub const fn supported_dialects(mut self, dialects: NoteDialects) -> Self {
+        self.supported_dialects = dialects;
         self
     }
 
-    /// Converts this builder-like instance into an owned [`AudioPortInfo`] tagged with a plugin-local ID.
+    /// Converts this builder-like instance into an owned [`AudioPortInfo`]
+    /// tagged with a plugin-local ID.
     pub fn into_note_port_info(&self, index: u32) -> NotePortInfo<'a> {
         NotePortInfo {
             id: ClapId::new(index),
