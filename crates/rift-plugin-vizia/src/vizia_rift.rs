@@ -10,7 +10,7 @@ use std::sync::{
 };
 use vizia::prelude::*;
 
-use rift_plugin_shared::gui::*;
+use rift_plugin_core::gui::*;
 
 use crate::utils::gui_events::ContextMenuEvent;
 

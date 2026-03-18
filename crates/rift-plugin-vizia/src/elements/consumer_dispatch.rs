@@ -1,5 +1,5 @@
 use rift_plugin_accumulator::prelude::*;
-use rift_plugin_shared::prelude::ConsumerCell;
+use rift_plugin_core::prelude::ConsumerCell;
 use vizia::prelude::*;
 
 /// Simple struct that is send when the binding over the redraw lens change
@@ -119,8 +119,8 @@ mod tests {
         fn consume(
             &mut self,
             _: &[f32],
-            _: rift_plugin_shared::transport::ChannelsInfo,
-            _: rift_plugin_shared::transport::BlockTime,
+            _: rift_plugin_core::transport::ChannelsInfo,
+            _: rift_plugin_core::transport::BlockTime,
         ) {
             self.count += 1;
         }

@@ -1,7 +1,7 @@
 use rift_plugin_accumulator::prelude::*;
-use rift_plugin_shared::prelude::ConsumerCell;
-use rift_plugin_shared::utils::interpo::cubic_interpolate;
-use rift_plugin_shared::utils::spaces::Linspace;
+use rift_plugin_core::prelude::ConsumerCell;
+use rift_plugin_core::utils::interpo::cubic_interpolate;
+use rift_plugin_core::utils::spaces::Linspace;
 
 use vizia::vg;
 
@@ -289,7 +289,7 @@ impl PlotData for ConsumerCell<StftChannelConsumer> {
 mod tests {
     use super::*;
 
-    use rift_plugin_shared::assert_approx_eq;
+    use rift_plugin_core::assert_approx_eq;
 
     #[test]
     fn test_sample_spectrum_single_bin() {

@@ -1,4 +1,4 @@
-use rift_plugin_shared::utils::spaces::Linspace;
+use rift_plugin_core::utils::spaces::Linspace;
 use vizia::vg;
 
 use super::gui_prelude::*;
@@ -239,7 +239,7 @@ impl PlotGrid {
 mod tests {
     use super::*;
 
-    use rift_plugin_shared::assert_approx_eq;
+    use rift_plugin_core::assert_approx_eq;
 
     fn normalized_values(scale: &GridScale) -> Vec<f32> {
         scale.compile().0.iter().map(|v| v.normalized).collect()

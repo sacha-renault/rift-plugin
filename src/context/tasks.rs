@@ -2,7 +2,7 @@
 //! in [`crate::wrapper::shared_states::PluginSharedState`].
 
 use clack_plugin::utils::ClapId;
-use rift_plugin_shared::gui::GuiParamEvent;
+use rift_plugin_core::gui::GuiParamEvent;
 
 pub struct ParamContextMenu {
     pub param_id: ClapId,

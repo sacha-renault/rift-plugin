@@ -1,6 +1,6 @@
 use rift_plugin_accumulator::prelude::AudioPeaks;
-use rift_plugin_shared::prelude::ConsumerCell;
-use rift_plugin_shared::utils::conversion::{linear_to_db, normalize_by_range};
+use rift_plugin_core::prelude::ConsumerCell;
+use rift_plugin_core::utils::conversion::{linear_to_db, normalize_by_range};
 use vizia::vg::{Paint, PaintCap, PaintStyle, Rect};
 
 use super::gui_prelude::*;

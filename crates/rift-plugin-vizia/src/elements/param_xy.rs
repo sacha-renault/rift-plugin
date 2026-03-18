@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rift_plugin_shared::params::ParamPtr;
+use rift_plugin_core::params::ParamPtr;
 
 use super::gui_prelude::*;
 

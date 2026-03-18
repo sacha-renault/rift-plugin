@@ -1,4 +1,4 @@
-use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
 
 pub use super::bucket::Bucket;
 use crate::prelude::AudioConsumer;
@@ -185,8 +185,8 @@ impl<B: Bucket> AudioConsumer for WindowBuckets<B> {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_shared::assert_approx_eq;
-    use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
+    use rift_plugin_core::assert_approx_eq;
+    use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
 
     use crate::consumers::windowed_peaks::peaks::PeakBucket;
 

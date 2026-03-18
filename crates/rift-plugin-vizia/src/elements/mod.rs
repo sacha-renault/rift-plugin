@@ -15,7 +15,7 @@ mod popup;
 mod gui_prelude {
     //! this is an internal helper that gather
     //! everything needed for ui elements
-    pub use rift_plugin_shared::params::ClapParam;
+    pub use rift_plugin_core::params::ClapParam;
 
     pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
     pub use vizia::prelude::*;

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rift_plugin_shared::gui::{GuiContext, GuiParamEvent};
+use rift_plugin_core::gui::{GuiContext, GuiParamEvent};
 
 use crate::context::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use crate::prelude::Params;

@@ -2,8 +2,8 @@ use std::{ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
-use rift_plugin_shared::gui::GuiFactory;
-use rift_plugin_shared::params::Params;
+use rift_plugin_core::gui::GuiFactory;
+use rift_plugin_core::params::Params;
 
 use crate::_sealed::__ParamsInitializer;
 use crate::prelude::*;

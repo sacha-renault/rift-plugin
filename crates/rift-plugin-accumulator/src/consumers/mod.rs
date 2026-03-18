@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rift_plugin_shared::{
+use rift_plugin_core::{
     prelude::ConsumerCell,
     transport::{BlockTime, ChannelsInfo},
 };

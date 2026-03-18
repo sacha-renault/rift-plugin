@@ -1,5 +1,5 @@
 use crossbeam_queue::ArrayQueue;
-use rift_plugin_shared::transport::{BlockInfo, BlockTime};
+use rift_plugin_core::transport::{BlockInfo, BlockTime};
 
 use crate::prelude::TimedAudioBlock;
 

@@ -1,4 +1,4 @@
-use rift_plugin_shared::transport::BlockTime;
+use rift_plugin_core::transport::BlockTime;
 
 pub struct TimedAudioBlock<const N: usize> {
     raw: [f32; N],

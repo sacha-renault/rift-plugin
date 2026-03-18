@@ -1,4 +1,4 @@
-use rift_plugin_shared::utils::conversion::normalize_by_range;
+use rift_plugin_core::utils::conversion::normalize_by_range;
 use vizia::layout::BoundingBox;
 
 /// Maps data-space coordinates into screen-space coordinates within a bounding box.

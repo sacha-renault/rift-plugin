@@ -3,7 +3,7 @@ pub use clack_extensions::params::*;
 use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
-use rift_plugin_shared::params::Params;
+use rift_plugin_core::params::Params;
 
 use crate::prelude::*;
 use crate::wrapper::ClapPlugin;

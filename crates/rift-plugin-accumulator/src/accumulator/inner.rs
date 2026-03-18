@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use rift_plugin_shared::prelude::*;
+use rift_plugin_core::prelude::*;
 
 use super::channel::ChannelProducer;
 use crate::prelude::*;

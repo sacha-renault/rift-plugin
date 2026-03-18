@@ -1153,8 +1153,8 @@ dependencies = [
  "parking_lot",
  "paste",
  "rift-plugin-accumulator",
+ "rift-plugin-core",
  "rift-plugin-derive",
- "rift-plugin-shared",
  "serde_json",
 ]
 
@@ -1163,8 +1163,18 @@ name = "rift-plugin-accumulator"
 version = "0.1.0"
 dependencies = [
  "crossbeam-queue",
- "rift-plugin-shared",
+ "rift-plugin-core",
  "rustfft",
+]
+
+[[package]]
+name = "rift-plugin-core"
+version = "0.1.0"
+dependencies = [
+ "bon",
+ "clack-extensions",
+ "clack-plugin",
+ "log",
 ]
 
 [[package]]
@@ -1186,16 +1196,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rift-plugin-shared"
-version = "0.1.0"
-dependencies = [
- "bon",
- "clack-extensions",
- "clack-plugin",
- "log",
-]
-
-[[package]]
 name = "rift-plugin-vizia"
 version = "0.1.0"
 dependencies = [
@@ -1204,8 +1204,8 @@ dependencies = [
  "log",
  "raw-window-handle",
  "rift-plugin-accumulator",
+ "rift-plugin-core",
  "rift-plugin-derive",
- "rift-plugin-shared",
  "vizia",
 ]
 

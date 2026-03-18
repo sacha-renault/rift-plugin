@@ -26,12 +26,13 @@ pub mod prelude {
     pub use clack_plugin::prelude::PluginError;
 
     // reexport inner
+    pub use rift_plugin_core::gui::{ClapGui, GuiFactory};
+    pub use rift_plugin_core::params::*;
+    pub use rift_plugin_core::prelude::*;
+    pub use rift_plugin_core::utils;
     pub use rift_plugin_derive::{
         DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder,
     };
-    pub use rift_plugin_shared::gui::{ClapGui, GuiFactory};
-    pub use rift_plugin_shared::params::*;
-    pub use rift_plugin_shared::utils;
 
     pub use super::export_clap_plugin;
 
@@ -53,5 +54,5 @@ pub mod _sealed {
     //! otherwise it can't be implemented by client side but that should NEVER be used
     //! for ant Plugin that uses Rift. Meant only for internal stuff.
     #[doc(hidden)]
-    pub use rift_plugin_shared::params::{__ParamInitializer, __ParamsInitializer};
+    pub use rift_plugin_core::params::{__ParamInitializer, __ParamsInitializer};
 }

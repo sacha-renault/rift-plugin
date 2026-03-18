@@ -1,5 +1,5 @@
-use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
-use rift_plugin_shared::utils::interpo::lerp_n;
+use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_core::utils::interpo::lerp_n;
 
 use crate::prelude::AudioConsumer;
 

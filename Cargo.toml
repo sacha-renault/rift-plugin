@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 rift-plugin-derive = { workspace = true }
-rift-plugin-shared = { workspace = true }
+rift-plugin-core = { workspace = true }
 rift-plugin-accumulator = { workspace = true }
 
 clack-plugin = { workspace =  true }
@@ -24,7 +24,7 @@ members = [
   "crates/rift-plugin-accumulator",
   "crates/rift-plugin-derive", 
   "crates/rift-plugin-resolver", 
-  "crates/rift-plugin-shared", 
+  "crates/rift-plugin-core", 
   "crates/rift-plugin-vizia"
 ]
 
@@ -32,7 +32,7 @@ members = [
 rift-plugin-derive  = { path = "crates/rift-plugin-derive" }
 rift-plugin-resolver = { path = "crates/rift-plugin-resolver" }
 rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
-rift-plugin-shared = { path = "crates/rift-plugin-shared" }
+rift-plugin-core = { path = "crates/rift-plugin-core" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance", default-features = false, features = [
