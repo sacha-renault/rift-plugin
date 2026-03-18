@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace = true }
+bon = { workspace = true }
+log = { workspace = true }

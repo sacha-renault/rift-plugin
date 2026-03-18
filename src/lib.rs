@@ -1,5 +1,4 @@
 mod context;
-mod params;
 mod processing;
 mod type_wrapper;
 mod wrapper;
@@ -31,13 +30,8 @@ pub mod prelude {
         DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder,
     };
     pub use rift_plugin_shared::gui::{ClapGui, GuiFactory};
-    pub use rift_plugin_shared::params::{ClapParam, ParamPtr, Params, TypedParam};
+    pub use rift_plugin_shared::params::*;
     pub use rift_plugin_shared::utils;
-
-    pub use params::param_bool::BoolParam;
-    pub use params::param_enum::{EnumParam, EnumValues};
-    pub use params::param_float::FloatParam;
-    pub use params::param_int::IntParam;
 
     pub use super::export_clap_plugin;
 

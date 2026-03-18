@@ -1,19 +1,19 @@
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicI32, Ordering};
 
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
-use crate::_sealed::__ParamInitializer;
-use crate::prelude::{ClapParam, ParamPtr, TypedParam};
+use super::ptr::ParamPtr;
+use super::traits::{__ParamInitializer, ClapParam, TypedParam};
 
 #[derive(bon::Builder)]
-pub struct BoolParam {
+pub struct IntParam {
     /// Default value for the param
     #[allow(unused)]
-    default: bool,
+    pub(crate) default: i32,
 
-    #[builder(skip = AtomicBool::new(default))]
-    value: AtomicBool,
+    #[builder(skip = AtomicI32::new(default))]
+    pub(crate) value: AtomicI32,
 
     /// The name of the param will
     /// be initialized in the derive with it's clap ID
@@ -25,17 +25,23 @@ pub struct BoolParam {
     module: Option<String>,
 
     #[builder(default = "")]
-    unit: &'static str,
+    pub(crate) unit: &'static str,
+
+    #[builder(default = 0)]
+    pub(crate) min_value: i32,
+
+    #[builder(default = 1)]
+    pub(crate) max_value: i32,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
-    flags: ParamInfoFlags,
+    pub(crate) flags: ParamInfoFlags,
 
     #[builder(skip = ClapId::new(0))]
-    id: ClapId,
+    pub(crate) id: ClapId,
 }
 
-impl TypedParam for BoolParam {
-    type Value = bool;
+impl TypedParam for IntParam {
+    type Value = i32;
 
     fn value(&self) -> Self::Value {
         self.value.load(Ordering::SeqCst)
@@ -46,7 +52,7 @@ impl TypedParam for BoolParam {
     }
 }
 
-impl ClapParam for BoolParam {
+impl ClapParam for IntParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -64,60 +70,55 @@ impl ClapParam for BoolParam {
     }
 
     fn set_raw(&self, value: f64) {
-        self.value.store(value >= 0.5, Ordering::SeqCst);
+        let int_value = (value as i32).clamp(self.min_value, self.max_value);
+        self.value.store(int_value, Ordering::SeqCst);
     }
 
     fn get_raw(&self) -> f64 {
-        if self.value.load(Ordering::SeqCst) {
-            1.0
-        } else {
-            0.0
-        }
+        self.value.load(Ordering::SeqCst) as f64
     }
 
     fn default_raw(&self) -> f64 {
-        if self.default { 1.0 } else { 0.0 }
+        self.default as f64
     }
 
     fn get_normalized(&self) -> f64 {
-        self.get_raw()
+        let value = self.get_raw();
+        self.normalize(value)
     }
 
     fn set_normalized(&self, normalized: f64) {
-        self.set_raw(normalized);
+        self.set_raw(self.denormalize(normalized));
+    }
+
+    fn min_value(&self) -> f64 {
+        self.min_value as f64
+    }
+
+    fn max_value(&self) -> f64 {
+        self.max_value as f64
     }
 
     fn flags(&self) -> ParamInfoFlags {
         self.flags
     }
 
-    fn min_value(&self) -> f64 {
-        0.0
-    }
-
-    fn max_value(&self) -> f64 {
-        1.0
-    }
-
-    #[inline]
     fn normalize(&self, value: f64) -> f64 {
-        // bool param already have
-        // normalized value (0.0 or 1.0)
-        value
+        let range = (self.max_value - self.min_value) as f64;
+        (value - self.min_value as f64) / range
     }
 
-    #[inline]
     fn denormalize(&self, normalized: f64) -> f64 {
-        // bool param already have
-        // normalized value (0.0 or 1.0)
-        normalized
+        let range = (self.max_value - self.min_value) as f64;
+        normalized * range + self.min_value as f64
     }
 
     fn as_ptr(&self) -> ParamPtr {
         ParamPtr::new(self as *const dyn ClapParam)
     }
 }
-impl __ParamInitializer for BoolParam {
+
+impl __ParamInitializer for IntParam {
     fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
         self.name = name;
         self.id = id;

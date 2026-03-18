@@ -3,8 +3,9 @@ use std::marker::PhantomData;
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
-use crate::_sealed::__ParamInitializer;
-use crate::prelude::{ClapParam, IntParam, ParamPtr, TypedParam};
+use super::param_int::IntParam;
+use super::ptr::ParamPtr;
+use super::traits::{__ParamInitializer, ClapParam, TypedParam};
 
 pub trait EnumValues: std::fmt::Display + Default + Sized + Copy + 'static {
     fn to_index(self) -> u32;
