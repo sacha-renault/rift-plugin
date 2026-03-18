@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use clack_extensions::params::*;
+use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
 use super::param_int::IntParam;
@@ -43,13 +44,13 @@ impl<E: EnumValues> EnumParam<E> {
 }
 
 impl<E: EnumValues> TypedParam for EnumParam<E> {
-    type Value = E;
+    type ValueType = E;
 
-    fn set_value(&self, value: Self::Value) {
+    fn set_value(&self, value: Self::ValueType) {
         self.set_raw(value.to_index() as f64);
     }
 
-    fn value(&self) -> Self::Value {
+    fn value(&self) -> Self::ValueType {
         let enum_idx = self.get_raw().round() as u32;
         if let Some(v) = E::from_index(enum_idx) {
             v
@@ -131,6 +132,16 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
     fn value_to_text(&self, value: f64, writer: &mut dyn std::fmt::Write) -> std::fmt::Result {
         let variant = E::from_index(value.round() as u32).unwrap_or_default();
         writer.write_str(&format!("{variant}"))
+    }
+}
+
+impl<E: EnumValues> super::Persistent for EnumParam<E> {
+    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
+        self.inner.deserialize(reader)
+    }
+
+    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
+        self.inner.serialize(writer)
     }
 }
 

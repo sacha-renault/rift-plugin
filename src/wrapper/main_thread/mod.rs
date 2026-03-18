@@ -8,7 +8,7 @@ use rift_plugin_core::gui::ClapGui;
 
 use crate::context::MainThreadTask;
 use crate::prelude::*;
-use crate::wrapper::shared_states::PluginSharedState;
+use crate::wrapper::shared_states::SharedQueues;
 use crate::wrapper::{ClapPlugin, shared::WrapperShared};
 
 mod context_menu;
@@ -27,7 +27,7 @@ pub struct WrapperMainThread<'a, P: ClapPlugin> {
 
 impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
     #[inline]
-    fn states(&self) -> Arc<PluginSharedState> {
+    fn states(&self) -> Arc<SharedQueues> {
         self.shared.states.clone()
     }
 

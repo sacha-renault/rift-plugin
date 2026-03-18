@@ -8,11 +8,11 @@ use clack_plugin::process::Process;
 use rift_plugin_core::transport::BlockInfo;
 
 use crate::prelude::MidiMessage;
-use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};
+use crate::wrapper::{ClapPlugin, shared_states::SharedQueues};
 
 pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) host: &'a HostAudioProcessorHandle<'a>,
-    pub(crate) states: Arc<PluginSharedState>,
+    pub(crate) states: Arc<SharedQueues>,
     pub(crate) shared: Arc<P::SharedType>,
     pub(crate) process: Process<'a>,
     pub(crate) samplerate: f64,
@@ -58,7 +58,7 @@ impl<'a, 'e, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, 'e, P
     }
 
     #[inline]
-    fn states(&self) -> Arc<PluginSharedState> {
+    fn states(&self) -> Arc<SharedQueues> {
         self.states.clone()
     }
 }

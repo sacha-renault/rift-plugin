@@ -4,7 +4,7 @@ use clack_plugin::plugin::PluginShared;
 
 use crate::{
     _sealed::__ParamsInitializer,
-    wrapper::{ClapPlugin, shared_states::PluginSharedState},
+    wrapper::{ClapPlugin, shared_states::SharedQueues},
 };
 
 pub struct WrapperShared<P: ClapPlugin> {
@@ -13,7 +13,7 @@ pub struct WrapperShared<P: ClapPlugin> {
     /// Any shared data, defined also by the user
     pub(crate) other: Arc<P::SharedType>,
     /// Internal messaging system between Audio and Main(GUI) thread
-    pub(crate) states: Arc<PluginSharedState>,
+    pub(crate) states: Arc<SharedQueues>,
 }
 
 impl<P: ClapPlugin> Clone for WrapperShared<P> {
@@ -34,7 +34,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
         Self {
             params: Arc::new(params),
             other: Arc::new(P::SharedType::default()),
-            states: Arc::new(PluginSharedState::default()),
+            states: Arc::new(SharedQueues::default()),
         }
     }
 }

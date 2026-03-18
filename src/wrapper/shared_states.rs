@@ -11,7 +11,7 @@ const TASKS_CAPACITY: usize = 2048;
 /// Contains bounded queues for posting tasks to the opposite thread.
 /// If a queue is full when pushing a task, the push operation fails and returns
 /// the unposted task in an `Err`.
-pub(crate) struct PluginSharedState {
+pub(crate) struct SharedQueues {
     pub(crate) latency: AtomicU32,
 
     /// Queues that audio / main thread can read
@@ -19,7 +19,7 @@ pub(crate) struct PluginSharedState {
     pub(crate) audio_thread_tasks: ArrayQueue<AudioThreadTask>,
 }
 
-impl Default for PluginSharedState {
+impl Default for SharedQueues {
     fn default() -> Self {
         Self {
             latency: AtomicU32::new(0),
@@ -29,7 +29,7 @@ impl Default for PluginSharedState {
     }
 }
 
-impl PluginSharedState {
+impl SharedQueues {
     /// Updates the plugin's processing latency in samples.
     #[inline]
     pub fn set_latency(&self, latency: u32) {

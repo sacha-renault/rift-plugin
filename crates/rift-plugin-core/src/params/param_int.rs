@@ -1,7 +1,10 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use clack_extensions::params::*;
+use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
+
+use crate::params::Persistent;
 
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
@@ -41,13 +44,13 @@ pub struct IntParam {
 }
 
 impl TypedParam for IntParam {
-    type Value = i32;
+    type ValueType = i32;
 
-    fn value(&self) -> Self::Value {
+    fn value(&self) -> Self::ValueType {
         self.value.load(Ordering::SeqCst)
     }
 
-    fn set_value(&self, value: Self::Value) {
+    fn set_value(&self, value: Self::ValueType) {
         self.value.store(value, Ordering::SeqCst);
     }
 }
@@ -115,6 +118,20 @@ impl ClapParam for IntParam {
 
     fn as_ptr(&self) -> ParamPtr {
         ParamPtr::new(self as *const dyn ClapParam)
+    }
+}
+
+impl Persistent for IntParam {
+    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
+        let value: i32 = serde_json::from_reader(reader)
+            .map_err(|_| PluginError::Message("deserialize error"))?;
+        self.set_value(value);
+        Ok(())
+    }
+
+    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
+        serde_json::to_writer(writer, &self.value())
+            .map_err(|_| PluginError::Message("serialize error"))
     }
 }
 
