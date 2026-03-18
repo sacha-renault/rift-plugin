@@ -1,4 +1,9 @@
-use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
+use std::{cell::RefCell, rc::Rc};
+
+use rift_plugin_shared::{
+    prelude::ConsumerCell,
+    transport::{BlockTime, ChannelsInfo},
+};
 
 pub use super::bucket::Bucket;
 use crate::prelude::AudioConsumer;

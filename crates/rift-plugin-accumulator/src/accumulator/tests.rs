@@ -1,9 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rift_plugin_shared::{
-    RcCell,
-    transport::{BlockTime, ChannelsInfo},
-};
+use rift_plugin_shared::prelude::*;
 
 use super::*;
 
@@ -14,7 +11,7 @@ struct ConsumerMock {
 }
 
 impl ConsumerMock {
-    fn new() -> RcCell<Self> {
+    fn new() -> ConsumerCell<Self> {
         Rc::new(RefCell::new(ConsumerMock {
             n_calls: 0,
             data: Vec::new(),

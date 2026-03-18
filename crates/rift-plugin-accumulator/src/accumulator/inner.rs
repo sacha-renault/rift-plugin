@@ -1,9 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use rift_plugin_shared::{
-    RcCell,
-    transport::{BlockInfo, ChannelsInfo},
-};
+use rift_plugin_shared::prelude::*;
 
 use super::channel::ChannelProducer;
 use crate::prelude::*;
@@ -72,7 +69,7 @@ impl<const N: usize> AudioAccumulatorErased for InnerAudioAccumulator<N> {
         self.num_writes.load(Ordering::Relaxed)
     }
 
-    fn drain(&self, consumers: &[RcCell<dyn AudioConsumer>]) {
+    fn drain(&self, consumers: &[ConsumerCell<dyn AudioConsumer>]) {
         let total_channels = self.channels();
         if total_channels == 0 {
             return;
