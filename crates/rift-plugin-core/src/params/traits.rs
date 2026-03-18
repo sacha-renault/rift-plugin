@@ -140,18 +140,9 @@ pub trait TypedParam {
     fn set_value(&self, value: Self::ValueType);
 }
 
-/// A generic trait for parameters that expose their underlying type at compile time.
+/// Trait for plugin state persistence (preset save/load).
 ///
-/// If the underlying type is cheap to copy, use [`TypedParam`].
-pub trait TypedParamRef {
-    /// The concrete type of the value held by this parameter.
-    type ValueType;
-
-    fn value(&self) -> &Self::ValueType;
-
-    fn set_value(&self, value: Self::ValueType);
-}
-
+/// Each implementor is responsible for writing a single valid JSON value to the writer and reading it back.
 pub trait Persistent {
     fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
