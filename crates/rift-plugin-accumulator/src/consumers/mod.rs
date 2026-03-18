@@ -1,4 +1,9 @@
-use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
+use std::{cell::RefCell, rc::Rc};
+
+use rift_plugin_shared::{
+    prelude::ConsumerCell,
+    transport::{BlockTime, ChannelsInfo},
+};
 
 mod audio_peaks;
 mod spectrogram;
@@ -26,6 +31,19 @@ pub trait AudioConsumer: 'static {
     /// - `time` — transport position at the start of this block, or
     ///   [`BlockTime::none`] if timing information was unavailable.
     fn consume(&mut self, block: &[f32], channel_info: ChannelsInfo, time: BlockTime);
+}
+
+pub trait WrapsConsumer {
+    fn wraps_consumer(self) -> ConsumerCell<Self>;
+}
+
+impl<T> WrapsConsumer for T
+where
+    T: AudioConsumer,
+{
+    fn wraps_consumer(self) -> ConsumerCell<Self> {
+        Rc::new(RefCell::new(self))
+    }
 }
 
 pub use audio_peaks::AudioPeaks;

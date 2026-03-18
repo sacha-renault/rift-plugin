@@ -1,10 +1,7 @@
 use core::f32;
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::sync::Arc;
 
 use super::AudioConsumer;
-use rift_plugin_shared::prelude::ConsumerCell;
 use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
 use rift_plugin_shared::utils::dequeue_buffer::DequeBuffer;
 use rift_plugin_shared::utils::spaces::Linspace;
