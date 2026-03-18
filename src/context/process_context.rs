@@ -5,7 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
-use rift_plugin_shared::transport::BlockInfo;
+use rift_plugin_core::transport::BlockInfo;
 
 use crate::prelude::MidiMessage;
 use crate::wrapper::{ClapPlugin, shared_states::PluginSharedState};

@@ -2,8 +2,8 @@ use clack_extensions::params::*;
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::prelude::*;
 
-use rift_plugin_shared::gui::{GuiParamEvent, GuiParamEventKind};
-use rift_plugin_shared::params::Params;
+use rift_plugin_core::gui::{GuiParamEvent, GuiParamEventKind};
+use rift_plugin_core::params::Params;
 
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};
 use crate::prelude::Buffers;

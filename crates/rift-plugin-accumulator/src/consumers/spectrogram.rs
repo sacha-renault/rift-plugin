@@ -2,9 +2,9 @@ use core::f32;
 use std::sync::Arc;
 
 use super::AudioConsumer;
-use rift_plugin_shared::transport::{BlockTime, ChannelsInfo};
-use rift_plugin_shared::utils::dequeue_buffer::DequeBuffer;
-use rift_plugin_shared::utils::spaces::Linspace;
+use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_core::utils::dequeue_buffer::DequeBuffer;
+use rift_plugin_core::utils::spaces::Linspace;
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
 
 /// Single-channel STFT consumer. Accumulates incoming samples into a rolling
@@ -101,7 +101,7 @@ fn hanning(fft_size: usize) -> Vec<f32> {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_shared::assert_approx_eq;
+    use rift_plugin_core::assert_approx_eq;
 
     use super::*;
     use std::f32::consts::PI;

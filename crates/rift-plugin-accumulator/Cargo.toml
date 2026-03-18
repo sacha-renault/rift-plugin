@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rift-plugin-shared = {workspace = true}
+rift-plugin-core = {workspace = true}
 crossbeam-queue = {workspace = true}
 rustfft = { workspace = true }
