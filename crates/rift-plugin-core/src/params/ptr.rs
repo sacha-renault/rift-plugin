@@ -36,7 +36,7 @@ impl NamedParam for ParamPtr {
     }
 
     #[inline]
-    fn module(&self) -> &str {
+    fn module(&self) -> Option<&str> {
         unsafe { (*self.ptr).module() }
     }
 }
@@ -137,8 +137,8 @@ mod tests {
         fn name(&self) -> &str {
             "mock"
         }
-        fn module(&self) -> &str {
-            "test/module"
+        fn module(&self) -> Option<&str> {
+            Some("test/module")
         }
     }
 
@@ -190,7 +190,7 @@ mod tests {
         let mock = MockParam::new(42.0);
         let ptr = make_ptr(&mock);
         assert_eq!(ptr.name(), "mock");
-        assert_eq!(ptr.module(), "test/module");
+        assert_eq!(ptr.module(), Some("test/module"));
         assert_eq!(ptr.unit(), "dB");
     }
 

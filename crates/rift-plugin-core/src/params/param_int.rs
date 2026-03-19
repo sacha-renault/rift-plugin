@@ -60,8 +60,8 @@ impl NamedParam for IntParam {
         &self.name
     }
 
-    fn module(&self) -> &str {
-        self.module.as_deref().unwrap_or("")
+    fn module(&self) -> Option<&str> {
+        self.module.as_deref()
     }
 
     fn id(&self) -> ClapId {

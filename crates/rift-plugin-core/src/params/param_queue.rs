@@ -80,8 +80,8 @@ impl<T: ParamQueueType> NamedParam for ParamQueue<T> {
         self.id
     }
 
-    fn module(&self) -> &str {
-        self.module.as_deref().unwrap_or("")
+    fn module(&self) -> Option<&str> {
+        self.module.as_deref()
     }
 
     fn name(&self) -> &str {
