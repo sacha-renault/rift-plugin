@@ -8,14 +8,27 @@ use crate::params::ParamQueueType;
 pub struct ControlPoint {
     pub x: f32,
     pub y: f32,
+    pub tension: f32,
 }
 
 /// Event pushed from the UI thread to mutate control points.
 #[derive(Clone, Copy)]
 pub enum ControlPointEvent {
-    DeletePoint { idx: usize },
-    ModifyPoint { idx: usize, x: f32, y: f32 },
-    AddPointBefore { idx: usize, x: f32, y: f32 },
+    DeletePoint {
+        idx: usize,
+    },
+    ModifyPoint {
+        idx: usize,
+        x: f32,
+        y: f32,
+        tension: f32,
+    },
+    AddPointBefore {
+        idx: usize,
+        x: f32,
+        y: f32,
+        tension: f32,
+    },
 }
 
 /// A bounded list of control points, safe for use in the audio thread.
@@ -71,13 +84,13 @@ impl ParamQueueType for ControlPoints {
                     self.points.remove(idx);
                 }
             }
-            ModifyPoint { idx, x, y } => {
+            ModifyPoint { idx, x, y, tension } => {
                 if let Some(point) = self.points.get_mut(idx) {
-                    *point = ControlPoint { x, y }
+                    *point = ControlPoint { x, y, tension }
                 }
             }
-            AddPointBefore { idx, x, y } if self.can_add_point_at(idx) => {
-                self.points.insert(idx, ControlPoint { x, y });
+            AddPointBefore { idx, x, y, tension } if self.can_add_point_at(idx) => {
+                self.points.insert(idx, ControlPoint { x, y, tension });
             }
             _ => {}
         }
