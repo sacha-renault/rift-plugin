@@ -10,4 +10,4 @@ crossbeam-queue = { workspace = true }
 bon = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
-serde = "1"
+serde = { version = "1", features = ["derive"] }

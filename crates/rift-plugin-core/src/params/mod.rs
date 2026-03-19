@@ -6,6 +6,8 @@ mod param_queue;
 mod ptr;
 mod traits;
 
+pub mod param_queue_impl;
+
 pub use param_bool::BoolParam;
 pub use param_enum::{EnumParam, EnumValues};
 pub use param_float::FloatParam;

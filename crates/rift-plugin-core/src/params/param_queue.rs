@@ -35,6 +35,15 @@ unsafe impl<T: ParamQueueType + Send> Send for ParamQueue<T> {}
 unsafe impl<T: ParamQueueType + Send> Sync for ParamQueue<T> {}
 
 impl<T: ParamQueueType> ParamQueue<T> {
+    pub fn new(default: T, queue_capacity: usize) -> Self {
+        Self {
+            cache: UnsafeCell::new(default),
+            queue: ArrayQueue::new(queue_capacity),
+            name: String::from(""),
+            module: None,
+            id: ClapId::new(0),
+        }
+    }
     /// Drain pending events and return a reference to the current state.
     ///
     /// # Safety
@@ -68,10 +77,21 @@ impl<T: ParamQueueType> ParamQueue<T> {
         unsafe { (*self.cache.get()).clone() }
     }
 
-    /// Add an event from the UI thread that will be process at next
-    /// block of audio thread.
-    pub fn push_event(&self, event: <T as ParamQueueType>::EventType) {
-        self.queue.force_push(event);
+    /// Push an event from the UI thread to be processed by the audio thread.
+    ///
+    /// Returns `Err(event)` if the queue is full, allowing the caller to
+    /// skip applying the event locally and stay in sync with the audio thread.
+    ///
+    /// ```ignore
+    /// if param_queue.push_event(event).is_ok() {
+    ///     local_state.handle_event(event);
+    /// }
+    /// ```
+    pub fn push_event(
+        &self,
+        event: <T as ParamQueueType>::EventType,
+    ) -> Result<(), <T as ParamQueueType>::EventType> {
+        self.queue.push(event)
     }
 }
 
