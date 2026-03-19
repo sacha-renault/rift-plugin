@@ -4,6 +4,8 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
+use crate::params::NamedParam;
+
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
 
@@ -47,7 +49,7 @@ impl TypedParam for BoolParam {
     }
 }
 
-impl ClapParam for BoolParam {
+impl NamedParam for BoolParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -59,7 +61,9 @@ impl ClapParam for BoolParam {
     fn id(&self) -> ClapId {
         self.id
     }
+}
 
+impl ClapParam for BoolParam {
     fn unit(&self) -> &str {
         self.unit
     }

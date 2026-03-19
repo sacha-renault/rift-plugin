@@ -7,6 +7,7 @@ use clack_plugin::utils::ClapId;
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
 
+use crate::params::NamedParam;
 use crate::utils::atomic_f32::AtomicF32;
 
 #[derive(bon::Builder)]
@@ -55,7 +56,7 @@ impl TypedParam for FloatParam {
     }
 }
 
-impl ClapParam for FloatParam {
+impl NamedParam for FloatParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -67,7 +68,9 @@ impl ClapParam for FloatParam {
     fn id(&self) -> ClapId {
         self.id
     }
+}
 
+impl ClapParam for FloatParam {
     fn unit(&self) -> &str {
         self.unit
     }

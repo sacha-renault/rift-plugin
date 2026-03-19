@@ -4,7 +4,7 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
-use crate::params::Persistent;
+use crate::params::{NamedParam, Persistent};
 
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
@@ -55,7 +55,7 @@ impl TypedParam for IntParam {
     }
 }
 
-impl ClapParam for IntParam {
+impl NamedParam for IntParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -67,7 +67,9 @@ impl ClapParam for IntParam {
     fn id(&self) -> ClapId {
         self.id
     }
+}
 
+impl ClapParam for IntParam {
     fn unit(&self) -> &str {
         self.unit
     }
