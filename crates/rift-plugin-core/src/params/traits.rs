@@ -190,6 +190,10 @@ pub trait Params: Sync + Send + 'static {
         value: f64,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result;
+
+    fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
+
+    fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
 }
 
 #[doc(hidden)]

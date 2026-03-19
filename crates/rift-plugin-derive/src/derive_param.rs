@@ -121,6 +121,40 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 )*
                 Err(std::fmt::Error)
             }
+
+            fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), ::rift_plugin::prelude::PluginError> {
+                use std::io::Write;
+                use rift_plugin::_sealed::serde_json;
+
+                // We serialize each field into a JSON map: { "name": value, "name2": value2, ... }
+                let mut map = serde_json::Map::new();
+                #(
+                    {
+                        let mut buf = Vec::new();
+                        self.#field_idents.serialize(&mut buf)?;
+                        let value: serde_json::Value = serde_json::from_slice(&buf)
+                            .map_err(|_| ::rift_plugin::prelude::PluginError::Message("serialize error"))?;
+                        map.insert(#param_names.to_string(), value);
+                    }
+                )*
+                serde_json::to_writer(writer, &map)
+                    .map_err(|_| ::rift_plugin::prelude::PluginError::Message("serialize error"))
+            }
+
+            fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), ::rift_plugin::prelude::PluginError> {
+                use rift_plugin::_sealed::serde_json;
+
+                let map: serde_json::Map<String, serde_json::Value> = serde_json::from_reader(reader)
+                    .map_err(|_| ::rift_plugin::prelude::PluginError::Message("deserialize error"))?;
+                #(
+                    if let Some(value) = map.get(#param_names) {
+                        let buf = serde_json::to_vec(value)
+                            .map_err(|_| ::rift_plugin::prelude::PluginError::Message("deserialize error"))?;
+                        self.#field_idents.deserialize(&mut buf.as_slice())?;
+                    }
+                )*
+                Ok(())
+            }
         }
 
         impl ::rift_plugin::_sealed::__ParamsInitializer for #name {
