@@ -4,7 +4,7 @@ use rift_plugin_core::params::{
 };
 use vizia::{
     events::EventMeta,
-    vg::{Paint, PaintCap, PaintStyle},
+    vg::{Paint, PaintCap, PaintStyle, Path},
 };
 
 use super::gui_prelude::*;
@@ -26,6 +26,11 @@ enum ChildToEditor {
         visible: bool,
         entity: Entity,
     },
+    // InitializeTension {
+    //     idx: usize,
+    //     visible: bool,
+    //     entity: Entity,
+    // },
 }
 
 /// Struct containing the initial value of the point and it's idx in the array
@@ -88,7 +93,8 @@ pub struct ControlPointsEditor {
     dragging: Option<(usize, Entity)>,
     param: ParamQueue<ControlPoints>,
     points: ControlPoints,
-    entities: Vec<(bool, Entity)>,
+    point_entities: Vec<(bool, Entity)>,
+    // tension_entities: Vec<(bool, Entity)>,
     rule: fn(usize, ControlPoint, &ControlPoints) -> ControlPoint,
     last_mouse_pos: (f32, f32),
 
@@ -114,7 +120,8 @@ impl ControlPointsEditor {
             dragging: None,
             on_change: None,
             last_mouse_pos: (0., 0.),
-            entities: vec![(false, Entity::null()); capacity],
+            point_entities: vec![(false, Entity::null()); capacity],
+            // tension_entities: vec![(false, Entity::null()); capacity],
         }
         .build(cx, move |cx| {
             for idx in 0..capacity {
@@ -134,6 +141,7 @@ impl ControlPointsEditor {
                 } else {
                     Display::None
                 })
+                .class("point-handle")
                 .entity();
 
                 cx.emit(ChildToEditor::InitializePoint {
@@ -142,12 +150,46 @@ impl ControlPointsEditor {
                     entity,
                 });
             }
+
+            // for idx in 0..(capacity - 1) {
+            //     let (x, y, visible) = if let (Some(p1), Some(p2)) =
+            //         (initial_values.get(idx), initial_values.get(idx + 1))
+            //     {
+            //         let (x, y) = segment_handle(p1, p2);
+            //         (x, y, true)
+            //     } else {
+            //         (0.0, 0.0, false)
+            //     };
+
+            //     let entity = DraggablePoint {
+            //         init_x: x,
+            //         init_y: y,
+            //     }
+            //     .build_view(cx)
+            //     .display(if visible {
+            //         Display::Flex
+            //     } else {
+            //         Display::None
+            //     })
+            //     .class("tension-handle")
+            //     .entity();
+
+            //     cx.emit(ChildToEditor::InitializeTension {
+            //         idx,
+            //         visible,
+            //         entity,
+            //     });
+            // }
         })
     }
 
-    fn point_idx_for_entity(&self, entity: Entity) -> Option<usize> {
-        self.entities.iter().position(|e| e.1 == entity)
+    fn idx_by_point_entity(&self, entity: Entity) -> Option<usize> {
+        self.point_entities.iter().position(|e| e.1 == entity)
     }
+
+    // fn idx_by_tension_entity(&self, entity: Entity) -> Option<usize> {
+    //     self.tension_entities.iter().position(|e| e.1 == entity)
+    // }
 
     fn normalize_mouse_input(&self, cx: &mut EventContext, x: f32, y: f32) -> (f32, f32) {
         let pbounds = cx.bounds();
@@ -158,7 +200,7 @@ impl ControlPointsEditor {
 
     fn on_begin_drag(&mut self, cx: &mut EventContext, meta: &mut EventMeta) {
         let entity = meta.origin;
-        if let Some(point_idx) = self.point_idx_for_entity(entity) {
+        if let Some(point_idx) = self.idx_by_point_entity(entity) {
             self.dragging = Some((point_idx, entity));
             cx.capture();
         }
@@ -180,11 +222,13 @@ impl ControlPointsEditor {
             return;
         };
 
-        let point = (self.rule)(idx, ControlPoint { x, y }, &self.points);
+        let tension = self.points[idx].tension;
+        let point = (self.rule)(idx, ControlPoint { x, y, tension }, &self.points);
         let event = ControlPointEvent::ModifyPoint {
             idx,
             x: point.x,
             y: point.y,
+            tension,
         };
 
         if self.points[idx] != point && self.param.push_event(event).is_ok() {
@@ -215,22 +259,26 @@ impl ControlPointsEditor {
             return;
         };
 
-        let event = ControlPointEvent::AddPointBefore { idx, x, y };
+        let event = ControlPointEvent::AddPointBefore {
+            idx,
+            x,
+            y,
+            tension: 0.,
+        };
         if !self.param.push_event(event).is_ok() {
             return;
         }
         self.points.handle_event(event);
 
-        let Some(hidden_idx) = self.entities.iter().position(|p| !p.0) else {
+        let Some(hidden_idx) = self.point_entities.iter().position(|p| !p.0) else {
             log::error!("Cannot add a new point ...");
             return;
         };
 
-        let (_, entity) = self.entities.remove(hidden_idx);
-        self.entities.insert(idx, (true, entity));
+        let (_, entity) = self.point_entities.remove(hidden_idx);
+        self.point_entities.insert(idx, (true, entity));
         cx.emit_to(entity, EditorToChild::MovePoint { x, y });
         cx.emit_to(entity, EditorToChild::SetVisible);
-        cx.needs_redraw();
     }
 
     fn remove_point(&mut self, cx: &mut EventContext) {
@@ -251,8 +299,8 @@ impl ControlPointsEditor {
         }
         self.points.handle_event(event);
 
-        let (_, entity) = self.entities.remove(idx);
-        self.entities.push((false, entity));
+        let (_, entity) = self.point_entities.remove(idx);
+        self.point_entities.push((false, entity));
         cx.emit_to(entity, EditorToChild::SetInvisible);
         cx.needs_redraw();
     }
@@ -266,7 +314,12 @@ impl View for ControlPointsEditor {
                 entity,
                 visible,
                 idx,
-            } => self.entities[idx] = (visible, entity),
+            } => self.point_entities[idx] = (visible, entity),
+            // ChildToEditor::InitializeTension {
+            //     idx,
+            //     visible,
+            //     entity,
+            // } => self.point_entities[idx] = (visible, entity),
         });
 
         event.map(|window_event, _| match *window_event {
@@ -288,17 +341,71 @@ impl View for ControlPointsEditor {
             .set_style(PaintStyle::Stroke)
             .set_anti_alias(true);
 
-        let Some(path_with_closing) = make_strokepath(
-            self.points
-                .iter()
-                .copied()
-                .map(|ControlPoint { x, y }| (x, y)),
-            viewport_transform,
-            0.,
-        ) else {
-            return;
-        };
+        let mut path = Path::new();
 
-        canvas.draw_path(&path_with_closing.path, &paint);
+        draw_curved(&mut path, &self.points, viewport_transform);
+        canvas.draw_path(&path, &paint);
     }
 }
+
+fn draw_curved(path: &mut Path, points: &[ControlPoint], vt: ViewportTransform) {
+    if points.len() < 2 {
+        return;
+    }
+
+    path.move_to(vt.transform(points[0].x, points[0].y));
+
+    for i in 0..points.len() - 1 {
+        let p1 = &points[i];
+        let p2 = &points[i + 1];
+
+        let (pixel_width, _) = vt.transform(p2.x - p1.x, 0.0);
+        let steps = (pixel_width.ceil() as usize).max(1);
+
+        for s in 1..=steps {
+            let t = s as f32 / steps as f32;
+            let shaped_t = shape(t, p1.tension);
+
+            let x = p1.x + (p2.x - p1.x) * t;
+            let y = p1.y + (p2.y - p1.y) * shaped_t;
+
+            path.line_to(vt.transform(x, y));
+        }
+    }
+}
+
+/// curve_amount: 0.0 = linear, negative = log (fast start), positive = exp (slow start)
+/// Common range: roughly -8.0 to 8.0
+fn shape(t: f32, curve_amount: f32) -> f32 {
+    if curve_amount.abs() < 1e-6 {
+        t // linear
+    } else {
+        let k = curve_amount;
+        // classic audio tension formula:
+        // attempt to map the tension symmetrically around linear
+        let exp = (k).exp2();
+        if k > 0.0 {
+            t.powf(exp) // exponential: slow start, fast end
+        } else {
+            1.0 - (1.0 - t).powf(exp.recip()) // logarithmic: fast start, slow end
+        }
+    }
+}
+
+// fn tension_from_drag(p1: &ControlPoint, p2: &ControlPoint, mouse_y: f32) -> f32 {
+//     let mid_y = (p1.y + p2.y) / 2.0; // linear midpoint
+//     let range = (p2.y - p1.y).abs().max(1e-6);
+
+//     // how far the handle is from the straight line, normalized to -1..1
+//     let offset = (mouse_y - mid_y) / (range / 2.0);
+
+//     // map to your tension range
+//     (offset * 8.0).clamp(-8.0, 8.0)
+// }
+
+// fn segment_handle(p1: &ControlPoint, p2: &ControlPoint) -> (f32, f32) {
+//     const T: f32 = 0.5;
+//     let x = p1.x + (p2.x - p1.x) * T;
+//     let y = p1.y + (p2.y - p1.y) * shape(T, p1.tension);
+//     (x, y)
+// }

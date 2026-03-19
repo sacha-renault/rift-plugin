@@ -99,7 +99,7 @@ pub trait ClapParam: NamedParam {
     /// Get flags describing the parameter's properties.
     fn flags(&self) -> ParamInfoFlags;
 
-    /// Apply the normalization curve to a raw value.
+    /// Apply the normalization tension to a raw value.
     ///
     /// Generally equivalent to `get_normalized()` but allows manual conversion.
     fn normalize(&self, value: f64) -> f64;
