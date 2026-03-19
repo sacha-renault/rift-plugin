@@ -16,7 +16,6 @@ pub enum ControlPointEvent {
     DeletePoint { idx: usize },
     ModifyPoint { idx: usize, x: f32, y: f32 },
     AddPointBefore { idx: usize, x: f32, y: f32 },
-    AddPointAfter { idx: usize, x: f32, y: f32 },
 }
 
 /// A bounded list of control points, safe for use in the audio thread.
@@ -80,10 +79,17 @@ impl ParamQueueType for ControlPoints {
             AddPointBefore { idx, x, y } if self.can_add_point_at(idx) => {
                 self.points.insert(idx, ControlPoint { x, y });
             }
-            AddPointAfter { idx, x, y } if self.can_add_point_at(idx + 1) => {
-                self.points.insert(idx + 1, ControlPoint { x, y });
-            }
             _ => {}
+        }
+    }
+
+    fn snapshot(&self) -> Self {
+        // Snapshot should provide the full array with same capacity
+        let mut clone = Vec::with_capacity(self.capacity);
+        clone.extend_from_slice(&self.points);
+        Self {
+            points: clone,
+            capacity: self.capacity,
         }
     }
 }

@@ -8,10 +8,11 @@ use crate::params::NamedParam;
 
 pub use super::Persistent;
 
-pub trait ParamQueueType: Clone {
+pub trait ParamQueueType {
     type EventType;
 
     fn handle_event(&mut self, event: Self::EventType);
+    fn snapshot(&self) -> Self;
 }
 
 /// Shared handle to a parameter queue.
@@ -86,7 +87,7 @@ impl<T: ParamQueueType> ParamQueue<T> {
         // UI is the only one to write events, and audio thread
         // should have drain all events already, but still.
         while let Some(_) = self.inner.queue.pop() {}
-        unsafe { (*self.inner.cache.get()).clone() }
+        unsafe { (&*self.inner.cache.get()).snapshot() }
     }
 
     /// Push an event from the UI thread to be processed by the audio thread.
