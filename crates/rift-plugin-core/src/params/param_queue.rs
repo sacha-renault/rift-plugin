@@ -1,4 +1,4 @@
-use std::cell::UnsafeCell;
+use std::{cell::UnsafeCell, sync::Arc};
 
 use clack_plugin::{plugin::PluginError, utils::ClapId};
 use crossbeam_queue::ArrayQueue;
@@ -14,7 +14,17 @@ pub trait ParamQueueType: Clone {
     fn handle_event(&mut self, event: Self::EventType);
 }
 
+/// Shared handle to a parameter queue.
+///
+/// Cheaply cloneable — the UI thread holds its own `ParamQueue<T>`
+/// pointing to the same inner state. Both sides interact through
+/// the lock-free queue; only the audio thread touches the cache.
+#[derive(Clone)]
 pub struct ParamQueue<T: ParamQueueType> {
+    inner: Arc<ParamQueueInner<T>>,
+}
+
+pub struct ParamQueueInner<T: ParamQueueType> {
     cache: UnsafeCell<T>,
     queue: ArrayQueue<T::EventType>,
 
@@ -37,11 +47,13 @@ unsafe impl<T: ParamQueueType + Send> Sync for ParamQueue<T> {}
 impl<T: ParamQueueType> ParamQueue<T> {
     pub fn new(default: T, queue_capacity: usize) -> Self {
         Self {
-            cache: UnsafeCell::new(default),
-            queue: ArrayQueue::new(queue_capacity),
-            name: String::from(""),
-            module: None,
-            id: ClapId::new(0),
+            inner: Arc::new(ParamQueueInner {
+                cache: UnsafeCell::new(default),
+                queue: ArrayQueue::new(queue_capacity),
+                name: String::from(""),
+                module: None,
+                id: ClapId::new(0),
+            }),
         }
     }
     /// Drain pending events and return a reference to the current state.
@@ -51,8 +63,8 @@ impl<T: ParamQueueType> ParamQueue<T> {
     /// Must only be called from the audio thread. Calling from an other
     /// thread is undefined behavior.
     pub fn value(&self) -> &T {
-        let value = unsafe { &mut *self.cache.get() };
-        while let Some(event) = self.queue.pop() {
+        let value = unsafe { &mut *self.inner.cache.get() };
+        while let Some(event) = self.inner.queue.pop() {
             value.handle_event(event);
         }
         value
@@ -73,8 +85,8 @@ impl<T: ParamQueueType> ParamQueue<T> {
         // This shouldn't be poping anything as
         // UI is the only one to write events, and audio thread
         // should have drain all events already, but still.
-        while let Some(_) = self.queue.pop() {}
-        unsafe { (*self.cache.get()).clone() }
+        while let Some(_) = self.inner.queue.pop() {}
+        unsafe { (*self.inner.cache.get()).clone() }
     }
 
     /// Push an event from the UI thread to be processed by the audio thread.
@@ -91,27 +103,27 @@ impl<T: ParamQueueType> ParamQueue<T> {
         &self,
         event: <T as ParamQueueType>::EventType,
     ) -> Result<(), <T as ParamQueueType>::EventType> {
-        self.queue.push(event)
+        self.inner.queue.push(event)
     }
 }
 
 impl<T: ParamQueueType> NamedParam for ParamQueue<T> {
     fn id(&self) -> clack_plugin::prelude::ClapId {
-        self.id
+        self.inner.id
     }
 
     fn module(&self) -> Option<&str> {
-        self.module.as_deref()
+        self.inner.module.as_deref()
     }
 
     fn name(&self) -> &str {
-        &self.name
+        &self.inner.name
     }
 }
 
 impl<T: ParamQueueType + Serialize + DeserializeOwned> Persistent for ParamQueue<T> {
     fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
-        let value = unsafe { &*self.cache.get() };
+        let value = unsafe { &*self.inner.cache.get() };
         serde_json::to_writer(writer, value).map_err(|_| PluginError::Message("serialize error"))
     }
 
@@ -120,8 +132,8 @@ impl<T: ParamQueueType + Serialize + DeserializeOwned> Persistent for ParamQueue
             .map_err(|_| PluginError::Message("deserialize error"))?;
 
         // Drain any pending events — they're stale now
-        while self.queue.pop().is_some() {}
-        unsafe { *self.cache.get() = value }
+        while self.inner.queue.pop().is_some() {}
+        unsafe { *self.inner.cache.get() = value }
         Ok(())
     }
 }
@@ -133,8 +145,12 @@ impl<T: ParamQueueType> super::__ParamInitializer for ParamQueue<T> {
         id: clack_plugin::prelude::ClapId,
         module: Option<String>,
     ) {
-        self.name = name;
-        self.module = module;
-        self.id = id;
+        let Some(inner) = Arc::get_mut(&mut self.inner) else {
+            log::error!("ParamQueue must be initialized before cloning : {name}");
+            panic!("ParamQueue must be initialized before cloning");
+        };
+        inner.name = name;
+        inner.module = module;
+        inner.id = id;
     }
 }

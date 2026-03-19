@@ -1,13 +1,10 @@
+use rift_plugin_core::params::{
+    ParamQueue, ParamQueueType,
+    param_queue_impl::{ControlPoint, ControlPointEvent, ControlPoints},
+};
 use vizia::vg::{Paint, PaintCap, PaintStyle};
 
 use super::gui_prelude::*;
-
-/// Representation of a point
-#[derive(Clone, Copy, PartialEq)]
-pub struct ControlPoint {
-    pub x: f32,
-    pub y: f32,
-}
 
 impl From<ControlPoint> for MovePoint {
     fn from(ControlPoint { x, y }: ControlPoint) -> Self {
@@ -15,8 +12,9 @@ impl From<ControlPoint> for MovePoint {
     }
 }
 
-impl From<(f32, f32)> for ControlPoint {
-    fn from((x, y): (f32, f32)) -> Self {
+impl Into<ControlPoint> for MovePoint {
+    fn into(self) -> ControlPoint {
+        let MovePoint { x, y } = self;
         ControlPoint { x, y }
     }
 }
@@ -31,7 +29,7 @@ struct MovePoint {
 /// The child points sends to the control that the point at idx
 /// started the drag action
 struct BeginDrag {
-    child_idx: usize,
+    idx: usize,
 }
 
 /// Struct containing the initial value of the point and it's idx in the array
@@ -58,9 +56,7 @@ impl View for DraggablePoint {
         event.map(|window_event, _| match *window_event {
             WindowEvent::MouseDown(btn) if btn == MouseButton::Left && !cx.is_disabled() => {
                 cx.toggle_class("dragging", true);
-                cx.emit(BeginDrag {
-                    child_idx: self.idx,
-                });
+                cx.emit(BeginDrag { idx: self.idx });
             }
             WindowEvent::MouseUp(btn) if btn == MouseButton::Left => {
                 cx.toggle_class("dragging", false);
@@ -88,26 +84,28 @@ impl DestructThenBuildView for DraggablePoint {
 }
 
 #[derive(HandleExtension)]
-pub struct ControlPoints {
+pub struct ControlPointsEditor {
     dragging: Option<(usize, Entity)>,
-    points: Vec<ControlPoint>,
-    rule: fn(usize, ControlPoint, &Vec<ControlPoint>) -> ControlPoint,
+    param: ParamQueue<ControlPoints>,
+    points: ControlPoints,
+
+    rule: fn(usize, ControlPoint, &ControlPoints) -> ControlPoint,
 
     #[extension(ext)]
     on_change: Option<Box<dyn Fn(&mut EventContext, ControlPoint, usize)>>,
 }
 
-impl ControlPoints {
+impl ControlPointsEditor {
     pub fn new(
         cx: &mut Context,
-        points: impl Into<Vec<ControlPoint>>,
-        rule: fn(usize, ControlPoint, &Vec<ControlPoint>) -> ControlPoint,
-    ) -> Handle<'_, ControlPoints> {
-        let points = points.into();
-        let intial_values = points.clone();
+        param: ParamQueue<ControlPoints>,
+        rule: fn(usize, ControlPoint, &ControlPoints) -> ControlPoint,
+    ) -> Handle<'_, ControlPointsEditor> {
+        let intial_values = param.snapshot();
         Self {
             dragging: None,
-            points,
+            points: intial_values.clone(),
+            param,
             on_change: None,
             rule,
         }
@@ -124,10 +122,10 @@ impl ControlPoints {
     }
 }
 
-impl View for ControlPoints {
+impl View for ControlPointsEditor {
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
         event.map(|drag_event, meta| match *drag_event {
-            BeginDrag { child_idx } => {
+            BeginDrag { idx: child_idx } => {
                 self.dragging = Some((child_idx, meta.origin));
                 meta.consume();
                 cx.capture();
@@ -156,8 +154,14 @@ impl View for ControlPoints {
                 // Update internal repr
                 let point = (self.rule)(idx, ControlPoint { x, y }, &self.points);
 
-                if self.points[idx] != point {
-                    self.points[idx] = point;
+                // Create the event linked
+                let event = ControlPointEvent::ModifyPoint {
+                    idx,
+                    x: point.x,
+                    y: point.y,
+                };
+                if self.points[idx] != point && self.param.push_event(event).is_ok() {
+                    self.points.handle_event(event);
                     cx.emit_to(entity, MovePoint::from(point));
 
                     if let Some(on_change) = &self.on_change {

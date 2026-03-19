@@ -89,6 +89,7 @@ impl<B: Bucket> WindowBuckets<B> {
             self.n_buckets = num_buckets;
             self.recalculate_buckets();
             self.buckets = vec![B::empty(); self.n_buckets];
+            self.write_idx = 0;
         }
     }
 
