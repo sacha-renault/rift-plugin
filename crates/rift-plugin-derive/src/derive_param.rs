@@ -18,7 +18,7 @@ struct ParamField {
     name: Option<String>, // default to None
 
     #[darling(default)]
-    persistant: bool, // default to false
+    persistent: bool, // default to false
 }
 
 #[derive(FromDeriveInput)]
@@ -57,7 +57,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
             panic!("Parameter {} must have a `name`.", ident);
         };
 
-        if f.persistant {
+        if f.persistent {
             persist_fields_idents.push(ident);
             persist_fields_names.push(field_name);
             persist_fields_types.push(&f.ty);
