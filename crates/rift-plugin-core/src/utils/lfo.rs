@@ -1,5 +1,19 @@
 use crate::{params::param_queue_impl::ControlPoints, utils::interpo::lerp};
 
+pub enum LfoTime {
+    Seconds(f32),
+    Beats { beats: f32, tempo: f32 },
+}
+
+impl LfoTime {
+    pub fn as_second(self) -> f32 {
+        match self {
+            Self::Seconds(sec) => sec,
+            Self::Beats { beats, tempo } => beats * 60.0 / tempo,
+        }
+    }
+}
+
 pub struct Lfo {
     position: f32,
     samplerate: f32,
@@ -41,14 +55,27 @@ impl Lfo {
         self.position
     }
 
-    pub fn get_value(&mut self, points: &ControlPoints, lfo_seconds: f32) -> f32 {
+    pub fn get_value(&mut self, points: &ControlPoints, lfo_time: LfoTime) -> f32 {
+        debug_assert!(
+            points
+                .iter()
+                .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)),
+            "ControlPoints must be in [0, 1]"
+        );
+        debug_assert!(
+            points.is_sorted_by(|l, r| l.x <= r.x),
+            "ControlPoints must be sorted by x"
+        );
+
+        let seconds = lfo_time.as_second();
+
         if self.position > 1. && !self.one_shot {
             self.position = self.position.rem_euclid(1.);
         }
 
         let Some(right_idx) = points.iter().position(|p| p.x >= self.position) else {
             // Past all points — hold last value
-            self.position += 1. / (self.samplerate * lfo_seconds);
+            self.position += 1. / (self.samplerate * seconds);
             return points.last().map(|p| p.y).unwrap_or_default();
         };
 
@@ -63,7 +90,7 @@ impl Lfo {
         };
 
         // Advance position normalized
-        self.position += 1. / (self.samplerate * lfo_seconds);
+        self.position += 1. / (self.samplerate * seconds);
         value
     }
 }
