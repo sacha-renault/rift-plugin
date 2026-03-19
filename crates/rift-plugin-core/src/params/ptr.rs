@@ -1,5 +1,7 @@
 use clack_extensions::params::ParamInfoFlags;
 
+use crate::params::NamedParam;
+
 use super::traits::ClapParam;
 
 /// A zero-cost wrapper around a raw pointer to a [`ClapParam`].
@@ -22,7 +24,7 @@ impl ParamPtr {
 unsafe impl Send for ParamPtr {}
 unsafe impl Sync for ParamPtr {}
 
-impl ClapParam for ParamPtr {
+impl NamedParam for ParamPtr {
     #[inline]
     fn id(&self) -> clack_plugin::prelude::ClapId {
         unsafe { (*self.ptr).id() }
@@ -37,7 +39,9 @@ impl ClapParam for ParamPtr {
     fn module(&self) -> &str {
         unsafe { (*self.ptr).module() }
     }
+}
 
+impl ClapParam for ParamPtr {
     #[inline]
     fn unit(&self) -> &str {
         unsafe { (*self.ptr).unit() }
@@ -126,7 +130,7 @@ mod tests {
         }
     }
 
-    impl ClapParam for MockParam {
+    impl NamedParam for MockParam {
         fn id(&self) -> ClapId {
             ClapId::from(1u32)
         }
@@ -136,6 +140,9 @@ mod tests {
         fn module(&self) -> &str {
             "test/module"
         }
+    }
+
+    impl ClapParam for MockParam {
         fn unit(&self) -> &str {
             "dB"
         }

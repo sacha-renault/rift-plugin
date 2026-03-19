@@ -1,8 +1,10 @@
 use std::cell::UnsafeCell;
 
-use clack_plugin::plugin::PluginError;
+use clack_plugin::{plugin::PluginError, utils::ClapId};
 use crossbeam_queue::ArrayQueue;
 use serde::{Serialize, de::DeserializeOwned};
+
+use crate::params::NamedParam;
 
 pub use super::Persistent;
 
@@ -15,6 +17,8 @@ pub trait ParamQueueType: Clone {
 pub struct ParamQueue<T: ParamQueueType> {
     cache: UnsafeCell<T>,
     queue: ArrayQueue<T::EventType>,
+
+    id: ClapId,
     name: String,
     module: Option<String>,
 }
@@ -71,6 +75,20 @@ impl<T: ParamQueueType> ParamQueue<T> {
     }
 }
 
+impl<T: ParamQueueType> NamedParam for ParamQueue<T> {
+    fn id(&self) -> clack_plugin::prelude::ClapId {
+        self.id
+    }
+
+    fn module(&self) -> &str {
+        self.module.as_deref().unwrap_or("")
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
 impl<T: ParamQueueType + Serialize + DeserializeOwned> Persistent for ParamQueue<T> {
     fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
         let value = unsafe { &*self.cache.get() };
@@ -92,10 +110,11 @@ impl<T: ParamQueueType> super::__ParamInitializer for ParamQueue<T> {
     fn __initialize(
         &mut self,
         name: String,
-        _: clack_plugin::prelude::ClapId,
+        id: clack_plugin::prelude::ClapId,
         module: Option<String>,
     ) {
         self.name = name;
         self.module = module;
+        self.id = id;
     }
 }

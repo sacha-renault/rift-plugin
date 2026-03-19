@@ -4,6 +4,8 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
+use crate::params::NamedParam;
+
 use super::param_int::IntParam;
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
@@ -68,7 +70,7 @@ impl<E: EnumValues> TypedParam for EnumParam<E> {
     }
 }
 
-impl<E: EnumValues> ClapParam for EnumParam<E> {
+impl<E: EnumValues> NamedParam for EnumParam<E> {
     fn name(&self) -> &str {
         self.inner.name()
     }
@@ -80,7 +82,9 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
     fn id(&self) -> ClapId {
         self.inner.id()
     }
+}
 
+impl<E: EnumValues> ClapParam for EnumParam<E> {
     fn unit(&self) -> &str {
         self.inner.unit()
     }

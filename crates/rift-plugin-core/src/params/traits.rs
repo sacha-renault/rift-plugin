@@ -5,15 +5,8 @@ use clack_plugin::{prelude::*, utils::Cookie};
 
 use super::ptr::ParamPtr;
 
-/// Core abstraction for audio plugin parameters.
-///
-/// Represents a single control within a plugin (e.g., volume, cutoff).
-///
-/// # Safety & Contracts
-///
-/// * **Name Uniqueness**: `name()` must return a unique identifier string across all parameters in the plugin instance. Violation causes crashes.
-/// * **ID Uniqueness**: `id()` returns the internal CLAP handle (`ClapId`) which is used by the host to address this parameter. It must be stable for the lifetime of the plugin.
-pub trait ClapParam {
+/// Identity information shared by all named parameters (both regular and persistent-only).
+pub trait NamedParam {
     /// Get the display name of the parameter (e.g., "Cutoff").
     ///
     /// # Panics
@@ -29,7 +22,17 @@ pub trait ClapParam {
     ///
     /// Unlike `name()`, the `ClapId` is an opaque handle used directly by CLAP internals and must be consistent.
     fn id(&self) -> ClapId;
+}
 
+/// Core abstraction for audio plugin parameters.
+///
+/// Represents a single control within a plugin (e.g., volume, cutoff).
+///
+/// # Safety & Contracts
+///
+/// * **Name Uniqueness**: `name()` must return a unique identifier string across all parameters in the plugin instance. Violation causes crashes.
+/// * **ID Uniqueness**: `id()` returns the internal CLAP handle (`ClapId`) which is used by the host to address this parameter. It must be stable for the lifetime of the plugin.
+pub trait ClapParam: NamedParam {
     /// Get the unit symbol (e.g., "Hz", "dB", ""). If not applicable, return "".
     ///
     /// The string will be appended automatically to formatted text outputs.
