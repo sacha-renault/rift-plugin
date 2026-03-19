@@ -75,7 +75,7 @@ impl<E: EnumValues> NamedParam for EnumParam<E> {
         self.inner.name()
     }
 
-    fn module(&self) -> &str {
+    fn module(&self) -> Option<&str> {
         self.inner.module()
     }
 
