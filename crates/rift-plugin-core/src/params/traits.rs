@@ -1,4 +1,4 @@
-use std::ffi::CStr;
+use std::{ffi::CStr, io::Read, io::Write};
 
 use clack_extensions::params::{ParamDisplayWriter, ParamInfo, ParamInfoFlags};
 use clack_plugin::{prelude::*, utils::Cookie};
@@ -133,10 +133,28 @@ pub trait ClapParam {
 /// without casting, allowing for strongly-typed parameter sets in the UI layer.
 pub trait TypedParam {
     /// The concrete type of the value held by this parameter.
-    type Value;
+    type ValueType;
 
-    fn value(&self) -> Self::Value;
-    fn set_value(&self, value: Self::Value);
+    fn value(&self) -> Self::ValueType;
+
+    fn set_value(&self, value: Self::ValueType);
+}
+
+/// A generic trait for parameters that expose their underlying type at compile time.
+///
+/// If the underlying type is cheap to copy, use [`TypedParam`].
+pub trait TypedParamRef {
+    /// The concrete type of the value held by this parameter.
+    type ValueType;
+
+    fn value(&self) -> &Self::ValueType;
+
+    fn set_value(&self, value: Self::ValueType);
+}
+
+pub trait Persistent {
+    fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
+    fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
 }
 
 /// Collection trait for accessing parameters in a plugin.

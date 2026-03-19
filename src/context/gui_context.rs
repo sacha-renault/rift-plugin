@@ -4,10 +4,10 @@ use rift_plugin_core::gui::{GuiContext, GuiParamEvent};
 
 use crate::context::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use crate::prelude::Params;
-use crate::wrapper::shared_states::PluginSharedState;
+use crate::wrapper::shared_states::SharedQueues;
 
 pub struct GuiContextImpl {
-    pub(crate) states: Arc<PluginSharedState>,
+    pub(crate) states: Arc<SharedQueues>,
     pub(crate) params: Arc<dyn Params>,
 }
 

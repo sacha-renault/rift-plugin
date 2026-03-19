@@ -40,6 +40,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
     let indices: Vec<u32> = (0..count).collect();
 
     let mut unique_names = HashSet::<String>::new();
+    let field_types: Vec<_> = fields.iter().map(|f| &f.ty).collect();
     let param_names: Vec<_> = fields
         .iter()
         .map(|f| {
@@ -134,6 +135,14 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 )*
             }
         }
+
+        // We ensure params DOES implement Persistant trait
+        const _: () = {
+            fn _assert_persistent<T: ::rift_plugin::prelude::Persistent>() { }
+            fn _check() {
+                #( _assert_persistent::<#field_types>(); )*
+            }
+        };
     };
 
     TokenStream::from(expanded)

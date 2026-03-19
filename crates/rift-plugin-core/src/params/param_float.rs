@@ -1,12 +1,13 @@
 use std::sync::atomic::Ordering;
 
 use clack_extensions::params::*;
+use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
 
-use super::atomic_f32::AtomicF32;
+use crate::utils::atomic_f32::AtomicF32;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
@@ -43,13 +44,13 @@ pub struct FloatParam {
 }
 
 impl TypedParam for FloatParam {
-    type Value = f32;
+    type ValueType = f32;
 
-    fn value(&self) -> Self::Value {
+    fn value(&self) -> Self::ValueType {
         self.value.load(Ordering::SeqCst)
     }
 
-    fn set_value(&self, value: Self::Value) {
+    fn set_value(&self, value: Self::ValueType) {
         self.value.store(value, Ordering::SeqCst);
     }
 }
@@ -116,6 +117,20 @@ impl ClapParam for FloatParam {
 
     fn as_ptr(&self) -> ParamPtr {
         ParamPtr::new(self as *const dyn ClapParam)
+    }
+}
+
+impl super::Persistent for FloatParam {
+    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
+        let value: f32 = serde_json::from_reader(reader)
+            .map_err(|_| PluginError::Message("deserialize error"))?;
+        self.set_value(value);
+        Ok(())
+    }
+
+    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
+        serde_json::to_writer(writer, &self.value())
+            .map_err(|_| PluginError::Message("serialize error"))
     }
 }
 

@@ -6,5 +6,7 @@ edition = "2024"
 [dependencies]
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace = true }
+crossbeam-queue = { workspace = true }
 bon = { workspace = true }
 log = { workspace = true }
+serde_json = { workspace = true }
