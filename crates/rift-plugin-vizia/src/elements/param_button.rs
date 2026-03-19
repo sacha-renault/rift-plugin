@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use rift_plugin_core::params::BoolParam;
+
 use super::gui_prelude::*;
 
 /// A button that toggles a parameter on or off based on its normalized value.
@@ -18,7 +20,7 @@ pub struct ParamButton<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
-    MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+    MapFn: (Fn(&L::Target) -> &BoolParam) + Copy + 'static,
 {
     #[builder(new)]
     lens: L,
@@ -38,7 +40,7 @@ impl<L, MapFn> DestructThenBuildView for ParamButton<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
-    MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+    MapFn: (Fn(&L::Target) -> &BoolParam) + Copy + 'static,
 {
     fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {
@@ -54,24 +56,30 @@ where
         HStack::new(cx, move |cx| {
             Button::new(cx, |cx| Label::new(cx, param_ptr.name()))
                 .toggle_class("accent", value_lens)
-                .on_mouse_down(move |cx, mb| if mb == MouseButton::Left {
-                    let new_value = if param_ptr.get_normalized() > 0.5 {
-                        0.0
-                    } else {
-                        1.0
-                    };
+                .on_mouse_down(move |cx, mb| {
+                    if mb == MouseButton::Left {
+                        let new_value = if param_ptr.get_normalized() > 0.5 {
+                            0.0
+                        } else {
+                            1.0
+                        };
 
-                    // Send gestures for param change
-                    gesture_start(param_ptr, cx);
-                    set_value_normalized(param_ptr, cx, new_value);
-                    gesture_end(param_ptr, cx);
+                        // Send gestures for param change
+                        gesture_start(param_ptr, cx);
+                        set_value_normalized(param_ptr, cx, new_value);
+                        gesture_end(param_ptr, cx);
 
-                    // use callback
-                    if let Some(f) = on_press.as_ref() {
-                        f(cx, new_value as f32)
+                        // use callback
+                        if let Some(f) = on_press.as_ref() {
+                            f(cx, new_value as f32)
+                        }
                     }
                 })
-                .on_mouse_up(move |cx, mb| if mb == MouseButton::Right { cx.emit(ContextMenuEvent(param_ptr.id())) })
+                .on_mouse_up(move |cx, mb| {
+                    if mb == MouseButton::Right {
+                        cx.emit(ContextMenuEvent(param_ptr.id()))
+                    }
+                })
                 .maybe_apply_modifiers(button_modifiers.as_deref())
                 .class("button");
         })
