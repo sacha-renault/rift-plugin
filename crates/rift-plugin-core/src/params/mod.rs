@@ -10,8 +10,9 @@ pub use param_bool::BoolParam;
 pub use param_enum::{EnumParam, EnumValues};
 pub use param_float::FloatParam;
 pub use param_int::IntParam;
+pub use param_queue::{ParamQueue, ParamQueueType};
 pub use ptr::ParamPtr;
-pub use traits::{ClapParam, Params, Persistent, TypedParam, TypedParamRef};
+pub use traits::{ClapParam, Params, Persistent, TypedParam};
 
 #[doc(hidden)]
 pub use traits::{__ParamInitializer, __ParamsInitializer};
