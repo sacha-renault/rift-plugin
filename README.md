@@ -1,5 +1,7 @@
 ### TODO 
 - [ ] Might have to many things in base lib, look into featuring some stuf.
+- [ ] Add tons of debug assert
+- [ ] doc is too small. There are things that should be documented better
 
 ## Tests
 - Run all tests and collect coverage:
