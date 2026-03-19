@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::params::ParamQueueType;
 
-#[derive(Clone, Deserialize, Serialize)]
+#[derive(Copy, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ControlPoint {
     pub x: f32,
     pub y: f32,
@@ -36,6 +36,13 @@ impl ControlPoints {
             points: Vec::with_capacity(capacity),
             capacity,
         }
+    }
+
+    pub fn with_value(values: Vec<ControlPoint>, capacity: usize) -> Self {
+        assert!(values.len() <= capacity);
+        let mut points = Vec::with_capacity(capacity);
+        points.extend_from_slice(&values);
+        Self { points, capacity }
     }
 }
 
