@@ -1,5 +1,7 @@
 use std::sync::Arc;
 
+use rift_plugin_core::params::FloatParam;
+
 use super::gui_prelude::*;
 
 /// A control for mapping a [`ClapParam`] to a Slider.
@@ -8,7 +10,7 @@ pub struct ParamSlider<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
-    MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+    MapFn: (Fn(&L::Target) -> &FloatParam) + Copy + 'static,
 {
     #[builder(new)]
     lens: L,
@@ -55,7 +57,7 @@ impl<L, MapFn> DestructThenBuildView for ParamSlider<L, MapFn>
 where
     L: Lens + Copy,
     L::Target: Clone,
-    MapFn: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+    MapFn: (Fn(&L::Target) -> &FloatParam) + Copy + 'static,
 {
     fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {
@@ -111,10 +113,12 @@ where
                         f(cx, v)
                     }
                 })
-                .on_mouse_down(move |cx, mb| if mb == MouseButton::Left {
-                    gesture_start(param_ptr, cx);
-                    if let Some(f) = on_mouse_down.as_ref() {
-                        f(cx, mb)
+                .on_mouse_down(move |cx, mb| {
+                    if mb == MouseButton::Left {
+                        gesture_start(param_ptr, cx);
+                        if let Some(f) = on_mouse_down.as_ref() {
+                            f(cx, mb)
+                        }
                     }
                 })
                 .on_mouse_up(move |cx, mb| match mb {

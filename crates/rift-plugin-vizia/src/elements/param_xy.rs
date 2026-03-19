@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rift_plugin_core::params::ParamPtr;
+use rift_plugin_core::params::{FloatParam, ParamPtr};
 
 use super::gui_prelude::*;
 
@@ -60,8 +60,8 @@ pub struct ParamPadXY<L, MapFnX, MapFnY>
 where
     L: Lens + Copy,
     L::Target: Clone,
-    MapFnX: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
-    MapFnY: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+    MapFnX: (Fn(&L::Target) -> &FloatParam) + Copy + 'static,
+    MapFnY: (Fn(&L::Target) -> &FloatParam) + Copy + 'static,
 {
     #[builder(new)]
     lens: L,
@@ -85,8 +85,8 @@ impl<L, MapFnX, MapFnY> ParamPadXY<L, MapFnX, MapFnY>
 where
     L: Lens + Copy,
     L::Target: Clone,
-    MapFnX: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
-    MapFnY: (Fn(&L::Target) -> &dyn ClapParam) + Copy + 'static,
+    MapFnX: (Fn(&L::Target) -> &FloatParam) + Copy + 'static,
+    MapFnY: (Fn(&L::Target) -> &FloatParam) + Copy + 'static,
 {
     pub fn build_view(self, cx: &mut Context) -> Handle<'_, impl View> {
         let Self {

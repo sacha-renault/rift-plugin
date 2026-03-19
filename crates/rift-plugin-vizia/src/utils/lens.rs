@@ -1,7 +1,5 @@
 use vizia::prelude::*;
 
-use rift_plugin_core::params::ClapParam;
-
 /// A function that transform struct like Map<...> into impl Lens<...>
 ///
 /// Example:
@@ -12,11 +10,11 @@ use rift_plugin_core::params::ClapParam;
 /// // This on the other hand is easier to use
 /// let lens =  make_lens(AppData::params, |params| access_fn(params), |p| p.raw_value());
 /// ```
-pub fn make_lens<L, P, MapFn, F, R>(params: L, accessor: MapFn, f: F) -> impl Lens<Target = R>
+pub fn make_lens<L, MapFn, P, Q, F, R>(params: L, accessor: MapFn, f: F) -> impl Lens<Target = R>
 where
     L: Lens<Target = P> + Copy,
-    MapFn: 'static + Copy + Fn(&P) -> &dyn ClapParam,
-    F: Fn(&dyn ClapParam) -> R + Clone + 'static,
+    MapFn: 'static + Copy + Fn(&P) -> &Q,
+    F: Fn(&Q) -> R + Clone + 'static,
     R: Clone + 'static,
 {
     params.map(move |params| {
