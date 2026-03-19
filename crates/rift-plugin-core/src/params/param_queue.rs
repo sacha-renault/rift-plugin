@@ -15,6 +15,8 @@ pub trait ParamQueueType: Clone {
 pub struct ParamQueue<T: ParamQueueType> {
     cache: UnsafeCell<T>,
     queue: ArrayQueue<T::EventType>,
+    name: String,
+    module: Option<String>,
 }
 
 /// SAFETY: Access to the inner [`UnsafeCell<T>`] is governed by these rules:
@@ -62,6 +64,8 @@ impl<T: ParamQueueType> ParamQueue<T> {
         unsafe { (*self.cache.get()).clone() }
     }
 
+    /// Add an event from the UI thread that will be process at next
+    /// block of audio thread.
     pub fn push_event(&self, event: <T as ParamQueueType>::EventType) {
         self.queue.force_push(event);
     }
@@ -81,5 +85,17 @@ impl<T: ParamQueueType + Serialize + DeserializeOwned> Persistent for ParamQueue
         while self.queue.pop().is_some() {}
         unsafe { *self.cache.get() = value }
         Ok(())
+    }
+}
+
+impl<T: ParamQueueType> super::__ParamInitializer for ParamQueue<T> {
+    fn __initialize(
+        &mut self,
+        name: String,
+        _: clack_plugin::prelude::ClapId,
+        module: Option<String>,
+    ) {
+        self.name = name;
+        self.module = module;
     }
 }

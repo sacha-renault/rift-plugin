@@ -13,11 +13,12 @@ struct ParamField {
 
     #[allow(unused)]
     ty: syn::Type,
-    // /// If not present, it defaults to None.
-    // #[darling(default)]
-    // default: Option<syn::Expr>,
+
     #[darling(default)]
-    name: Option<String>,
+    name: Option<String>, // default to None
+
+    #[darling(default)]
+    persistant: bool, // default to false
 }
 
 #[derive(FromDeriveInput)]
@@ -33,40 +34,63 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
     let receiver = ParamsReceiver::from_derive_input(&input).unwrap();
     let name = &receiver.ident;
     let fields = receiver.data.take_struct().expect("Expected struct");
-
-    // general info (count etc ..)
-    let field_idents: Vec<_> = fields.iter().map(|f| f.ident.as_ref().unwrap()).collect();
-    let count = field_idents.len() as u32;
-    let indices: Vec<u32> = (0..count).collect();
-
     let mut unique_names = HashSet::<String>::new();
-    let field_types: Vec<_> = fields.iter().map(|f| &f.ty).collect();
-    let param_names: Vec<_> = fields
-        .iter()
-        .map(|f| {
-            if let Some(name) = f.name.clone() {
-                if unique_names.contains(&name) {
-                    panic!("Parameter name `{name}` is not unique")
-                }
-                unique_names.insert(name.clone());
-                name
-            } else {
-                let ident = f.ident.as_ref().unwrap().to_string();
-                panic!("Parameter {ident} must have a `name`.");
+
+    // Separate fields into param fields and persistent-only fields
+    let mut param_fields_idents = Vec::new();
+    let mut param_fields_names = Vec::new();
+    let mut param_fields_types = Vec::new();
+
+    let mut persist_fields_idents = Vec::new();
+    let mut persist_fields_names = Vec::new();
+    let mut persist_fields_types = Vec::new();
+
+    for f in fields.iter() {
+        let ident = f.ident.as_ref().unwrap();
+        let field_name = if let Some(ref name) = f.name {
+            if unique_names.contains(name) {
+                panic!("Parameter name `{name}` is not unique");
             }
-        })
+            unique_names.insert(name.clone());
+            name.clone()
+        } else {
+            panic!("Parameter {} must have a `name`.", ident);
+        };
+
+        if f.persistant {
+            persist_fields_idents.push(ident);
+            persist_fields_names.push(field_name);
+            persist_fields_types.push(&f.ty);
+        } else {
+            param_fields_idents.push(ident);
+            param_fields_names.push(field_name);
+            param_fields_types.push(&f.ty);
+        }
+    }
+
+    let param_count = param_fields_idents.len() as u32;
+    let param_indices: Vec<u32> = (0..param_count).collect();
+
+    // Persistent fields get indices after param fields (for __initialize ClapId)
+    let persist_indices: Vec<u32> =
+        (param_count..(param_count + persist_fields_idents.len() as u32)).collect();
+
+    // All field types for the Persistent trait check
+    let all_field_types: Vec<_> = param_fields_types
+        .iter()
+        .chain(persist_fields_types.iter())
         .collect();
 
     let expanded = quote! {
         impl ::rift_plugin::prelude::Params for #name {
             fn count(&self) -> u32 {
-                #count
+                #param_count
             }
 
             fn get_param_info<'a>(&'a self, index: u32) -> Option<::rift_plugin::prelude::clack_extensions::params::ParamInfo<'a>> {
                 match index {
                     #(
-                        #indices => Some(self.#field_idents.param_info()),
+                        #param_indices => Some(self.#param_fields_idents.param_info()),
                     )*
                     _ => None,
                 }
@@ -74,8 +98,8 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
             fn get_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId) -> Option<f64> {
                 #(
-                    if id == self.#field_idents.id() {
-                        return Some(self.#field_idents.get_raw());
+                    if id == self.#param_fields_idents.id() {
+                        return Some(self.#param_fields_idents.get_raw());
                     }
                 )*
                 None
@@ -83,8 +107,8 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
             fn set_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f64) {
                 #(
-                    if id == self.#field_idents.id() {
-                        self.#field_idents.set_raw(value);
+                    if id == self.#param_fields_idents.id() {
+                        self.#param_fields_idents.set_raw(value);
                         return;
                     }
                 )*
@@ -92,8 +116,8 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
             fn set_value_normalized(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f64) {
                 #(
-                    if id == self.#field_idents.id() {
-                        self.#field_idents.set_normalized(value);
+                    if id == self.#param_fields_idents.id() {
+                        self.#param_fields_idents.set_normalized(value);
                         return;
                     }
                 )*
@@ -101,8 +125,8 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
             fn text_to_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, text: &std::ffi::CStr) -> Option<f64> {
                 #(
-                    if id == self.#field_idents.id() {
-                        return self.#field_idents.text_to_value(text);
+                    if id == self.#param_fields_idents.id() {
+                        return self.#param_fields_idents.text_to_value(text);
                     }
                 )*
                 None
@@ -115,8 +139,8 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 writer: &mut ::rift_plugin::prelude::clack_extensions::params::ParamDisplayWriter,
             ) -> std::fmt::Result {
                 #(
-                    if id == self.#field_idents.id() {
-                        return self.#field_idents.value_to_text(value, writer);
+                    if id == self.#param_fields_idents.id() {
+                        return self.#param_fields_idents.value_to_text(value, writer);
                     }
                 )*
                 Err(std::fmt::Error)
@@ -126,15 +150,25 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 use std::io::Write;
                 use rift_plugin::_sealed::serde_json;
 
-                // We serialize each field into a JSON map: { "name": value, "name2": value2, ... }
                 let mut map = serde_json::Map::new();
+                // Serialize param fields
                 #(
                     {
                         let mut buf = Vec::new();
-                        self.#field_idents.serialize(&mut buf)?;
+                        self.#param_fields_idents.serialize(&mut buf)?;
                         let value: serde_json::Value = serde_json::from_slice(&buf)
                             .map_err(|_| ::rift_plugin::prelude::PluginError::Message("serialize error"))?;
-                        map.insert(#param_names.to_string(), value);
+                        map.insert(#param_fields_names.to_string(), value);
+                    }
+                )*
+                // Serialize persistent-only fields
+                #(
+                    {
+                        let mut buf = Vec::new();
+                        self.#persist_fields_idents.serialize(&mut buf)?;
+                        let value: serde_json::Value = serde_json::from_slice(&buf)
+                            .map_err(|_| ::rift_plugin::prelude::PluginError::Message("serialize error"))?;
+                        map.insert(#persist_fields_names.to_string(), value);
                     }
                 )*
                 serde_json::to_writer(writer, &map)
@@ -146,11 +180,20 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
                 let map: serde_json::Map<String, serde_json::Value> = serde_json::from_reader(reader)
                     .map_err(|_| ::rift_plugin::prelude::PluginError::Message("deserialize error"))?;
+                // Deserialize param fields
                 #(
-                    if let Some(value) = map.get(#param_names) {
+                    if let Some(value) = map.get(#param_fields_names) {
                         let buf = serde_json::to_vec(value)
                             .map_err(|_| ::rift_plugin::prelude::PluginError::Message("deserialize error"))?;
-                        self.#field_idents.deserialize(&mut buf.as_slice())?;
+                        self.#param_fields_idents.deserialize(&mut buf.as_slice())?;
+                    }
+                )*
+                // Deserialize persistent-only fields
+                #(
+                    if let Some(value) = map.get(#persist_fields_names) {
+                        let buf = serde_json::to_vec(value)
+                            .map_err(|_| ::rift_plugin::prelude::PluginError::Message("deserialize error"))?;
+                        self.#persist_fields_idents.deserialize(&mut buf.as_slice())?;
                     }
                 )*
                 Ok(())
@@ -160,10 +203,19 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
         impl ::rift_plugin::_sealed::__ParamsInitializer for #name {
             fn __initialize(&mut self) {
                 use ::rift_plugin::_sealed::__ParamInitializer;
+                // Initialize param fields
                 #(
-                    self.#field_idents.__initialize(
-                        #param_names.to_string(),
-                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::from(#indices),
+                    self.#param_fields_idents.__initialize(
+                        #param_fields_names.to_string(),
+                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::from(#param_indices),
+                        None,
+                    );
+                )*
+                // Initialize persistent-only fields
+                #(
+                    self.#persist_fields_idents.__initialize(
+                        #persist_fields_names.to_string(),
+                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::from(#persist_indices),
                         None,
                     );
                 )*
@@ -173,8 +225,10 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
         // We ensure params DOES implement Persistant trait
         const _: () = {
             fn _assert_persistent<T: ::rift_plugin::prelude::Persistent>() { }
+            fn _assert_clap_param<T: ::rift_plugin::prelude::ClapParam>() { }
             fn _check() {
-                #( _assert_persistent::<#field_types>(); )*
+                #( _assert_persistent::<#all_field_types>(); )*
+                #( _assert_clap_param::<#param_fields_types>(); )*
             }
         };
     };
