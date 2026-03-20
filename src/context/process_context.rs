@@ -5,7 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
-use rift_plugin_core::transport::BlockInfo;
+use rift_plugin_core::transport::{BlockIndex, BlockInfo};
 
 use crate::prelude::MidiMessage;
 use crate::wrapper::{ClapPlugin, shared_states::SharedQueues};
@@ -16,6 +16,7 @@ pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) shared: Arc<P::SharedType>,
     pub(crate) process: Process<'a>,
     pub(crate) samplerate: f64,
+    pub(crate) block_index: BlockIndex,
 
     /// Count of pending events to be drained. MUST be initialized to 0; dropping with >0
     /// triggers a callback request to the host via the destructor.
@@ -42,6 +43,10 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
         } else {
             None
         }
+    }
+
+    pub fn block_index(&self) -> BlockIndex {
+        self.block_index
     }
 
     /// Add a midi message as output event
