@@ -28,17 +28,11 @@ impl<T> BoundedVec<T> {
 
 impl<T> BoundedVec<T> {
     /// Creates an empty `BoundedVec` with the given capacity.
-    /// No further allocation will ever occur unless explicitly asked with
-    /// [`BoundedVec::reallocate`]
+    /// No further allocation will ever occur.
     pub fn new(capacity: usize) -> Self {
         Self {
             inner: Vec::with_capacity(capacity),
         }
-    }
-
-    /// The only way to change the capacity of this struct
-    pub fn reallocate(&mut self, additional: usize) {
-        self.inner.reserve_exact(additional);
     }
 
     /// Returns the fixed capacity.
@@ -166,5 +160,191 @@ where
         let mut clone = Vec::with_capacity(self.inner.capacity());
         clone.extend_from_slice(&self.inner);
         Self { inner: clone }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_has_correct_capacity() {
+        let v: BoundedVec<i32> = BoundedVec::new(10);
+        assert_eq!(v.capacity(), 10);
+        assert_eq!(v.len(), 0);
+    }
+
+    #[test]
+    fn new_zero_capacity() {
+        let v: BoundedVec<i32> = BoundedVec::new(0);
+        assert_eq!(v.capacity(), 0);
+        assert!(v.is_full());
+    }
+
+    #[test]
+    fn push_within_capacity() {
+        let mut v = BoundedVec::new(3);
+        v.push(1);
+        v.push(2);
+        v.push(3);
+        assert_eq!(v.len(), 3);
+        assert!(v.is_full());
+    }
+
+    #[test]
+    #[should_panic]
+    fn push_beyond_capacity_panics() {
+        let mut v = BoundedVec::new(1);
+        v.push(1);
+        v.push(2); // panics
+    }
+
+    #[test]
+    fn try_push_returns_ok_when_space() {
+        let mut v = BoundedVec::new(1);
+        assert!(v.try_push(42).is_ok());
+    }
+
+    #[test]
+    fn try_push_returns_err_when_full() {
+        let mut v = BoundedVec::new(1);
+        v.push(1);
+        assert_eq!(v.try_push(2), Err(2));
+    }
+
+    #[test]
+    fn remaining_capacity() {
+        let mut v = BoundedVec::new(5);
+        assert_eq!(v.remaining_capacity(), 5);
+        v.push(1);
+        assert_eq!(v.remaining_capacity(), 4);
+    }
+
+    #[test]
+    fn is_full() {
+        let mut v = BoundedVec::new(2);
+        assert!(!v.is_full());
+        v.push(1);
+        assert!(!v.is_full());
+        v.push(2);
+        assert!(v.is_full());
+    }
+
+    #[test]
+    fn clear_resets_len_not_capacity() {
+        let mut v = BoundedVec::new(5);
+        v.push(1);
+        v.push(2);
+        v.clear();
+        assert_eq!(v.len(), 0);
+        assert_eq!(v.capacity(), 5); // capacity preserved
+    }
+
+    #[test]
+    fn pop_returns_last_element() {
+        let mut v = BoundedVec::new(3);
+        v.push(1);
+        v.push(2);
+        assert_eq!(v.pop(), Some(2));
+        assert_eq!(v.len(), 1);
+    }
+
+    #[test]
+    fn remove_correct_element() {
+        let mut v = BoundedVec::new(3);
+        v.push(10);
+        v.push(20);
+        v.push(30);
+        assert_eq!(v.remove(1), 20);
+        assert_eq!(&*v, &[10, 30]);
+    }
+
+    #[test]
+    fn insert_within_capacity() {
+        let mut v = BoundedVec::new(3);
+        v.push(1);
+        v.push(3);
+        v.insert(1, 2);
+        assert_eq!(&*v, &[1, 2, 3]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn insert_beyond_capacity_panics() {
+        let mut v = BoundedVec::new(2);
+        v.push(1);
+        v.push(2);
+        v.insert(0, 0); // panics
+    }
+
+    #[test]
+    fn swap_elements() {
+        let mut v = BoundedVec::new(3);
+        v.push(1);
+        v.push(2);
+        v.push(3);
+        v.swap(0, 2);
+        assert_eq!(&*v, &[3, 2, 1]);
+    }
+
+    #[test]
+    fn deref_to_slice() {
+        let mut v = BoundedVec::new(3);
+        v.push(1);
+        v.push(2);
+        assert_eq!(v[0], 1);
+        assert_eq!(v[1], 2);
+    }
+
+    #[test]
+    fn deref_mut_allows_mutation() {
+        let mut v = BoundedVec::new(3);
+        v.push(1);
+        v[0] = 99;
+        assert_eq!(v[0], 99);
+    }
+
+    #[test]
+    fn extend_from_slice_within_capacity() {
+        let mut v = BoundedVec::new(5);
+        v.extend_from_slice(&[1, 2, 3]);
+        assert_eq!(&*v, &[1, 2, 3]);
+    }
+
+    #[test]
+    #[should_panic]
+    fn extend_from_slice_beyond_capacity_panics() {
+        let mut v = BoundedVec::new(2);
+        v.extend_from_slice(&[1, 2, 3]); // panics
+    }
+
+    #[test]
+    fn resize_fills_and_clears() {
+        let mut v = BoundedVec::new(5);
+        v.push(99);
+        v.resize(3, 0);
+        assert_eq!(&*v, &[0, 0, 0]);
+    }
+
+    #[test]
+    fn resize_with_fills_and_clears() {
+        let mut v = BoundedVec::new(5);
+        v.push(99);
+        let mut n = 0;
+        v.resize_with(3, || {
+            n += 1;
+            n
+        });
+        assert_eq!(&*v, &[1, 2, 3]);
+    }
+
+    #[test]
+    fn clone_preserves_data_and_capacity() {
+        let mut v = BoundedVec::new(5);
+        v.push(1);
+        v.push(2);
+        let c = v.clone();
+        assert_eq!(&*c, &[1, 2]);
+        assert_eq!(c.capacity(), 5); // capacity preserved, not just len
     }
 }
