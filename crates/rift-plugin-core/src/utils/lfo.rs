@@ -1,23 +1,37 @@
-use crate::{params::param_queue_impl::ControlPoints, utils::interpo::lerp};
+use crate::{params::param_queue_impl::ControlPoints, prelude::BlockInfo, utils::interpo::lerp};
 
-pub enum LfoTime {
-    Seconds(f32),
-    Beats { beats: f32, tempo: f32 },
+#[derive(Copy, Clone, PartialEq)]
+pub enum LfoMode {
+    Enveloppe,
+    Retrigger,
+    Classic,
 }
 
-impl LfoTime {
-    pub fn as_second(self) -> f32 {
-        match self {
-            Self::Seconds(sec) => sec,
-            Self::Beats { beats, tempo } => beats * 60.0 / tempo,
-        }
-    }
+/// LFO rate, either as raw Hz or as a beat division relative to tempo.
+pub enum LfoFrequency {
+    Hz(f32),
+    Beats(f32),
 }
 
+/// LFO that reads its waveform from a set of [`ControlPoints`] (x/y in [0, 1]).
+///
+/// # Modes
+/// - **Classic** - phase is derived from absolute transport time, so all Classic
+///   LFOs with the same frequency stay in sync. Freezes when transport is stopped
+///   (`time` is `None`).
+/// - **Retrigger** - free-running, resets to 0 on [`retrigger()`](Lfo::retrigger),
+///   wraps at 1.0. Keeps running when transport is stopped.
+/// - **Envelope** - same as Retrigger but does *not* wrap: once past the last
+///   control point, holds the last value indefinitely.
+///
+/// # Position
+/// `position` is always in [0, 1] and represents where we are in the control-point
+/// curve. It is updated *after* the current value is read, so the first call after
+/// a retrigger always reads position 0.
 pub struct Lfo {
     position: f32,
     samplerate: f32,
-    one_shot: bool,
+    mode: LfoMode,
 }
 
 impl Default for Lfo {
@@ -25,17 +39,17 @@ impl Default for Lfo {
         Self {
             samplerate: 44100.,
             position: 0.,
-            one_shot: false,
+            mode: LfoMode::Classic,
         }
     }
 }
 
 impl Lfo {
-    pub fn new(one_shot: bool) -> Self {
+    pub fn new(mode: LfoMode) -> Self {
         Self {
             samplerate: 44100.,
             position: 0.,
-            one_shot,
+            mode,
         }
     }
 
@@ -43,19 +57,32 @@ impl Lfo {
         self.samplerate = samplerate;
     }
 
-    pub fn set_one_shot(&mut self, one_shot: bool) {
-        self.one_shot = one_shot;
+    pub fn set_mode(&mut self, mode: LfoMode) {
+        self.mode = mode;
     }
 
-    pub fn reset(&mut self) {
-        self.position = 0.;
+    pub fn retrigger(&mut self) {
+        match self.mode {
+            LfoMode::Enveloppe | LfoMode::Retrigger => self.position = 0.,
+            LfoMode::Classic => {}
+        }
     }
 
     pub fn get_position_normalized(&self) -> f32 {
         self.position
     }
 
-    pub fn get_value(&mut self, points: &ControlPoints, lfo_time: LfoTime) -> f32 {
+    /// Returns the current LFO value in [0, 1] and advances the position.
+    ///
+    /// `points` must be sorted by `x` and fully within [0, 1] (debug-asserted).
+    /// Pass `None` for `time` when the transport is stopped.
+    #[inline]
+    pub fn get_value(
+        &mut self,
+        points: &ControlPoints,
+        lfo_freq: LfoFrequency,
+        time: Option<BlockInfo>,
+    ) -> f32 {
         debug_assert!(
             points
                 .iter()
@@ -67,15 +94,14 @@ impl Lfo {
             "ControlPoints must be sorted by x"
         );
 
-        let seconds = lfo_time.as_second();
+        let value = self.calculate_value(points);
+        self.update_position(lfo_freq, time);
+        value
+    }
 
-        if self.position > 1. && !self.one_shot {
-            self.position = self.position.rem_euclid(1.);
-        }
-
+    fn calculate_value(&self, points: &ControlPoints) -> f32 {
         let Some(right_idx) = points.iter().position(|p| p.x >= self.position) else {
-            // Past all points — hold last value
-            self.position += 1. / (self.samplerate * seconds);
+            // Past all points - hold last value
             return points.last().map(|p| p.y).unwrap_or_default();
         };
 
@@ -89,8 +115,42 @@ impl Lfo {
             lerp(left.y, right.y, fract)
         };
 
-        // Advance position normalized
-        self.position += 1. / (self.samplerate * seconds);
         value
+    }
+
+    fn update_position(&mut self, lfo_freq: LfoFrequency, time: Option<BlockInfo>) {
+        if self.mode == LfoMode::Classic {
+            let Some(time) = time else {
+                return;
+            };
+
+            match lfo_freq {
+                LfoFrequency::Hz(hz) => {
+                    let seconds = hz.recip();
+                    self.position = (time.seconds as f32).rem_euclid(seconds) / seconds;
+                    return;
+                }
+                LfoFrequency::Beats(beats) => {
+                    self.position = (time.beats as f32).rem_euclid(beats) / beats;
+                    return;
+                }
+            }
+        } else {
+            let Some(time) = time else {
+                return;
+            };
+
+            match lfo_freq {
+                LfoFrequency::Hz(hz) => self.position += hz / self.samplerate,
+                LfoFrequency::Beats(beats) => {
+                    let seconds = beats * 60. / time.tempo as f32;
+                    self.position += 1. / (seconds * self.samplerate)
+                }
+            }
+
+            if self.mode == LfoMode::Retrigger {
+                self.position = self.position.rem_euclid(1.);
+            }
+        }
     }
 }

@@ -16,7 +16,7 @@ pub struct BlockInfo {
     pub seconds: f64,
     pub beats: f64,
     pub samplerate: f64,
-    pub seconds_per_beat: f64,
+    pub tempo: f64,
 }
 
 impl BlockInfo {
@@ -26,7 +26,7 @@ impl BlockInfo {
 
         // Advance seconds if they exist
         self.seconds += delta_seconds;
-        self.beats += delta_seconds / self.seconds_per_beat;
+        self.beats += delta_seconds / self.tempo;
     }
 }
 
@@ -120,7 +120,7 @@ mod tests {
             seconds: 0.,
             beats: 0.,
             samplerate: 44100.,
-            seconds_per_beat: 1., // Case BPM = 60
+            tempo: 1., // Case BPM = 60
         };
 
         // Advance by a full second
@@ -131,7 +131,7 @@ mod tests {
 
         // Shouldn't change
         assert_approx_eq!(infos.samplerate, 44100.);
-        assert_approx_eq!(infos.seconds_per_beat, 1.);
+        assert_approx_eq!(infos.tempo, 1.);
     }
 
     #[test]

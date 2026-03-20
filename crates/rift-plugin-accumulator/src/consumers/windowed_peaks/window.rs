@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn test_averaged_ignores_incomplete_channel_pass() {
-        // Only feeding channel 0 out of 2 — intermediate should not be pushed yet
+        // Only feeding channel 0 out of 2 - intermediate should not be pushed yet
         let mut b = make_buffer(64, 1.0);
         let block = vec![1.0_f32; 512];
         b.consume(&block, make_channels(0, 2), BlockTime::none());
