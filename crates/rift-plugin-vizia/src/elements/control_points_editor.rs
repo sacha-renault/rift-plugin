@@ -126,8 +126,8 @@ impl ControlPointsEditor {
             tension_entities: vec![(false, Entity::null()); capacity],
         }
         .build(cx, move |cx| {
-            Self::build_point_handles(cx, &initial, capacity);
             Self::build_tension_handles(cx, &initial, capacity);
+            Self::build_point_handles(cx, &initial, capacity);
         })
     }
 
