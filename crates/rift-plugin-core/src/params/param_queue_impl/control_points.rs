@@ -2,7 +2,7 @@ use std::ops::Deref;
 
 use serde::{Deserialize, Serialize};
 
-use crate::params::ParamQueueType;
+use crate::{params::ParamQueueType, utils::bounded_vec::BoundedVec};
 
 #[derive(Copy, Clone, Deserialize, Serialize, PartialEq)]
 pub struct ControlPoint {
@@ -38,32 +38,33 @@ pub enum ControlPointEvent {
 /// This guarantees no heap allocation after `new()`.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ControlPoints {
-    points: Vec<ControlPoint>,
-    capacity: usize,
+    points: BoundedVec<ControlPoint>,
 }
 
 impl ControlPoints {
     pub fn new(capacity: usize) -> Self {
         Self {
-            points: Vec::with_capacity(capacity),
-            capacity,
+            points: BoundedVec::new(capacity),
         }
     }
 
     pub fn with_value(values: Vec<ControlPoint>, capacity: usize) -> Self {
-        assert!(values.len() <= capacity);
-        let mut points = Vec::with_capacity(capacity);
+        let mut points = BoundedVec::new(capacity);
         points.extend_from_slice(&values);
-        Self { points, capacity }
+        Self { points }
     }
 
-    fn can_add_point_at(&self, idx: usize) -> bool {
-        self.points.len() < self.capacity && idx <= self.points.len()
+    pub fn capacity(&self) -> usize {
+        self.points.capacity()
+    }
+
+    fn can_add_point(&self) -> bool {
+        !self.points.is_full()
     }
 }
 
 impl Deref for ControlPoints {
-    type Target = Vec<ControlPoint>;
+    type Target = [ControlPoint];
 
     fn deref(&self) -> &Self::Target {
         &self.points
@@ -87,7 +88,7 @@ impl ParamQueueType for ControlPoints {
                     *point = ControlPoint { x, y, tension }
                 }
             }
-            AddPointBefore { idx, x, y, tension } if self.can_add_point_at(idx) => {
+            AddPointBefore { idx, x, y, tension } if self.can_add_point() => {
                 self.points.insert(idx, ControlPoint { x, y, tension });
             }
             _ => {}
@@ -96,11 +97,6 @@ impl ParamQueueType for ControlPoints {
 
     fn snapshot(&self) -> Self {
         // Snapshot should provide the full array with same capacity
-        let mut clone = Vec::with_capacity(self.capacity);
-        clone.extend_from_slice(&self.points);
-        Self {
-            points: clone,
-            capacity: self.capacity,
-        }
+        self.clone()
     }
 }
