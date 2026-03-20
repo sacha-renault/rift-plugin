@@ -81,8 +81,9 @@ impl<T: ParamQueueType> ParamQueue<T> {
     ///
     /// This must be called ONCE per UI initialization BEFORE
     /// any event is pushed into the internal queue. Anything
-    /// beyond that is undefined behavior
-    pub fn snapshot(&self) -> T {
+    /// beyond that is undefined behavior. This is the reason this
+    /// function is unsafe.
+    pub unsafe fn snapshot(&self) -> T {
         // This shouldn't be poping anything as
         // UI is the only one to write events, and audio thread
         // should have drain all events already, but still.
