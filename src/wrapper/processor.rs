@@ -4,6 +4,7 @@ use clack_plugin::prelude::*;
 
 use rift_plugin_core::gui::{GuiParamEvent, GuiParamEventKind};
 use rift_plugin_core::params::Params;
+use rift_plugin_core::transport::BlockIndex;
 
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};
 use crate::prelude::Buffers;
@@ -14,6 +15,7 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     plugin: P,
     host: HostAudioProcessorHandle<'a>,
     samplerate: f64,
+    block_index: BlockIndex,
 }
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
@@ -87,6 +89,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             plugin,
             host,
             samplerate: audio_config.sample_rate,
+            block_index: BlockIndex(-1),
         })
     }
 
@@ -98,6 +101,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<ProcessStatus, PluginError> {
         self.flush(events.input, events.output);
         let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
+
         let context = ProcessContext {
             host: &self.host,
             states: self.shared.states.clone(),
@@ -106,6 +110,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             samplerate: self.samplerate,
             num_events: 0,
             outputs_events: events.output,
+            block_index: self.block_index.increment(),
         };
 
         self.plugin.process(buffers, context)

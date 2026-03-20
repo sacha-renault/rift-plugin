@@ -33,7 +33,7 @@ pub enum LfoFrequency {
 ///
 /// # Position
 /// `position` is always in [0, 1] and represents where we are in the control-point
-/// curve. [`update_position`](Lfo::update_position) must be called once at the end
+/// curve. [`update_lfo_position`](Lfo::update_lfo_position) must be called once at the end
 /// of each block. The first call after a retrigger always reads position 0.
 ///
 /// # Usage
@@ -44,7 +44,7 @@ pub enum LfoFrequency {
 /// # Per-block lifecycle
 ///
 /// ```text
-/// prepare_block(points, infos, block_size)
+/// get_lfo_block(points, infos)
 ///         │
 ///         ▼
 ///   get_value(0) ──► sample 0
@@ -54,13 +54,35 @@ pub enum LfoFrequency {
 ///   get_value(N) ──► sample N
 ///         │
 ///         ▼
-///   update_position(block_size)
+///   update_lfo_position(block_size)
+/// ```
+///
+/// # Example:
+///
+/// ```ignore
+/// let lfo_points = self.params.lfo.value();
+/// let lfo1_block = self.lfo1.get_lfo_block(lfo_points, ctx.block_info());
+/// let lfo2_block = self.lfo2.get_lfo_block(lfo_points, ctx.block_info());
+
+/// let main_buffer = buffers.main()?;
+/// for (idx, sample_iter) in main_buffer.iter_samples().enumerate() {
+///     let lfo_value = lfo1_block.get_value(idx);
+///     let lfo_value2 = lfo2_block.get_value(idx);
+///     for sample in sample_iter {
+///         *sample *= lfo_value;
+///         // Do something with lfo_value2 :)
+///     }
+/// }
+/// // We just need to update the param at the very end
+/// self.lfo1.update_lfo_position(main_buffer.samples());
+/// self.lfo2.update_lfo_position(main_buffer.samples());
 /// ```
 pub struct Lfo {
     position: f32,
     samplerate_recip: f32,
     mode: LfoMode,
     frequency: LfoFrequency,
+    infos: Option<BlockInfo>,
 }
 
 impl Lfo {
@@ -72,6 +94,7 @@ impl Lfo {
             position: 0.,
             mode,
             frequency,
+            infos: None,
         }
     }
 
@@ -90,17 +113,34 @@ impl Lfo {
         self.frequency = frequency;
     }
 
+    /// Advances the internal position by `block_size` samples.
+    /// Must be called once at the end of each block, after all [`get_value`](Lfo::get_value) calls.
+    pub fn update_lfo_position(&mut self, block_size: usize) {
+        self.position = get_position(
+            self.position,
+            self.samplerate_recip,
+            self.frequency,
+            self.mode,
+            self.infos.as_ref(),
+            block_size as f32,
+        );
+    }
+
     /// Prepares the LFO for a new processing block.
-    pub fn prepare_block<'a>(
-        &'a mut self,
+    /// Can be called as many time as wanted in the process function
+    pub fn get_lfo_block<'a>(
+        &mut self,
         lfo_points: &'a ControlPoints,
         infos: Option<BlockInfo>,
-        block_length: usize,
     ) -> LfoBlock<'a> {
+        self.infos = infos.clone();
+
         LfoBlock {
-            lfo: self,
+            frequency: self.frequency,
+            mode: self.mode,
+            position: self.position,
+            samplerate_recip: self.samplerate_recip,
             lfo_points,
-            block_length,
             infos,
         }
     }
@@ -113,134 +153,140 @@ impl Lfo {
             LfoMode::Classic => {}
         }
     }
+}
 
+pub struct LfoBlock<'a> {
+    lfo_points: &'a ControlPoints,
+    infos: Option<BlockInfo>,
+
+    /// We could get this one in lfo but this saves one indirection
+    mode: LfoMode,
+    frequency: LfoFrequency,
+    position: f32,
+    samplerate_recip: f32,
+}
+
+impl<'a> LfoBlock<'a> {
     /// Returns the current LFO value in [0, 1] and advances the position.
     ///
     /// `points` must be sorted by `x` and fully within [0, 1] (debug-asserted).
     /// Freezes when transport is stopped (`time` is `None`).
     #[inline]
-    fn get_value(
-        &self,
-        points: &ControlPoints,
-        infos: Option<&BlockInfo>,
-        sample_idx: usize,
-    ) -> f32 {
+    pub fn get_value(&self, sample_idx: usize) -> f32 {
         debug_assert!(
-            points
+            self.lfo_points
                 .iter()
                 .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)),
             "ControlPoints must be in [0, 1]"
         );
         debug_assert!(
-            points.is_sorted_by(|l, r| l.x <= r.x),
+            self.lfo_points.is_sorted_by(|l, r| l.x <= r.x),
             "ControlPoints must be sorted by x"
         );
 
-        let position = self.get_position(infos, sample_idx);
-        self.calculate_value(points, position)
-    }
-
-    /// Advances the internal position by `block_size` samples.
-    /// Must be called once at the end of each block, after all [`get_value`](Lfo::get_value) calls.
-    pub fn update_position(&mut self, infos: Option<&BlockInfo>, block_size: usize) {
-        self.position = self.get_position(infos, block_size);
-    }
-
-    fn get_position(&self, infos: Option<&BlockInfo>, sample_idx: usize) -> f32 {
-        let Some(infos) = infos else {
-            return self.position;
-        };
-
-        let sample_idx = sample_idx as f32;
-
-        // Is is_playing is false, then both second and beat position
-        // would be fixed. it will be processed as a retrig
-        if self.mode == LfoMode::Classic && infos.is_playing() {
-            self.get_position_classic(infos, sample_idx)
-        } else {
-            self.get_position_retrig(infos, sample_idx)
-        }
-    }
-
-    fn get_position_classic(&self, infos: &BlockInfo, sample_idx: f32) -> f32 {
-        match self.frequency {
-            LfoFrequency::Hz(hz) => {
-                let period = hz.recip();
-                let offset = sample_idx * self.samplerate_recip;
-                let pos = infos.seconds as f32 + offset;
-                pos.rem_euclid(period) / period
-            }
-            LfoFrequency::Beats(beats) => {
-                let offset_seconds = sample_idx * self.samplerate_recip;
-                let beat_offset = offset_seconds * infos.tempo as f32 / 60.;
-                let pos = infos.beats as f32 + beat_offset;
-                pos.rem_euclid(beats) / beats
-            }
-        }
-    }
-
-    fn get_position_retrig(&self, infos: &BlockInfo, sample_idx: f32) -> f32 {
-        let mut position = self.position;
-
-        match self.frequency {
-            LfoFrequency::Hz(hz) => position += sample_idx * hz * self.samplerate_recip,
-            LfoFrequency::Beats(beats) => {
-                let hz = infos.tempo as f32 / (beats * 60.);
-                position += sample_idx * hz * self.samplerate_recip
-            }
-        }
-
-        if self.mode != LfoMode::Enveloppe {
-            position = position.rem_euclid(1.);
-        }
-
-        position
-    }
-
-    fn calculate_value(&self, points: &ControlPoints, position: f32) -> f32 {
-        let Some(right_idx) = points.iter().position(|p| p.x >= position) else {
-            // Past all points - hold last value
-            return points.last().map(|p| p.y).unwrap_or_default();
-        };
-
-        let right = &points[right_idx];
-
-        let value = if right_idx == 0 {
-            right.y
-        } else {
-            let left = &points[right_idx - 1];
-            let fract = (position - left.x) / (right.x - left.x);
-            let (_, y) = pow_interpolation(left, right, fract);
-            y
-        };
-
-        value
+        let position = get_position(
+            self.position,
+            self.samplerate_recip,
+            self.frequency,
+            self.mode,
+            self.infos.as_ref(),
+            sample_idx as f32,
+        );
+        calculate_value(&self.lfo_points, position)
     }
 }
 
-pub struct LfoBlock<'a> {
-    lfo: &'a mut Lfo,
-    lfo_points: &'a ControlPoints,
+fn get_position(
+    position: f32,
+    samplerate_recip: f32,
+    frequency: LfoFrequency,
+    mode: LfoMode,
+    infos: Option<&BlockInfo>,
+    sample_idx: f32,
+) -> f32 {
+    let Some(infos) = infos else {
+        return position;
+    };
 
-    /// We could get this one in lfo but this saves one indirection
-    block_length: usize,
-    infos: Option<BlockInfo>,
+    // Is is_playing is false, then both second and beat position
+    // would be fixed. it will be processed as a retrig
+    if mode == LfoMode::Classic && infos.is_playing() {
+        get_position_classic(samplerate_recip, frequency, infos, sample_idx)
+    } else {
+        get_position_retrig(
+            position,
+            samplerate_recip,
+            frequency,
+            mode,
+            infos,
+            sample_idx,
+        )
+    }
 }
 
-impl<'a> LfoBlock<'a> {
-    pub fn get_value(&self, sample_idx: usize) -> f32 {
-        self.lfo
-            .get_value(self.lfo_points, self.infos.as_ref(), sample_idx)
+fn get_position_classic(
+    samplerate_recip: f32,
+    frequency: LfoFrequency,
+    infos: &BlockInfo,
+    sample_idx: f32,
+) -> f32 {
+    match frequency {
+        LfoFrequency::Hz(hz) => {
+            let period = hz.recip();
+            let offset = sample_idx * samplerate_recip;
+            let pos = infos.seconds as f32 + offset;
+            pos.rem_euclid(period) / period
+        }
+        LfoFrequency::Beats(beats) => {
+            let offset_seconds = sample_idx * samplerate_recip;
+            let beat_offset = offset_seconds * infos.tempo as f32 / 60.;
+            let pos = infos.beats as f32 + beat_offset;
+            pos.rem_euclid(beats) / beats
+        }
+    }
+}
+
+fn get_position_retrig(
+    mut position: f32,
+    samplerate_recip: f32,
+    frequency: LfoFrequency,
+    mode: LfoMode,
+    infos: &BlockInfo,
+    sample_idx: f32,
+) -> f32 {
+    match frequency {
+        LfoFrequency::Hz(hz) => position += sample_idx * hz * samplerate_recip,
+        LfoFrequency::Beats(beats) => {
+            let hz = infos.tempo as f32 / (beats * 60.);
+            position += sample_idx * hz * samplerate_recip
+        }
     }
 
-    pub fn retrigger(&mut self) {
-        self.lfo.retrigger();
+    if mode != LfoMode::Enveloppe {
+        position = position.rem_euclid(1.);
     }
 
-    pub fn update_position(&mut self) {
-        self.lfo
-            .update_position(self.infos.as_ref(), self.block_length);
-    }
+    position
+}
+
+fn calculate_value(points: &ControlPoints, position: f32) -> f32 {
+    let Some(right_idx) = points.iter().position(|p| p.x >= position) else {
+        // Past all points - hold last value
+        return points.last().map(|p| p.y).unwrap_or_default();
+    };
+
+    let right = &points[right_idx];
+
+    let value = if right_idx == 0 {
+        right.y
+    } else {
+        let left = &points[right_idx - 1];
+        let fract = (position - left.x) / (right.x - left.x);
+        let (_, y) = pow_interpolation(left, right, fract);
+        y
+    };
+
+    value
 }
 
 fn pow_interpolation(p1: &ControlPoint, p2: &ControlPoint, t: f32) -> (f32, f32) {
