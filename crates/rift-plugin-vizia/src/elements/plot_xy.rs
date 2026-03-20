@@ -5,6 +5,8 @@ use rift_plugin_core::utils::spaces::Linspace;
 
 use vizia::vg;
 
+use crate::utils::draw_utils::close_path;
+
 use super::gui_prelude::*;
 
 /// Displays an audio waveform buffer as a stroked and filled line.
@@ -127,24 +129,20 @@ impl<D: PlotData> PlotXY<D> {
         let bounds = cx.bounds();
         let vtransform = ViewportTransform::with_range(bounds, self.x_range, self.y_range);
         let scaled_width = bounds.width() * self.resolution;
-        let Some(path_with_closing) = self.data.with_points(scaled_width, |points| {
+        let Some(mut path) = self.data.with_points(scaled_width, |points| {
             if let Some(transform) = &self.filter_transform {
                 let points = points.filter_map(|(x, y)| transform(x, y));
-                make_strokepath(points, vtransform, self.fill_lign_height)
+                make_strokepath(points, &vtransform)
             } else {
-                make_strokepath(points, vtransform, self.fill_lign_height)
+                make_strokepath(points, &vtransform)
             }
         }) else {
             return;
         };
 
-        self.draw_stroke(cx, canvas, &path_with_closing.path);
+        self.draw_stroke(cx, canvas, &path);
         if self.filled_path {
-            let mut path = path_with_closing.path;
-            let [pt1, pt2] = path_with_closing.closing_points;
-            path.line_to(pt1);
-            path.line_to(pt2);
-            path.close();
+            close_path(&mut path, &vtransform, self.fill_lign_height);
             self.draw_fill(cx, canvas, &path);
         }
     }

@@ -25,7 +25,7 @@ mod gui_prelude {
 }
 
 pub use consumer_dispatch::{AudioConsumerDispatch, AudioConsumerDispatchExt};
-pub use control_points_editor::ControlPointsEditor;
+pub use control_points_editor::{ControlPointsEditor, ControlPointsEditorExt};
 pub use dropdown::{DropdownItem, DropdownStyled};
 pub use grid::{GridScale, PlotGrid, PlotGridExt};
 pub use gui_prelude::RedrawOnExt;
