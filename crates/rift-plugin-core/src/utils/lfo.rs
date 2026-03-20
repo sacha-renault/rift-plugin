@@ -1,4 +1,7 @@
-use crate::{params::param_queue_impl::ControlPoints, prelude::BlockInfo, utils::interpo::lerp};
+use crate::{
+    params::param_queue_impl::{ControlPoint, ControlPoints},
+    prelude::BlockInfo,
+};
 
 #[derive(Copy, Clone, PartialEq)]
 pub enum LfoMode {
@@ -112,7 +115,8 @@ impl Lfo {
         } else {
             let left = &points[right_idx - 1];
             let fract = (self.position - left.x) / (right.x - left.x);
-            lerp(left.y, right.y, fract)
+            let (_, y) = pow_interpolation(left, right, fract);
+            y
         };
 
         value
@@ -152,5 +156,24 @@ impl Lfo {
                 self.position = self.position.rem_euclid(1.);
             }
         }
+    }
+}
+
+fn pow_interpolation(p1: &ControlPoint, p2: &ControlPoint, t: f32) -> (f32, f32) {
+    let x = p1.x + (p2.x - p1.x) * t;
+    let y = p1.y + (p2.y - p1.y) * shape(t, p1.tension);
+    (x, y)
+}
+
+fn shape(t: f32, curve_amount: f32) -> f32 {
+    if curve_amount.abs() < 1e-6 {
+        return t;
+    }
+
+    let exp = curve_amount.exp2();
+    if curve_amount > 0.0 {
+        t.powf(exp)
+    } else {
+        1.0 - (1.0 - t).powf(exp.recip())
     }
 }
