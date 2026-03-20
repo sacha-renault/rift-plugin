@@ -21,12 +21,17 @@ use crate::prelude::MainAudioPort;
 pub struct Buffers<'a> {
     audio: Audio<'a>,
     main_config: MainAudioPort,
+    is_main_copied: bool,
 }
 
 impl<'a> Buffers<'a> {
     /// Create a new view on [`clack_plugin::process::Audio`] struct.
     pub(crate) fn new(audio: Audio<'a>, main_config: MainAudioPort) -> Self {
-        Self { audio, main_config }
+        Self {
+            audio,
+            main_config,
+            is_main_copied: false,
+        }
     }
 
     /// Get the (not shifted by main port) input at `index`.
@@ -57,6 +62,10 @@ impl<'a> Buffers<'a> {
 
     /// Retrieve port pair 0 and copy, if needed, input into output.
     fn main_input_into_output(&mut self) -> Result<(), PluginError> {
+        if self.is_main_copied {
+            return Ok(());
+        }
+
         let mut port_pair = self
             .audio
             .port_pair(0)
@@ -67,6 +76,7 @@ impl<'a> Buffers<'a> {
             .into_f32()
             .ok_or(PluginError::Message("Expected f32 input/output"))?;
 
+        self.is_main_copied = true;
         for paired in paired_channels.iter_mut() {
             // There is 4 cases
             // either InputOutput => handled with copy
@@ -239,6 +249,21 @@ impl<'a> Buffer<'a> {
         self.raw_data()
             .iter()
             .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, self.samples()) })
+    }
+}
+
+impl<'a> Drop for Buffers<'a> {
+    fn drop(&mut self) {
+        match self.main_config {
+            MainAudioPort::InputOutput(_) if !self.is_main_copied => {
+                let _ = self.main_input_into_output();
+            }
+
+            // Nothing to do on input only
+            // We might wanna add later something
+            // in the case output only, if it wasn't cleared might
+            _ => {}
+        }
     }
 }
 
