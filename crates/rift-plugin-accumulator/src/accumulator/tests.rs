@@ -58,7 +58,7 @@ fn test_add_slice_with_time_info() {
         seconds: 0.,
         beats: 0.,
         samplerate: 44100.,
-        seconds_per_beat: 60.,
+        tempo: 60.,
     };
     acc.push_slices(&mut [channel.as_slice()].into_iter(), Some(infos));
 

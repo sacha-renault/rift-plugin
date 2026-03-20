@@ -368,7 +368,7 @@ impl ControlPointsEditor {
         Self::emit_move(cx, entity, x, y);
         cx.emit_to(entity, EditorToChild::SetVisible);
 
-        // Recycle a hidden tension entity — inserting a point splits one segment into two
+        // Recycle a hidden tension entity - inserting a point splits one segment into two
         let Some(hidden_t) = self.tension_entities.iter().position(|t| !t.0) else {
             log::error!("No spare tension entity to activate");
             debug_assert!(false, "No spare tension entity to activate");
@@ -406,7 +406,7 @@ impl ControlPointsEditor {
         self.point_entities.push((false, entity));
         cx.emit_to(entity, EditorToChild::SetInvisible);
 
-        // Hide one tension handle — removing a point merges two segments into one.
+        // Hide one tension handle - removing a point merges two segments into one.
         // Pick the tension entity at `idx`, or `idx - 1` if idx was the last visible segment.
         let visible_count = self.tension_entities.iter().filter(|t| t.0).count();
         let t_idx = idx.min(visible_count.saturating_sub(1));
@@ -443,7 +443,7 @@ impl View for ControlPointsEditor {
                 visible,
                 entity,
             } => {
-                self.tension_entities[idx] = (visible, entity); // was point_entities — bug!
+                self.tension_entities[idx] = (visible, entity); // was point_entities - bug!
             }
         });
 

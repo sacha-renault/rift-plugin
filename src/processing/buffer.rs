@@ -232,7 +232,7 @@ impl<'a> Buffer<'a> {
 
     /// Iterates channel-by-channel, yielding a contiguous `&mut [f32]` for each channel.
     ///
-    /// Preferred for per-channel DSP (gain, filters, saturation) — the compiler
+    /// Preferred for per-channel DSP (gain, filters, saturation) - the compiler
     /// can auto-vectorize over the contiguous slice. For inter-channel processing,
     /// see [`Buffer::iter_samples`].
     pub fn iter_channels_mut(&'a self) -> impl Iterator<Item = &'a mut [f32]> {

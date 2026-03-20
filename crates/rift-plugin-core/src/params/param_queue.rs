@@ -17,7 +17,7 @@ pub trait ParamQueueType {
 
 /// Shared handle to a parameter queue.
 ///
-/// Cheaply cloneable — the UI thread holds its own `ParamQueue<T>`
+/// Cheaply cloneable - the UI thread holds its own `ParamQueue<T>`
 /// pointing to the same inner state. Both sides interact through
 /// the lock-free queue; only the audio thread touches the cache.
 #[derive(Clone)]
@@ -73,7 +73,7 @@ impl<T: ParamQueueType> ParamQueue<T> {
 
     /// Read-only snapshot of the current state for the UI thread.
     ///
-    /// The returned value is a clone — the UI thread must not hold
+    /// The returned value is a clone - the UI thread must not hold
     /// a reference into the cache. Safe to call while the audio
     /// thread is processing.
     ///
@@ -133,7 +133,7 @@ impl<T: ParamQueueType + Serialize + DeserializeOwned> Persistent for ParamQueue
         let value: T = serde_json::from_reader(reader)
             .map_err(|_| PluginError::Message("deserialize error"))?;
 
-        // Drain any pending events — they're stale now
+        // Drain any pending events - they're stale now
         while self.inner.queue.pop().is_some() {}
         unsafe { *self.inner.cache.get() = value }
         Ok(())

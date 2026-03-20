@@ -24,11 +24,11 @@ mod windowed_peaks;
 pub trait AudioConsumer: 'static {
     /// Processes one block of PCM samples for a single channel.
     ///
-    /// - `block` — interleaved f32 samples for the current channel only.
+    /// - `block` - interleaved f32 samples for the current channel only.
     ///   Length may be less than `N` for the final chunk of a render cycle.
-    /// - `channel_info` — identifies which channel this block belongs to and
+    /// - `channel_info` - identifies which channel this block belongs to and
     ///   how many channels are in the bus in total.
-    /// - `time` — transport position at the start of this block, or
+    /// - `time` - transport position at the start of this block, or
     ///   [`BlockTime::none`] if timing information was unavailable.
     fn consume(&mut self, block: &[f32], channel_info: ChannelsInfo, time: BlockTime);
 }

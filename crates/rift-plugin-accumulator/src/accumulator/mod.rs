@@ -99,7 +99,7 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
 /// // N=512 sets the internal frame-block size at compile time.
 /// let accumulator = AudioAccumulator::new::<512>(2, 8);
 ///
-/// // The handle is cheap to clone — both point to the same queue.
+/// // The handle is cheap to clone - both point to the same queue.
 /// let accumulator_ui = accumulator.clone();
 /// ```
 #[derive(Clone)]
@@ -112,14 +112,14 @@ impl AudioAccumulator {
     ///
     /// # Type parameters
     ///
-    /// * `N` — the compile-time frame-block size used internally by the accumulator.
+    /// * `N` - the compile-time frame-block size used internally by the accumulator.
     ///   This value is erased after construction; choose it to match your audio engine's
     ///   maximum block size.
     ///
     /// # Arguments
     ///
-    /// * `max_channels` — number of audio channels to allocate buffers for.
-    /// * `max_block_in_queue` — maximum number of audio blocks that can be buffered
+    /// * `max_channels` - number of audio channels to allocate buffers for.
+    /// * `max_block_in_queue` - maximum number of audio blocks that can be buffered
     ///   before the audio thread drop data.
     pub fn new<const N: usize>(max_channels: usize, max_block_in_queue: usize) -> Self {
         Self {

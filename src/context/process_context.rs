@@ -37,7 +37,7 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
                 seconds: transport.song_pos_seconds.to_float(),
                 beats: transport.song_pos_beats.to_float(),
                 samplerate: self.samplerate,
-                seconds_per_beat: transport.tempo,
+                tempo: transport.tempo,
             };
             Some(info)
         } else {
