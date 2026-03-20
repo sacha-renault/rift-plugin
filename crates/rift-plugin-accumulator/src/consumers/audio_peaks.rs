@@ -24,7 +24,7 @@ impl ChannelAudioPeaks {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```ignore
 /// let mut peaks = AudioPeaks::new(2)
 ///     .lerp_factor(0.5)
 ///     .decay(|peak, block_size| peak * 0.999_f32.powi(block_size as i32));

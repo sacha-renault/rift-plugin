@@ -30,14 +30,13 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
 
     /// Returns playback progress info (seconds/beats) if currently playing, otherwise None.
     pub fn block_info(&self) -> Option<BlockInfo> {
-        if let Some(transport) = self.process.transport
-            && transport.flags.contains(TransportFlags::IS_PLAYING)
-        {
+        if let Some(transport) = self.process.transport {
             let info = BlockInfo {
                 seconds: transport.song_pos_seconds.to_float(),
                 beats: transport.song_pos_beats.to_float(),
                 samplerate: self.samplerate,
                 tempo: transport.tempo,
+                flags: TransportFlags::IS_PLAYING,
             };
             Some(info)
         } else {
