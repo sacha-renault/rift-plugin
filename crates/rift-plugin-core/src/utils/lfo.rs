@@ -22,7 +22,7 @@ pub enum LfoMode {
 /// - `Beats(f32)` - period in beats (e.g. `4.0` = one full cycle every 4 beats).
 ///   Requires a valid `tempo` in [`BlockInfo`].
 #[derive(Copy, Clone, PartialEq)]
-pub enum LfoFrequency {
+pub enum LfoFreq {
     Hz(f32),
     Beats(f32),
 }
@@ -81,14 +81,14 @@ pub struct Lfo {
     position: f32,
     samplerate_recip: f32,
     mode: LfoMode,
-    frequency: LfoFrequency,
+    frequency: LfoFreq,
     infos: Option<BlockInfo>,
 }
 
 impl Lfo {
     /// Creates a new LFO with the given mode and frequency.
     /// Defaults to 44100 Hz samplerate.
-    pub fn new(mode: LfoMode, frequency: LfoFrequency) -> Self {
+    pub fn new(mode: LfoMode, frequency: LfoFreq) -> Self {
         Self {
             samplerate_recip: 44100f32.recip(),
             position: 0.,
@@ -109,8 +109,16 @@ impl Lfo {
     }
 
     /// Sets the LFO frequency. See [`LfoFrequency`].
-    pub fn set_frequency(&mut self, frequency: LfoFrequency) {
+    pub fn set_frequency(&mut self, frequency: LfoFreq) {
         self.frequency = frequency;
+    }
+
+    /// Sets both mode and frequency
+    ///
+    /// Calls sequentially [`Lfo::set_mode`] and [`Lfo::set_frequency`]
+    pub fn set_config(&mut self, mode: LfoMode, frequency: LfoFreq) {
+        self.set_mode(mode);
+        self.set_frequency(frequency);
     }
 
     /// Advances the internal position by `block_size` samples.
@@ -161,7 +169,7 @@ pub struct LfoBlock<'a> {
 
     /// We could get this one in lfo but this saves one indirection
     mode: LfoMode,
-    frequency: LfoFrequency,
+    frequency: LfoFreq,
     position: f32,
     samplerate_recip: f32,
 }
@@ -199,7 +207,7 @@ impl<'a> LfoBlock<'a> {
 fn get_position(
     position: f32,
     samplerate_recip: f32,
-    frequency: LfoFrequency,
+    frequency: LfoFreq,
     mode: LfoMode,
     infos: Option<&BlockInfo>,
     sample_idx: f32,
@@ -226,18 +234,18 @@ fn get_position(
 
 fn get_position_classic(
     samplerate_recip: f32,
-    frequency: LfoFrequency,
+    frequency: LfoFreq,
     infos: &BlockInfo,
     sample_idx: f32,
 ) -> f32 {
     match frequency {
-        LfoFrequency::Hz(hz) => {
+        LfoFreq::Hz(hz) => {
             let period = hz.recip();
             let offset = sample_idx * samplerate_recip;
             let pos = infos.seconds as f32 + offset;
             pos.rem_euclid(period) / period
         }
-        LfoFrequency::Beats(beats) => {
+        LfoFreq::Beats(beats) => {
             let offset_seconds = sample_idx * samplerate_recip;
             let beat_offset = offset_seconds * infos.tempo as f32 / 60.;
             let pos = infos.beats as f32 + beat_offset;
@@ -249,14 +257,14 @@ fn get_position_classic(
 fn get_position_retrig(
     mut position: f32,
     samplerate_recip: f32,
-    frequency: LfoFrequency,
+    frequency: LfoFreq,
     mode: LfoMode,
     infos: &BlockInfo,
     sample_idx: f32,
 ) -> f32 {
     match frequency {
-        LfoFrequency::Hz(hz) => position += sample_idx * hz * samplerate_recip,
-        LfoFrequency::Beats(beats) => {
+        LfoFreq::Hz(hz) => position += sample_idx * hz * samplerate_recip,
+        LfoFreq::Beats(beats) => {
             let hz = infos.tempo as f32 / (beats * 60.);
             position += sample_idx * hz * samplerate_recip
         }
@@ -351,7 +359,7 @@ mod tests {
 
         #[test]
         fn classic_hz_position_from_absolute_time() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -362,7 +370,7 @@ mod tests {
 
         #[test]
         fn classic_hz_wraps_at_period() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -373,7 +381,7 @@ mod tests {
 
         #[test]
         fn classic_hz_sample_accurate_within_block() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -386,7 +394,7 @@ mod tests {
 
         #[test]
         fn classic_beats_position_from_beat_time() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Beats(4.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Beats(4.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -397,7 +405,7 @@ mod tests {
 
         #[test]
         fn classic_beats_wraps() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Beats(4.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Beats(4.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -408,7 +416,7 @@ mod tests {
 
         #[test]
         fn retrigger_hz_advances_and_wraps() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -423,7 +431,7 @@ mod tests {
 
         #[test]
         fn retrigger_resets_on_retrigger() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -439,7 +447,7 @@ mod tests {
 
         #[test]
         fn envelope_does_not_wrap() {
-            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -454,7 +462,7 @@ mod tests {
 
         #[test]
         fn envelope_retrigger_resets() {
-            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -470,7 +478,7 @@ mod tests {
 
         #[test]
         fn classic_retrigger_is_noop() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -487,7 +495,7 @@ mod tests {
 
         #[test]
         fn interpolation_midpoint() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -498,7 +506,7 @@ mod tests {
 
         #[test]
         fn tension_affects_interpolation() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let linear_points = make_points(&[(0.0, 0.0), (1.0, 1.0)]);
@@ -520,7 +528,7 @@ mod tests {
 
         #[test]
         fn multiple_lfo_blocks_same_result() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(2.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(2.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -539,7 +547,7 @@ mod tests {
 
         #[test]
         fn iteration_order_does_not_matter() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(2.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(2.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -557,7 +565,7 @@ mod tests {
 
         #[test]
         fn update_position_advances_across_blocks() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -578,7 +586,7 @@ mod tests {
 
         #[test]
         fn empty_points_returns_zero() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = make_points(&[]);
@@ -589,7 +597,7 @@ mod tests {
 
         #[test]
         fn single_point_returns_its_value() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = make_points(&[(0.5, 0.7)]);
@@ -600,7 +608,7 @@ mod tests {
 
         #[test]
         fn position_exactly_on_point() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = make_points(&[(0.0, 0.3), (0.5, 0.8), (1.0, 0.1)]);
@@ -617,7 +625,7 @@ mod tests {
 
         #[test]
         fn none_infos_freezes_position() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -632,7 +640,7 @@ mod tests {
 
         #[test]
         fn none_infos_update_does_not_advance() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -652,7 +660,7 @@ mod tests {
 
         #[test]
         fn classic_not_playing_falls_back_to_retrig() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -670,7 +678,7 @@ mod tests {
 
         #[test]
         fn high_frequency_wraps_correctly() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFrequency::Hz(100.0));
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(100.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -681,7 +689,7 @@ mod tests {
 
         #[test]
         fn block_rate_usage() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Hz(1.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
@@ -705,7 +713,7 @@ mod tests {
 
         #[test]
         fn retrigger_beats_advances_correctly() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFrequency::Beats(4.0));
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Beats(4.0));
             lfo.set_samplerate(SAMPLERATE);
 
             let points = ramp_points();
