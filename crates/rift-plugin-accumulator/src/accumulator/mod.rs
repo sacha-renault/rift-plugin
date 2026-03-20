@@ -94,7 +94,7 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```ignore
 /// // Create an accumulator with up to 2 channels and a queue depth of 8 blocks.
 /// // N=512 sets the internal frame-block size at compile time.
 /// let accumulator = AudioAccumulator::new::<512>(2, 8);

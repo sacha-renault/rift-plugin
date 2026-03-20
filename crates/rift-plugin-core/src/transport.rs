@@ -1,3 +1,5 @@
+use clack_plugin::events::event_types::TransportFlags;
+
 #[derive(Clone, Copy)]
 pub struct ChannelsInfo {
     pub current: usize,
@@ -17,16 +19,35 @@ pub struct BlockInfo {
     pub beats: f64,
     pub samplerate: f64,
     pub tempo: f64,
+    pub flags: TransportFlags,
 }
 
 impl BlockInfo {
+    pub fn new(seconds: f64, beats: f64, samplerate: f64, tempo: f64) -> Self {
+        Self {
+            seconds,
+            beats,
+            samplerate,
+            tempo,
+            flags: TransportFlags::empty(),
+        }
+    }
+
     /// Increments the internal timestamps based on a number of processed samples.
     pub fn advance_by_samples(&mut self, samples: usize) {
+        if !self.is_playing() {
+            return;
+        }
+
         let delta_seconds = samples as f64 / self.samplerate;
 
         // Advance seconds if they exist
         self.seconds += delta_seconds;
         self.beats += delta_seconds / self.tempo;
+    }
+
+    pub fn is_playing(&self) -> bool {
+        self.flags.contains(TransportFlags::IS_PLAYING)
     }
 }
 
@@ -121,6 +142,7 @@ mod tests {
             beats: 0.,
             samplerate: 44100.,
             tempo: 1., // Case BPM = 60
+            flags: TransportFlags::IS_PLAYING,
         };
 
         // Advance by a full second

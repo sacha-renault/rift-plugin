@@ -54,12 +54,7 @@ fn test_add_slice() {
 fn test_add_slice_with_time_info() {
     let acc = init_audio_accumulator();
     let channel: Vec<f32> = vec![0., 1., 2., 3.];
-    let infos = BlockInfo {
-        seconds: 0.,
-        beats: 0.,
-        samplerate: 44100.,
-        tempo: 60.,
-    };
+    let infos = BlockInfo::new(0., 0., 44100., 60.);
     acc.push_slices(&mut [channel.as_slice()].into_iter(), Some(infos));
 
     let consumer = ConsumerMock::new();
