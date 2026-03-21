@@ -21,7 +21,7 @@ impl<T> BoundedVec<T> {
     /// Panics if there is not enough capacity for `new_items_size` more elements.
     fn assert_capacity(&self, new_items_size: usize) {
         if !self.has_enough_capacity(new_items_size) {
-            panic!("No reallocation on OnceVec")
+            panic!("No reallocation on BoundedVec")
         }
     }
 }
@@ -83,7 +83,7 @@ impl<T> BoundedVec<T> {
     #[inline(always)]
     pub fn push(&mut self, value: T) {
         if self.try_push(value).is_err() {
-            panic!("No reallocation on OnceVec")
+            panic!("No reallocation on BoundedVec")
         }
     }
 
