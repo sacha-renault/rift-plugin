@@ -39,19 +39,24 @@ pub enum ControlPointEvent {
 #[derive(Clone, Deserialize, Serialize)]
 pub struct ControlPoints {
     points: BoundedVec<ControlPoint>,
+    max_tension: f32,
 }
 
 impl ControlPoints {
     pub fn new(capacity: usize) -> Self {
         Self {
             points: BoundedVec::new(capacity),
+            max_tension: 10.,
         }
     }
 
     pub fn with_value(values: Vec<ControlPoint>, capacity: usize) -> Self {
         let mut points = BoundedVec::new(capacity);
         points.extend_from_slice(&values);
-        Self { points }
+        Self {
+            points,
+            max_tension: 10.,
+        }
     }
 
     pub fn capacity(&self) -> usize {
@@ -85,11 +90,22 @@ impl ParamQueueType for ControlPoints {
             }
             ModifyPoint { idx, x, y, tension } => {
                 if let Some(point) = self.points.get_mut(idx) {
-                    *point = ControlPoint { x, y, tension }
+                    *point = ControlPoint {
+                        x,
+                        y,
+                        tension: tension.clamp(-self.max_tension, self.max_tension),
+                    }
                 }
             }
             AddPointBefore { idx, x, y, tension } if self.can_add_point() => {
-                self.points.insert(idx, ControlPoint { x, y, tension });
+                self.points.insert(
+                    idx,
+                    ControlPoint {
+                        x,
+                        y,
+                        tension: tension.clamp(-self.max_tension, self.max_tension),
+                    },
+                );
             }
             _ => {}
         }
