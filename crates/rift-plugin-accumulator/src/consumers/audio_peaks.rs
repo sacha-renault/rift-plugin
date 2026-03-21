@@ -1,4 +1,5 @@
 use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_core::utils::bounded_vec::BoundedVec;
 use rift_plugin_core::utils::interpo::lerp_n;
 
 use crate::prelude::AudioConsumer;
@@ -34,7 +35,7 @@ impl ChannelAudioPeaks {
 /// let smooth_peak = peaks.peak(0);
 /// ```
 pub struct AudioPeaks {
-    channel_peaks: Vec<ChannelAudioPeaks>,
+    channel_peaks: BoundedVec<ChannelAudioPeaks>,
     /// User-supplied decay function applied once per block to `true_peak`.
     /// Receives the current peak and the block length; returns the decayed peak.
     decay_fn: fn(f32, usize) -> f32,
@@ -49,7 +50,7 @@ impl AudioPeaks {
     /// The default decay function is [`default_decay`] and the default lerp
     /// factor is `0.8e-3`.
     pub fn new(channels: usize) -> Self {
-        let mut channel_peaks = Vec::new();
+        let mut channel_peaks = BoundedVec::new(channels);
         channel_peaks.resize_with(channels, ChannelAudioPeaks::new);
 
         Self {

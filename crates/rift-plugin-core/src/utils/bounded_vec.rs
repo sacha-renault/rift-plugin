@@ -1,5 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
+use serde::{Deserialize, Serialize};
+
 /// A `Vec`-like container with a fixed capacity that never reallocates.
 ///
 /// Unlike `Vec`, pushing beyond the allocated capacity panics instead of
@@ -7,7 +9,7 @@ use std::ops::{Deref, DerefMut};
 /// bounded - e.g. real-time, arena-style, or performance-sensitive code.
 ///
 /// Capacity is set once at construction and preserved through cloning.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BoundedVec<T> {
     inner: Vec<T>,
 }

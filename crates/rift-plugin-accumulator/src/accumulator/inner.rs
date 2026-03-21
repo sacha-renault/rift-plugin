@@ -1,6 +1,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use rift_plugin_core::prelude::*;
+use rift_plugin_core::utils::bounded_vec::BoundedVec;
 
 use super::channel::ChannelProducer;
 use crate::prelude::*;
@@ -13,7 +14,7 @@ use crate::prelude::*;
 /// [`AudioAccumulatorErased`] trait, which hides `N` behind an [`Arc`].
 pub struct InnerAudioAccumulator<const N: usize> {
     /// One producer ring per allocated channel
-    channels: Vec<ChannelProducer<N>>,
+    channels: BoundedVec<ChannelProducer<N>>,
 
     /// Monotonically increasing counter incremented on every [`push_slices`] call.
     /// Read by the UI thread to detect new data without holding a lock.
@@ -31,7 +32,7 @@ impl<const N: usize> InnerAudioAccumulator<N> {
     /// This is the only place where heap allocation occurs for the accumulator;
     /// all subsequent push operations are lock-free and allocation-free.
     pub fn new(max_channels: usize, max_block_in_queue: usize) -> Self {
-        let mut channels = Vec::with_capacity(max_channels);
+        let mut channels = BoundedVec::new(max_channels);
         channels.resize_with(max_channels, || ChannelProducer::new(max_block_in_queue));
 
         Self {
