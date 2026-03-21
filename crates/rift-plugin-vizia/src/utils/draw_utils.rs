@@ -1,49 +1,44 @@
 use vizia::{
     prelude::DrawContext,
     style::Color,
-    vg::{Canvas, ClipOp, Path, Point, Rect},
+    vg::{Canvas, ClipOp, Path, Rect},
 };
 
 use crate::utils::ViewportTransform;
 
-pub struct PathWithClosing {
-    pub path: Path,
-    pub closing_points: [(f32, f32); 2],
-}
-
 pub fn make_strokepath(
     points: impl Iterator<Item = (f32, f32)>,
-    vtransform: ViewportTransform,
-    x_low: f32,
-) -> Option<PathWithClosing> {
+    vtransform: &ViewportTransform,
+) -> Option<Path> {
     let mut path = Path::new();
     let mut points = points.map(|(x, y)| vtransform.transform(x, y));
-    let (_, zero_y) = vtransform.transform(0., x_low);
 
     if let Some((x, y)) = points.next() {
-        let first_x = x;
-
         path.move_to((x, y));
 
         for (x, y) in points {
             path.line_to((x, y));
         }
 
-        let last_x = if let Some(Point { x, .. }) = path.last_pt() {
-            x
-        } else {
-            // Very defensive, i might unwrap here since we have at least
-            // a point but i don't like unwraping
-            first_x
-        };
-
-        Some(PathWithClosing {
-            path,
-            closing_points: [(last_x, zero_y), (first_x, zero_y)],
-        })
+        Some(path)
     } else {
         None
     }
+}
+
+pub fn close_path(path: &mut Path, vtransform: &ViewportTransform, y_low: f32) {
+    let Some(first_point) = path.get_point(0) else {
+        return;
+    };
+
+    let Some(last_point) = path.last_pt() else {
+        return;
+    };
+
+    let (_, zero_y) = vtransform.transform(0., y_low);
+    path.line_to((last_point.x, zero_y))
+        .line_to((first_point.x, zero_y))
+        .close();
 }
 
 pub fn change_color_opacity(color: Color, opacity: u8) -> Color {
@@ -78,23 +73,42 @@ mod tests {
 
     #[test]
     fn test_empty_iterator_returns_none() {
-        assert!(make_strokepath(std::iter::empty(), identity(), 0.0).is_none());
+        assert!(make_strokepath(std::iter::empty(), &identity()).is_none());
     }
 
     #[test]
-    fn test_single_point_closing_uses_same_x() {
-        let res = make_strokepath(std::iter::once((3.0, 5.0)), identity(), 0.0).unwrap();
-        let [a, b] = res.closing_points;
-        assert_eq!(a.0, b.0);
-        assert_eq!(a.1, b.1);
+    fn test_single_point_creates_path() {
+        let points = vec![(0.5, 0.5)];
+        assert!(make_strokepath(points.into_iter(), &identity()).is_some());
     }
 
     #[test]
-    fn test_multiple_points_closing_spans_first_to_last() {
-        let pts = vec![(0.0, 1.0), (1.0, 2.0), (2.0, 0.5)];
-        let res = make_strokepath(pts.into_iter(), identity(), 0.0).unwrap();
-        let [a, b] = res.closing_points;
-        assert!(a.0 > b.0);
-        assert_eq!(a.1, b.1);
+    fn test_multiple_points_creates_path() {
+        let points = vec![(0.0, 0.0), (0.5, 0.5), (1.0, 1.0)];
+        assert!(make_strokepath(points.into_iter(), &identity()).is_some());
+    }
+
+    #[test]
+    fn test_change_color_opacity_sets_alpha() {
+        let color = Color::rgb(100, 150, 200);
+        let result = change_color_opacity(color, 128);
+        assert_eq!(result.r(), 100);
+        assert_eq!(result.g(), 150);
+        assert_eq!(result.b(), 200);
+        assert_eq!(result.a(), 128);
+    }
+
+    #[test]
+    fn test_change_color_opacity_zero() {
+        let color = Color::rgb(255, 255, 255);
+        let result = change_color_opacity(color, 0);
+        assert_eq!(result.a(), 0);
+    }
+
+    #[test]
+    fn test_change_color_opacity_full() {
+        let color = Color::rgb(255, 255, 255);
+        let result = change_color_opacity(color, 255);
+        assert_eq!(result.a(), 255);
     }
 }

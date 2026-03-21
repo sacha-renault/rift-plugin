@@ -7,9 +7,11 @@ use vizia::{
     vg::{Paint, PaintCap, PaintStyle, Path},
 };
 
+use crate::utils::draw_utils::close_path;
+
 use super::gui_prelude::*;
 
-const DELTA_DRAG_FACTOR: f32 = 1.35;
+const DELTA_DRAG_FACTOR: f32 = 1.45;
 
 // Internal events
 
@@ -103,6 +105,12 @@ pub struct ControlPointsEditor {
 
     #[extension(ext)]
     on_change: Option<Box<dyn Fn(&mut EventContext, ControlPoint, usize)>>,
+
+    #[extension(ext, set = true)]
+    filled: bool,
+
+    #[extension(ext)]
+    fill_opacity: u8,
 }
 
 impl ControlPointsEditor {
@@ -124,6 +132,8 @@ impl ControlPointsEditor {
             last_mouse_pos: (0., 0.),
             point_entities: vec![(false, Entity::null()); capacity],
             tension_entities: vec![(false, Entity::null()); capacity],
+            filled: false,
+            fill_opacity: 100,
         }
         .build(cx, move |cx| {
             Self::build_tension_handles(cx, &initial, capacity);
@@ -481,14 +491,23 @@ impl View for ControlPointsEditor {
             .set_anti_alias(true);
 
         let mut path = Path::new();
-        draw_curved(&mut path, &self.points, vt);
+        draw_curved(&mut path, &self.points, &vt);
         canvas.draw_path(&path, &paint);
+
+        if self.filled {
+            close_path(&mut path, &vt, 0.);
+            paint
+                .set_style(PaintStyle::Fill)
+                .set_anti_alias(false)
+                .set_color(change_color_opacity(cx.font_color(), self.fill_opacity));
+            canvas.draw_path(&path, &paint);
+        }
     }
 }
 
 // Curve mat
 
-fn draw_curved(path: &mut Path, points: &[ControlPoint], vt: ViewportTransform) {
+fn draw_curved(path: &mut Path, points: &[ControlPoint], vt: &ViewportTransform) {
     if points.len() < 2 {
         return;
     }
@@ -517,7 +536,6 @@ fn draw_curved(path: &mut Path, points: &[ControlPoint], vt: ViewportTransform) 
 /// Attempt to map the tension symmetrically around linear.
 ///
 /// `curve_amount`:  0.0 = linear,  negative = log (fast start),  positive = exp (slow start).
-/// Common range: roughly -8.0 to 8.0.
 fn shape(t: f32, curve_amount: f32) -> f32 {
     if curve_amount.abs() < 1e-6 {
         return t;
