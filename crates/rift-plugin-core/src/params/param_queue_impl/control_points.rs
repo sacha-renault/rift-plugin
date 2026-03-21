@@ -56,6 +56,10 @@ impl ControlPoints {
         points.extend_from_slice(&values);
         Self { points, capacity }
     }
+
+    fn can_add_point_at(&self, idx: usize) -> bool {
+        self.points.len() < self.capacity && idx <= self.points.len()
+    }
 }
 
 impl Deref for ControlPoints {
@@ -63,12 +67,6 @@ impl Deref for ControlPoints {
 
     fn deref(&self) -> &Self::Target {
         &self.points
-    }
-}
-
-impl ControlPoints {
-    fn can_add_point_at(&self, idx: usize) -> bool {
-        self.points.len() < self.capacity && idx <= self.points.len()
     }
 }
 
