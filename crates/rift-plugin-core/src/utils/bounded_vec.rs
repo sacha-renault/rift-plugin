@@ -1,6 +1,6 @@
 use std::ops::{Deref, DerefMut};
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, ser::SerializeStruct};
 
 /// A `Vec`-like container with a fixed capacity that never reallocates.
 ///
@@ -9,9 +9,41 @@ use serde::{Deserialize, Serialize};
 /// bounded - e.g. real-time, arena-style, or performance-sensitive code.
 ///
 /// Capacity is set once at construction and preserved through cloning.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug)]
 pub struct BoundedVec<T> {
     inner: Vec<T>,
+}
+
+impl<T: Serialize> Serialize for BoundedVec<T> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut state = serializer.serialize_struct("BoundedVec", 2)?;
+        state.serialize_field("capacity", &self.inner.capacity())?;
+        state.serialize_field("data", &self.inner)?;
+        state.end()
+    }
+}
+
+impl<'de, T: Deserialize<'de>> Deserialize<'de> for BoundedVec<T> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        struct Raw<T> {
+            capacity: usize,
+            data: Vec<T>,
+        }
+
+        let raw = Raw::deserialize(deserializer)?;
+        if raw.data.len() > raw.capacity {
+            return Err(serde::de::Error::custom(format!(
+                "BoundedVec data length ({}) exceeds capacity ({})",
+                raw.data.len(),
+                raw.capacity
+            )));
+        }
+
+        let mut inner = Vec::with_capacity(raw.capacity);
+        inner.extend(raw.data);
+        Ok(Self { inner })
+    }
 }
 
 impl<T> BoundedVec<T> {
@@ -348,5 +380,19 @@ mod tests {
         let c = v.clone();
         assert_eq!(&*c, &[1, 2]);
         assert_eq!(c.capacity(), 5); // capacity preserved, not just len
+    }
+
+    #[test]
+    fn serde_roundtrip() {
+        let mut v = BoundedVec::new(10);
+        v.push(1);
+        v.push(2);
+        v.push(3);
+
+        let json = serde_json::to_string(&v).unwrap();
+        let deserialized: BoundedVec<i32> = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(&*deserialized, &[1, 2, 3]);
+        assert_eq!(deserialized.capacity(), 10);
     }
 }
