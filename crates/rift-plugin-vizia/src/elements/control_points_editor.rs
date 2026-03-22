@@ -346,7 +346,11 @@ impl ControlPointsEditor {
 
     fn add_point(&mut self, cx: &mut EventContext) {
         if self.points.len() >= self.points.capacity() {
-            log::error!("Max number of control points reached");
+            log::error!(
+                "Max number of control points reached {} >= {}",
+                self.points.capacity(),
+                self.points.len()
+            );
             return;
         }
 
