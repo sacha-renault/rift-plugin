@@ -4,4 +4,4 @@ mod window;
 
 pub use bucket::Bucket;
 pub use peaks::PeakBucket;
-pub use window::{WindowBuckets, WindowBucketsMode};
+pub use window::WindowBuckets;

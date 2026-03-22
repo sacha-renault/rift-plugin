@@ -68,16 +68,20 @@ where
 
 pub trait AudioConsumerDispatchExt {
     /// Adds a new consumer that will receive audio data drained from the accumulator.
-    ///
-    /// The added [`AudioConsumer`] is registered with the dispatcher immediately.
-    /// When a write event occurs, all registered consumers are notified in sequence.
+    /// for the average of ALL channels
     fn add_consumer_averaged(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
 
+    /// Adds a new consumer that will receive audio data drained from the accumulator
+    /// on a single specific channel
     fn add_consumer_at_channel(
         self,
         consumer: ConsumerCell<dyn AudioConsumer>,
         channel: usize,
     ) -> Self;
+
+    /// Adds a new consumer that will receive audio data drained from the accumulator
+    /// on every channel independently.
+    fn add_consumer_all(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
 
     /// Generates a redraw lens that fires whenever new data arrives in the accumulator.
     ///
@@ -92,6 +96,10 @@ where
 {
     fn add_consumer_averaged(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
         self.modify(|acc_drain| acc_drain.dispatcher.add_consumer_averaged(consumer))
+    }
+
+    fn add_consumer_all(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
+        self.modify(|acc_drain| acc_drain.dispatcher.add_consumer_all(consumer))
     }
 
     fn add_consumer_at_channel(
