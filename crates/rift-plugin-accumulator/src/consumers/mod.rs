@@ -53,5 +53,5 @@ where
 
 pub use audio_peaks::AudioPeaks;
 pub use consumer_dispatcher::{ChannelMode, ConsumerDispatcher};
-pub use spectrogram::StftChannelConsumer;
+pub use spectrogram::StftConsumer;
 pub use windowed_peaks::{Bucket, PeakBucket, WindowBuckets};

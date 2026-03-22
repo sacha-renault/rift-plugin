@@ -11,7 +11,7 @@ use rustfft::{Fft, FftPlanner, num_complex::Complex};
 /// buffer and recomputes the magnitude spectrum whenever a full `fft_size`
 /// window is available. Only processes blocks tagged with `channel_target`;
 /// all others are ignored.
-pub struct StftChannelConsumer {
+pub struct StftConsumer {
     samples: DequeBuffer,
     cache: Vec<f32>,
     window: Vec<f32>,
@@ -23,7 +23,7 @@ pub struct StftChannelConsumer {
     fft_workspace: Vec<Complex<f32>>,
 }
 
-impl StftChannelConsumer {
+impl StftConsumer {
     /// Creates a consumer for `channel` using a forward FFT of size `fft_size`
     /// at the given `samplerate`. The FFT plan is computed once here.
     pub fn new(fft_size: usize, samplerate: f32) -> Self {
@@ -82,7 +82,7 @@ impl StftChannelConsumer {
     }
 }
 
-impl AudioConsumer for StftChannelConsumer {
+impl AudioConsumer for StftConsumer {
     fn consume(&mut self, block: &[f32], _: ChannelsInfo, _: BlockTime) {
         self.consume_samples(block);
     }
@@ -101,11 +101,11 @@ mod tests {
     use super::*;
     use std::f32::consts::PI;
 
-    fn make_consumer(fft_size: usize) -> StftChannelConsumer {
-        StftChannelConsumer::new(fft_size, 44100.0)
+    fn make_consumer(fft_size: usize) -> StftConsumer {
+        StftConsumer::new(fft_size, 44100.0)
     }
 
-    fn feed_sine(consumer: &mut StftChannelConsumer, freq_hz: f32) {
+    fn feed_sine(consumer: &mut StftConsumer, freq_hz: f32) {
         let n = consumer.fft_size();
         let sr = consumer.sample_rate();
         let block: Vec<f32> = (0..n)
@@ -185,7 +185,7 @@ mod tests {
         let sr = 44100.0_f32;
         let freq = 1000.0_f32;
 
-        let mut c = StftChannelConsumer::new(fft_size, sr);
+        let mut c = StftConsumer::new(fft_size, sr);
         feed_sine(&mut c, freq);
 
         let bins = c.bins();

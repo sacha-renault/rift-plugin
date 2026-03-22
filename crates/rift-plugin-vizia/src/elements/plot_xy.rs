@@ -253,7 +253,7 @@ fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
 
 /// Yes, we do display spectrogram in the oscilloscope, it works the same
 /// anyway, we can use Oscilloscope for any data that for y has <= 1 x.
-impl PlotData for ConsumerCell<StftChannelConsumer> {
+impl PlotData for ConsumerCell<StftConsumer> {
     fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
