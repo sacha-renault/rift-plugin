@@ -12,8 +12,6 @@ use rustfft::{Fft, FftPlanner, num_complex::Complex};
 /// window is available. Only processes blocks tagged with `channel_target`;
 /// all others are ignored.
 pub struct StftChannelConsumer {
-    channel_target: usize,
-
     samples: DequeBuffer,
     cache: Vec<f32>,
     window: Vec<f32>,
@@ -28,12 +26,11 @@ pub struct StftChannelConsumer {
 impl StftChannelConsumer {
     /// Creates a consumer for `channel` using a forward FFT of size `fft_size`
     /// at the given `samplerate`. The FFT plan is computed once here.
-    pub fn new(channel: usize, fft_size: usize, samplerate: f32) -> Self {
+    pub fn new(fft_size: usize, samplerate: f32) -> Self {
         let fft = FftPlanner::<f32>::new().plan_fft_forward(fft_size);
         let window = hanning(fft_size);
 
         Self {
-            channel_target: channel,
             samples: DequeBuffer::new(fft_size),
             cache: vec![0.0; fft_size / 2],
             fft,
@@ -86,10 +83,8 @@ impl StftChannelConsumer {
 }
 
 impl AudioConsumer for StftChannelConsumer {
-    fn consume(&mut self, block: &[f32], channels: ChannelsInfo, _: BlockTime) {
-        if channels.current == self.channel_target {
-            self.consume_samples(block);
-        }
+    fn consume(&mut self, block: &[f32], _: ChannelsInfo, _: BlockTime) {
+        self.consume_samples(block);
     }
 }
 
@@ -107,7 +102,7 @@ mod tests {
     use std::f32::consts::PI;
 
     fn make_consumer(fft_size: usize) -> StftChannelConsumer {
-        StftChannelConsumer::new(0, fft_size, 44100.0)
+        StftChannelConsumer::new(fft_size, 44100.0)
     }
 
     fn feed_sine(consumer: &mut StftChannelConsumer, freq_hz: f32) {
@@ -190,7 +185,7 @@ mod tests {
         let sr = 44100.0_f32;
         let freq = 1000.0_f32;
 
-        let mut c = StftChannelConsumer::new(0, fft_size, sr);
+        let mut c = StftChannelConsumer::new(fft_size, sr);
         feed_sine(&mut c, freq);
 
         let bins = c.bins();
@@ -211,19 +206,6 @@ mod tests {
             "peak at bin {peak_bin} ({} Hz), expected {expected_bin} ({freq} Hz)",
             peak_bin as f32 * bin_hz
         );
-    }
-
-    #[test]
-    fn test_consume_ignores_wrong_channel() {
-        let mut c = make_consumer(256);
-        let block = vec![1.0_f32; 256];
-        let wrong_channel = ChannelsInfo {
-            current: 99,
-            total_channels: 100,
-        };
-
-        c.consume(&block, wrong_channel, BlockTime::none());
-        assert!(c.bins().iter().all(|&b| b == 0.0));
     }
 
     #[test]
