@@ -70,7 +70,7 @@ impl<const N: usize> AudioAccumulatorErased for InnerAudioAccumulator<N> {
         self.num_writes.load(Ordering::Relaxed)
     }
 
-    fn drain(&self, consumers: &[ConsumerCell<dyn AudioConsumer>]) {
+    fn dispatch(&self, dispatcher: &mut ConsumerDispatcher) {
         let total_channels = self.channels();
         if total_channels == 0 {
             return;
@@ -98,11 +98,7 @@ impl<const N: usize> AudioAccumulatorErased for InnerAudioAccumulator<N> {
                 let time = block.time();
 
                 // Accumulate over ALL consumers
-                for consumer_cell in consumers.iter() {
-                    if let Ok(mut consumer) = consumer_cell.try_borrow_mut() {
-                        consumer.consume(block.as_slice(), infos, time);
-                    }
-                }
+                dispatcher.dispatch(block.as_slice(), infos, time);
             }
         }
     }

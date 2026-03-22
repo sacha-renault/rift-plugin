@@ -29,8 +29,13 @@ impl AudioConsumer for ConsumerMock {
 }
 
 fn init_audio_accumulator() -> AudioAccumulator {
-    // 1 channel and 4 max blocks
     AudioAccumulator::new::<10>(1, 4)
+}
+
+fn make_dispatcher_with(consumer: ConsumerCell<dyn AudioConsumer>) -> ConsumerDispatcher {
+    let mut dispatcher = ConsumerDispatcher::new();
+    dispatcher.add_consumer_at_channel(consumer, 0);
+    dispatcher
 }
 
 #[test]
@@ -40,13 +45,14 @@ fn test_add_slice() {
     acc.push_slices(&mut [channel.as_slice()].into_iter(), None);
 
     let consumer = ConsumerMock::new();
-    acc.drain(&[consumer.clone()]);
+    let mut dispatcher = make_dispatcher_with(consumer.clone());
+    acc.dispatch(&mut dispatcher);
 
     assert_eq!(acc.channels(), 1);
     assert_eq!(consumer.borrow().n_calls, 1);
     assert_eq!(consumer.borrow().data.len(), channel.len());
     assert_eq!(consumer.borrow().data, channel);
-    assert!(consumer.borrow().time.is_some()); // Even if we pass none, this must be some, just no data inside
+    assert!(consumer.borrow().time.is_some());
     assert_eq!(consumer.borrow().time.map(|t| t.seconds()), Some(None))
 }
 
@@ -58,7 +64,8 @@ fn test_add_slice_with_time_info() {
     acc.push_slices(&mut [channel.as_slice()].into_iter(), Some(infos));
 
     let consumer = ConsumerMock::new();
-    acc.drain(&[consumer.clone()]);
+    let mut dispatcher = make_dispatcher_with(consumer.clone());
+    acc.dispatch(&mut dispatcher);
 
     assert_eq!(consumer.borrow().time.map(|t| t.seconds()), Some(Some(0.)));
     assert_eq!(acc.num_writes(), 1);
@@ -72,7 +79,9 @@ fn test_clear() {
     acc.clear();
 
     let consumer = ConsumerMock::new();
-    acc.drain(&[consumer.clone()]);
+    let mut dispatcher = make_dispatcher_with(consumer.clone());
+    acc.dispatch(&mut dispatcher);
+
     assert_eq!(consumer.borrow().n_calls, 0);
 }
 
@@ -83,7 +92,8 @@ fn test_push_slice_more_than_block_size() {
     acc.push_slices(&mut [channel.as_slice()].into_iter(), None);
 
     let consumer = ConsumerMock::new();
-    acc.drain(&[consumer.clone()]);
+    let mut dispatcher = make_dispatcher_with(consumer.clone());
+    acc.dispatch(&mut dispatcher);
 
     assert_eq!(acc.channels(), 1);
     assert_eq!(consumer.borrow().n_calls, 4);
@@ -97,7 +107,8 @@ fn test_push_slice_exceed_queue() {
     acc.push_slices(&mut [channel.as_slice()].into_iter(), None);
 
     let consumer = ConsumerMock::new();
-    acc.drain(&[consumer.clone()]);
+    let mut dispatcher = make_dispatcher_with(consumer.clone());
+    acc.dispatch(&mut dispatcher);
 
     assert_eq!(consumer.borrow().n_calls, 4);
     assert!(consumer.borrow().data.len() < channel.len());
@@ -111,5 +122,6 @@ fn test_no_channels() {
     acc.push_slices(&mut [channel.as_slice()].into_iter(), None);
 
     let consumer = ConsumerMock::new();
-    acc.drain(&[consumer.clone()]);
+    let mut dispatcher = make_dispatcher_with(consumer.clone());
+    acc.dispatch(&mut dispatcher);
 }
