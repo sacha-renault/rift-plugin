@@ -65,7 +65,7 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
     /// # Thread safety
     ///
     /// Intended for the UI thread only.
-    fn drain(&self, consumers: &[ConsumerCell<dyn AudioConsumer>]);
+    fn dispatch(&self, dispatcher: &mut ConsumerDispatcher);
 
     /// Discards all buffered blocks across every channel.
     ///
@@ -159,7 +159,7 @@ impl AudioAccumulatorErased for AudioAccumulator {
     }
 
     #[inline]
-    fn drain(&self, consumers: &[ConsumerCell<dyn AudioConsumer>]) {
-        self.inner.drain(consumers);
+    fn dispatch(&self, dispatcher: &mut ConsumerDispatcher) {
+        self.inner.dispatch(dispatcher);
     }
 }

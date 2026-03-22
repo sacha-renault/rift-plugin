@@ -25,7 +25,7 @@ pub struct AudioConsumerDispatch<L>
 where
     L: Lens<Target = AudioAccumulator>,
 {
-    consumers: Vec<ConsumerCell<dyn AudioConsumer>>,
+    dispatcher: ConsumerDispatcher,
     accumulator: L,
 }
 
@@ -36,7 +36,7 @@ where
     pub fn new(cx: &mut Context, accumulator: L) -> Handle<'_, Self> {
         Self {
             accumulator,
-            consumers: Vec::new(),
+            dispatcher: ConsumerDispatcher::new(),
         }
         .build(cx, move |cx| {
             // This will fire an event every time new data
@@ -61,7 +61,7 @@ where
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
         event.map(|_: &NewData, _| {
             let acc = self.accumulator.get(cx);
-            acc.drain(&self.consumers);
+            acc.dispatch(&mut self.dispatcher);
         });
     }
 }
@@ -71,7 +71,13 @@ pub trait AudioConsumerDispatchExt {
     ///
     /// The added [`AudioConsumer`] is registered with the dispatcher immediately.
     /// When a write event occurs, all registered consumers are notified in sequence.
-    fn add_consumer(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
+    fn add_consumer_averaged(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
+
+    fn add_consumer_at_channel(
+        self,
+        consumer: ConsumerCell<dyn AudioConsumer>,
+        channel: usize,
+    ) -> Self;
 
     /// Generates a redraw lens that fires whenever new data arrives in the accumulator.
     ///
@@ -84,8 +90,20 @@ impl<L> AudioConsumerDispatchExt for Handle<'_, AudioConsumerDispatch<L>>
 where
     L: Lens<Target = AudioAccumulator>,
 {
-    fn add_consumer(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
-        self.modify(|acc_drain| acc_drain.consumers.push(consumer))
+    fn add_consumer_averaged(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
+        self.modify(|acc_drain| acc_drain.dispatcher.add_consumer_averaged(consumer))
+    }
+
+    fn add_consumer_at_channel(
+        self,
+        consumer: ConsumerCell<dyn AudioConsumer>,
+        channel: usize,
+    ) -> Self {
+        self.modify(|acc_drain| {
+            acc_drain
+                .dispatcher
+                .add_consumer_at_channel(consumer, channel)
+        })
     }
 
     fn redraw_lens(&self) -> impl Lens<Target = u64> {
@@ -98,8 +116,6 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc};
-
     use super::*;
 
     const N_TEST: usize = 10;
@@ -141,12 +157,13 @@ mod tests {
         }
         .build(cx);
 
-        let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
-        let acd = AudioConsumerDispatch::new(cx, AccData::acc).add_consumer(consumer.clone());
+        let consumer = MockConsumer { count: 0 }.wraps_consumer();
+        let acd = AudioConsumerDispatch::new(cx, AccData::acc)
+            .add_consumer_at_channel(consumer.clone(), 0);
         let redraw = acd.redraw_lens();
 
         let mut consumer_count = 0;
-        acd.modify(|view| consumer_count = view.consumers.len());
+        acd.modify(|view| consumer_count = view.dispatcher.consumer_count());
 
         let num_writes_before = redraw.get(cx);
         push_audio(AccData::acc.get(cx));
@@ -164,11 +181,13 @@ mod tests {
         let acc = AudioAccumulator::new::<N_TEST>(1, 3);
         AccData { acc: acc.clone() }.build(cx);
 
-        let consumer = Rc::new(RefCell::new(MockConsumer { count: 0 }));
+        let consumer = MockConsumer { count: 0 }.wraps_consumer();
+        let mut dispatcher = ConsumerDispatcher::new();
+        dispatcher.add_consumer_at_channel(consumer.clone(), 0);
 
         let mut acd = AudioConsumerDispatch {
             accumulator: AccData::acc,
-            consumers: vec![consumer.clone()],
+            dispatcher: dispatcher,
         };
 
         push_audio(acc.clone());
