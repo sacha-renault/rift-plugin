@@ -29,10 +29,10 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
     fn lerp_array_out_of_range() {
         let array = vec![0., 1., 2.];
-        lerp_interpolate_buffer(&array, 4.);
+        let value = lerp_interpolate_buffer(&array, 4.);
+        assert_approx_eq!(value, array.last().unwrap()); // approx eq to last value
     }
 
     #[test]
