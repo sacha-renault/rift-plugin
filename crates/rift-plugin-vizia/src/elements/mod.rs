@@ -11,6 +11,7 @@ mod param_xy;
 mod peak_viewer;
 mod plot_xy;
 mod popup;
+mod position_indicator;
 
 mod gui_prelude {
     //! this is an internal helper that gather
@@ -36,3 +37,4 @@ pub use param_xy::ParamPadXY;
 pub use peak_viewer::PeaksViewer;
 pub use plot_xy::{PlotXY, PlotXYExt};
 pub use popup::PopupExt;
+pub use position_indicator::PositionIndicator;
