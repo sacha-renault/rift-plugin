@@ -22,6 +22,8 @@ pub fn interpolate_buffer2(buf: &[f32], x: f32, kernel: fn(f32, f32, f32) -> f32
 }
 
 /// Interpolate at a fractional index using a 4-sample kernel.
+///
+/// See [`catmull_interpolate_buffer`] implementation to see how to use.
 #[inline]
 pub fn interpolate_buffer4(buf: &[f32], x: f32, kernel: fn(f32, f32, f32, f32, f32) -> f32) -> f32 {
     let len = buf.len();
@@ -57,7 +59,7 @@ pub fn interpolate_buffer4(buf: &[f32], x: f32, kernel: fn(f32, f32, f32, f32, f
 /// # Panics
 /// - If `array` is empty.
 #[inline]
-pub fn lerp_buffer(array: &[f32], x: f32) -> f32 {
+pub fn lerp_interpolate_buffer(array: &[f32], x: f32) -> f32 {
     interpolate_buffer2(array, x, lerp)
 }
 
@@ -72,6 +74,6 @@ pub fn lerp_buffer(array: &[f32], x: f32) -> f32 {
 /// # Panics
 /// - If `array` is empty.
 #[inline]
-pub fn catmull_buffer(array: &[f32], x: f32) -> f32 {
+pub fn catmull_interpolate_buffer(array: &[f32], x: f32) -> f32 {
     interpolate_buffer4(array, x, cubic_catmull_interpolate)
 }

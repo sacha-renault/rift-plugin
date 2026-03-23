@@ -1,6 +1,6 @@
 use rift_plugin_accumulator::prelude::*;
 use rift_plugin_core::prelude::ConsumerCell;
-use rift_plugin_core::utils::interpo::{catmull_buffer, lerp_buffer};
+use rift_plugin_core::utils::interpo::{catmull_interpolate_buffer, lerp_interpolate_buffer};
 use rift_plugin_core::utils::spaces::Linspace;
 
 use vizia::vg;
@@ -178,7 +178,7 @@ impl PlotData for Vec<f32> {
             f(&mut iterator)
         } else {
             let mut iterator = Linspace::new(0., 1., width as usize).map(|x| {
-                let y = lerp_buffer(&self, x * max);
+                let y = lerp_interpolate_buffer(&self, x * max);
                 (x, y)
             });
             f(&mut iterator)
@@ -255,7 +255,7 @@ impl PlotData for ConsumerCell<StftConsumer> {
         let mut iterator = Linspace::new(0.0, 1.0, num_points).map(|x| {
             let freq = f_min * log_ratio.powf(x);
             let bin_idx = (freq * fft_size) / samplerate;
-            let val = catmull_buffer(bins, bin_idx);
+            let val = catmull_interpolate_buffer(bins, bin_idx);
             let db = 20.0 * val.max(1e-5).log10();
             (x, db)
         });

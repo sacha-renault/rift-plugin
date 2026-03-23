@@ -32,20 +32,20 @@ mod tests {
     #[should_panic]
     fn lerp_array_out_of_range() {
         let array = vec![0., 1., 2.];
-        lerp_buffer(&array, 4.);
+        lerp_interpolate_buffer(&array, 4.);
     }
 
     #[test]
     fn lerp_array() {
         let array = vec![0., 1., 2.];
-        let value = lerp_buffer(&array, 1.5);
+        let value = lerp_interpolate_buffer(&array, 1.5);
         assert_approx_eq!(value, 1.5);
     }
 
     #[test]
     fn lerp_array_last() {
         let array = vec![0., 1., 2.];
-        let value = lerp_buffer(&array, 2.);
+        let value = lerp_interpolate_buffer(&array, 2.);
         assert_approx_eq!(value, 2.);
     }
 
@@ -70,34 +70,34 @@ mod tests {
 
     #[test]
     fn cubic_catmull_interpolate_array_single_bin() {
-        assert_eq!(catmull_buffer(&[0.5], 0.0), 0.5);
+        assert_eq!(catmull_interpolate_buffer(&[0.5], 0.0), 0.5);
     }
 
     #[test]
     fn cubic_catmull_interpolate_array_exact_index() {
         let bins = [0.0, 1.0, 2.0, 3.0];
-        assert_approx_eq!(catmull_buffer(&bins, 0.0), 0.0);
-        assert_approx_eq!(catmull_buffer(&bins, 1.0), 1.0);
-        assert_approx_eq!(catmull_buffer(&bins, 2.0), 2.0);
+        assert_approx_eq!(catmull_interpolate_buffer(&bins, 0.0), 0.0);
+        assert_approx_eq!(catmull_interpolate_buffer(&bins, 1.0), 1.0);
+        assert_approx_eq!(catmull_interpolate_buffer(&bins, 2.0), 2.0);
     }
 
     #[test]
     fn cubic_catmull_interpolate_array_clamps_below_zero() {
         let bins = [1.0, 2.0, 3.0];
-        assert_approx_eq!(catmull_buffer(&bins, -1.0), 1.0);
+        assert_approx_eq!(catmull_interpolate_buffer(&bins, -1.0), 1.0);
     }
 
     #[test]
     fn cubic_catmull_interpolate_array_clamps_above_max() {
         let bins = [1.0, 2.0, 3.0];
-        assert_approx_eq!(catmull_buffer(&bins, 99.0), 3.0);
+        assert_approx_eq!(catmull_interpolate_buffer(&bins, 99.0), 3.0);
     }
 
     #[test]
     fn cubic_catmull_interpolate_array_interpolates_midpoint() {
         // For a linear ramp, cubic interpolation at 0.5 between two points should be ~midpoint
         let bins = [0.0, 0.0, 1.0, 1.0];
-        let mid = catmull_buffer(&bins, 1.5);
+        let mid = catmull_interpolate_buffer(&bins, 1.5);
         assert!((0.0..=1.0).contains(&mid));
     }
 }
