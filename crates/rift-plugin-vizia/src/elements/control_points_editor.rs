@@ -78,7 +78,6 @@ impl DestructThenBuildView for DraggablePoint {
 
         self.build(cx, |_| {})
             .corner_radius(Percentage(100.))
-            .border_color(Color::azure())
             .position_type(PositionType::Absolute)
             .transform(vec![Transform::Translate((
                 LengthOrPercentage::Percentage(-50.),
@@ -577,7 +576,6 @@ fn tension_from_drag(p1: &ControlPoint, p2: &ControlPoint, mouse_y: f32) -> f32 
     } else {
         p1.tension + delta_y
     }
-    .clamp(-8., 8.)
 }
 
 fn segment_handle(p1: &ControlPoint, p2: &ControlPoint) -> (f32, f32) {
