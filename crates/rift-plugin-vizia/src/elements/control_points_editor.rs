@@ -344,6 +344,21 @@ impl ControlPointsEditor {
         }
     }
 
+    fn reset_tension(&mut self, cx: &mut EventContext, idx: usize) {
+        // Idx of tension is same idx has its point.
+        let ControlPoint { x, y, .. } = self.points[idx];
+        let event = ControlPointEvent::ModifyPoint {
+            idx,
+            x,
+            y,
+            tension: 0f32,
+        };
+
+        if self.try_push_event(event) {
+            self.update_tension_handle_after(cx, idx);
+        }
+    }
+
     fn add_point(&mut self, cx: &mut EventContext) {
         if self.points.len() >= self.points.capacity() {
             log::error!(
@@ -472,6 +487,11 @@ impl View for ControlPointsEditor {
                     self.move_point(cx, x, y);
                 } else if self.idx_by_tension_entity(entity).is_some() {
                     self.move_tension(cx, x, y);
+                }
+            }
+            WindowEvent::MouseDown(MouseButton::Right) => {
+                if let Some(idx) = self.idx_by_tension_entity(cx.hovered()) {
+                    self.reset_tension(cx, idx);
                 }
             }
             _ => {}
