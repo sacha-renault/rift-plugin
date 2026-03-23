@@ -1,4 +1,5 @@
-use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
 
@@ -13,6 +14,7 @@ const TASKS_CAPACITY: usize = 2048;
 /// the unposted task in an `Err`.
 pub(crate) struct SharedQueues {
     pub(crate) latency: AtomicU32,
+    pub(crate) is_playing: Arc<AtomicBool>,
 
     /// Queues that audio / main thread can read
     pub(crate) main_thread_tasks: ArrayQueue<MainThreadTask>,
@@ -23,6 +25,7 @@ impl Default for SharedQueues {
     fn default() -> Self {
         Self {
             latency: AtomicU32::new(0),
+            is_playing: Arc::new(AtomicBool::new(false)),
             main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
             audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
         }

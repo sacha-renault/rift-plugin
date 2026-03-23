@@ -143,7 +143,7 @@ where
             apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
 
         VStack::new(cx, move |cx| {
-            let popup_model = ValuePopup::default().build(cx);
+            ValuePopup::default().build(cx);
 
             if has_name_label {
                 Label::new(cx, param_ptr.name())

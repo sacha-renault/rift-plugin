@@ -1,5 +1,7 @@
+use std::sync::atomic::Ordering;
+
 use clack_extensions::params::*;
-use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
+use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::prelude::*;
 
 use rift_plugin_core::gui::{GuiParamEvent, GuiParamEventKind};
@@ -101,6 +103,13 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<ProcessStatus, PluginError> {
         self.flush(events.input, events.output);
         let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
+
+        if let Some(flags) = process.transport.map(|tr| tr.flags) {
+            self.shared.states.is_playing.store(
+                flags.contains(TransportFlags::IS_PLAYING),
+                Ordering::Relaxed,
+            );
+        }
 
         let context = ProcessContext {
             host: &self.host,
