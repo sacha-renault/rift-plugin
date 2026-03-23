@@ -400,17 +400,7 @@ impl ControlPointsEditor {
         }
     }
 
-    fn remove_point(&mut self, cx: &mut EventContext) {
-        let (x, y) = self.last_mouse_pos;
-
-        let Some((idx, _)) = self.points.iter().enumerate().min_by(|(_, a), (_, b)| {
-            let da = (a.x - x).hypot(a.y - y);
-            let db = (b.x - x).hypot(b.y - y);
-            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
-        }) else {
-            return;
-        };
-
+    fn remove_point(&mut self, cx: &mut EventContext, idx: usize) {
         let event = ControlPointEvent::DeletePoint { idx };
         if !self.try_push_event(event) {
             return;
@@ -463,8 +453,13 @@ impl View for ControlPointsEditor {
 
         event.map(|window_event, _| match *window_event {
             WindowEvent::MouseUp(MouseButton::Left) => self.on_mouse_up(cx),
-            WindowEvent::MouseUp(MouseButton::Middle) => self.remove_point(cx),
-            WindowEvent::MouseDoubleClick(MouseButton::Left) => self.add_point(cx),
+            WindowEvent::MouseDoubleClick(MouseButton::Left) => {
+                if let Some(idx) = self.idx_by_point_entity(cx.hovered()) {
+                    self.remove_point(cx, idx);
+                } else {
+                    self.add_point(cx)
+                }
+            }
             WindowEvent::MouseMove(x, y) => {
                 let (x, y) = self.normalize_mouse(cx, x, y);
                 self.last_mouse_pos = (x, y);
