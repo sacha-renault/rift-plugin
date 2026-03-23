@@ -1,7 +1,7 @@
-use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_core::transport::BlockTime;
 
 pub use super::bucket::Bucket;
-use crate::prelude::AudioConsumer;
+use crate::prelude::MonoConsumer;
 
 /// A circular buffer that accumulates audio samples over a time window and exposes [`Bucket::value`].
 ///
@@ -107,8 +107,8 @@ impl<B: Bucket> WindowBuckets<B> {
     }
 }
 
-impl<B: Bucket> AudioConsumer for WindowBuckets<B> {
-    fn consume(&mut self, block: &[f32], _: ChannelsInfo, _: BlockTime) {
+impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
+    fn consume(&mut self, block: &[f32], _: BlockTime) {
         for &value in block.iter() {
             self.push_point(value);
         }
@@ -117,7 +117,7 @@ impl<B: Bucket> AudioConsumer for WindowBuckets<B> {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
+    use rift_plugin_core::transport::BlockTime;
 
     use crate::consumers::windowed_peaks::peaks::PeakBucket;
 
@@ -129,15 +129,8 @@ mod tests {
         buf
     }
 
-    fn dummy_channels() -> ChannelsInfo {
-        ChannelsInfo {
-            current: 0,
-            total_channels: 1,
-        }
-    }
-
     fn feed_block(buffer: &mut WindowBuckets<PeakBucket>, block: &[f32]) {
-        buffer.consume(block, dummy_channels(), BlockTime::none());
+        buffer.consume(block, BlockTime::none());
     }
 
     #[test]

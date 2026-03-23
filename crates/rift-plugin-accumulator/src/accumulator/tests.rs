@@ -20,8 +20,8 @@ impl ConsumerMock {
     }
 }
 
-impl AudioConsumer for ConsumerMock {
-    fn consume(&mut self, block: &[f32], _: ChannelsInfo, time: BlockTime) {
+impl MonoConsumer for ConsumerMock {
+    fn consume(&mut self, block: &[f32], time: BlockTime) {
         self.data.extend_from_slice(block);
         self.n_calls += 1;
         self.time = Some(time);
@@ -32,7 +32,7 @@ fn init_audio_accumulator() -> AudioAccumulator {
     AudioAccumulator::new::<10>(1, 4)
 }
 
-fn make_dispatcher_with(consumer: ConsumerCell<dyn AudioConsumer>) -> ConsumerDispatcher {
+fn make_dispatcher_with(consumer: ConsumerCell<dyn MonoConsumer>) -> ConsumerDispatcher {
     let mut dispatcher = ConsumerDispatcher::new();
     dispatcher.add_consumer_at_channel(consumer, 0);
     dispatcher

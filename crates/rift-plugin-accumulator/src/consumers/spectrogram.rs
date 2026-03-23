@@ -1,8 +1,8 @@
 use core::f32;
 use std::sync::Arc;
 
-use super::AudioConsumer;
-use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
+use super::MonoConsumer;
+use rift_plugin_core::transport::BlockTime;
 use rift_plugin_core::utils::dequeue_buffer::DequeBuffer;
 use rift_plugin_core::utils::spaces::Linspace;
 use rustfft::{Fft, FftPlanner, num_complex::Complex};
@@ -82,8 +82,8 @@ impl StftConsumer {
     }
 }
 
-impl AudioConsumer for StftConsumer {
-    fn consume(&mut self, block: &[f32], _: ChannelsInfo, _: BlockTime) {
+impl MonoConsumer for StftConsumer {
+    fn consume(&mut self, block: &[f32], _: BlockTime) {
         self.consume_samples(block);
     }
 }
@@ -212,12 +212,8 @@ mod tests {
     fn test_consume_processes_correct_channel() {
         let mut c = make_consumer(256);
         let block = vec![1.0_f32; 256];
-        let right_channel = ChannelsInfo {
-            current: 0,
-            total_channels: 1,
-        };
 
-        c.consume(&block, right_channel, BlockTime::none());
+        c.consume(&block, BlockTime::none());
         // DC bin must be non-zero after a full block of 1.0
         assert!(c.bins()[0] > 0.0);
     }
