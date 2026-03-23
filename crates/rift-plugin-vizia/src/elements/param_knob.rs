@@ -55,6 +55,9 @@ where
 
     #[builder(default = true)]
     has_name_label: bool,
+
+    #[builder(default = 15.)]
+    span: f32,
 }
 
 impl<L, MapFn> DestructThenBuildView for ParamKnob<L, MapFn>
@@ -80,6 +83,7 @@ where
             taper_inverse,
             knob_range: (start_angle, end_angle),
             has_name_label,
+            span,
         } = self;
         let sweep = end_angle - start_angle;
         let offset = sweep / 2.0;
@@ -112,7 +116,7 @@ where
                         cx,
                         false,
                         Percentage(100.0),
-                        Percentage(15.0),
+                        Percentage(span),
                         start_angle,
                         end_angle,
                         KnobMode::Continuous,
