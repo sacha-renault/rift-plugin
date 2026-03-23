@@ -22,6 +22,12 @@ impl BlockIndex {
 }
 
 impl ChannelsInfo {
+    pub fn mono() -> Self {
+        ChannelsInfo {
+            current: 0,
+            total_channels: 1,
+        }
+    }
     pub fn is_last_channel(&self) -> bool {
         // idx starts at 0
         self.current + 1 == self.total_channels

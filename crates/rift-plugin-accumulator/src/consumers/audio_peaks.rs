@@ -2,7 +2,7 @@ use rift_plugin_core::transport::{BlockTime, ChannelsInfo};
 use rift_plugin_core::utils::bounded_vec::BoundedVec;
 use rift_plugin_core::utils::interpo::lerp_n;
 
-use crate::prelude::AudioConsumer;
+use crate::prelude::MultiConsumer;
 
 /// Per-channel peak state tracked by [`AudioPeaks`].
 struct ChannelAudioPeaks {
@@ -100,7 +100,7 @@ impl AudioPeaks {
     }
 }
 
-impl AudioConsumer for AudioPeaks {
+impl MultiConsumer for AudioPeaks {
     fn consume(&mut self, block: &[f32], channel_info: ChannelsInfo, _: BlockTime) {
         let Some(channel_peak) = self.channel_peaks.get(channel_info.current) else {
             return;
@@ -146,7 +146,8 @@ mod tests {
     #[test]
     fn test_basic() {
         let mut acc = make_acc();
-        acc.consume(
+        MultiConsumer::consume(
+            &mut acc,
             &[1., 1., 1., 1.],
             ChannelsInfo {
                 current: 0,
@@ -163,7 +164,8 @@ mod tests {
     fn test_higher_lerp_factor() {
         let mut acc1 = make_acc();
         let mut acc2 = make_acc().lerp_factor(0.9);
-        acc1.consume(
+        MultiConsumer::consume(
+            &mut acc1,
             &[1., 1., 1., 1.],
             ChannelsInfo {
                 current: 0,
@@ -171,7 +173,8 @@ mod tests {
             },
             BlockTime::none(),
         );
-        acc2.consume(
+        MultiConsumer::consume(
+            &mut acc2,
             &[1., 1., 1., 1.],
             ChannelsInfo {
                 current: 0,
@@ -188,7 +191,8 @@ mod tests {
     fn test_higher_lerp_decay() {
         let mut acc1 = make_acc();
         let mut acc2 = make_acc().decay(|peak, block_size| peak * 0.9f32.powi(block_size as i32));
-        acc1.consume(
+        MultiConsumer::consume(
+            &mut acc1,
             &[0.5, 0.5],
             ChannelsInfo {
                 current: 0,
@@ -196,7 +200,8 @@ mod tests {
             },
             BlockTime::none(),
         );
-        acc2.consume(
+        MultiConsumer::consume(
+            &mut acc2,
             &[0.5, 0.5],
             ChannelsInfo {
                 current: 0,
@@ -205,7 +210,8 @@ mod tests {
             BlockTime::none(),
         );
 
-        acc1.consume(
+        MultiConsumer::consume(
+            &mut acc1,
             &[0.0, 0.0],
             ChannelsInfo {
                 current: 0,
@@ -213,7 +219,8 @@ mod tests {
             },
             BlockTime::none(),
         );
-        acc2.consume(
+        MultiConsumer::consume(
+            &mut acc2,
             &[0.0, 0.0],
             ChannelsInfo {
                 current: 0,
@@ -228,7 +235,8 @@ mod tests {
     #[test]
     fn test_out_of_bounds() {
         let mut acc = make_acc();
-        acc.consume(
+        MultiConsumer::consume(
+            &mut acc,
             &[0.0, 0.0],
             ChannelsInfo {
                 current: 1,

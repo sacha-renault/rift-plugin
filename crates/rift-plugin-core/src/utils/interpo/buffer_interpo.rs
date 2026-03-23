@@ -4,7 +4,8 @@ use super::function_interpo::*;
 #[inline]
 pub fn interpolate_buffer2(buf: &[f32], x: f32, kernel: fn(f32, f32, f32) -> f32) -> f32 {
     let len = buf.len();
-    assert_ne!(len, 0);
+    assert_ne!(len, 0, "buffer cannot be empty");
+
     if len == 1 || x <= 0.0 {
         return buf[0];
     }
@@ -27,7 +28,8 @@ pub fn interpolate_buffer2(buf: &[f32], x: f32, kernel: fn(f32, f32, f32) -> f32
 #[inline]
 pub fn interpolate_buffer4(buf: &[f32], x: f32, kernel: fn(f32, f32, f32, f32, f32) -> f32) -> f32 {
     let len = buf.len();
-    assert_ne!(len, 0);
+    assert_ne!(len, 0, "buffer cannot be empty");
+
     if len == 1 || x <= 0.0 {
         return buf[0];
     }

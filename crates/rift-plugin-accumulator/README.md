@@ -11,7 +11,7 @@ So we need a way to get samples from one side to the other without either thread
 
 ## How it works
 
-```
+```text
 Audio thread                                          UI thread
 ───────────                                           ─────────
 
@@ -32,22 +32,22 @@ Host hands us                                         On each frame
                                                   │ ConsumerDispatcher │
                                                   │                    │
                                                   │ Routes each block  │
-                                                  │ by ChannelMode     │
-                                                  └──┬─────┬────────┬──┘
-                                                     │     │        │
-                             ┌───────────────────────┘     │        └──────────────────┐
-                             ▼                             ▼                           ▼
-                    ChannelMode::Averaged         ChannelMode::All          ChannelMode::Channel(n)
-                            │                            │                           │
+                                                  │ by consumer type   │
+                                                  └──┬────┬─────────┬──┘
+                                                     │    │         │
+                            ┌────────────────────────┘    │         └────────────────┐
+                            ▼                             ▼                          ▼
+                      Averaged                     All (multi)               Channel(n)
+                            │                             │                          │
                     Accumulates all channels        Forwards every            Forwards only
                     into intermediate buffer,       channel as-is,            channel n,
                     divides, sends mono result      with ChannelsInfo         ignores the rest
-                    after last channel                   │                           │
-                           │                             │                           │
-                           ▼                             ▼                           ▼
+                    after last channel                    │                          │
+                            │                             │                          │
+                            ▼                             ▼                          ▼
                       ┌──────────────┐           ┌──────────────────┐         ┌──────────────────┐
-                      │ Consumer Avg │           │   Consumer All   │         │ Consumer Channel │
-                      │     ...      │           │       ...        │         │       ...        │
+                      │ MonoConsumer │           │  MultiConsumer   │         │  MonoConsumer or │
+                      │MultiConsumer │           │       ...        │         │   MultiConsumer  │
                       └──────────────┘           └──────────────────┘         └──────────────────┘
 ```
 
@@ -71,20 +71,23 @@ accumulator.dispatch(&mut dispatcher);
 
 This is where channel routing lives. Instead of every consumer implementing its own "am I looking at the right channel?" logic, the dispatcher handles it once.
 
-You register consumers with a mode:
+There are two consumer traits:
+
+- **`MonoConsumer`** — receives a plain `&[f32]` block with no channel context. Used for consumers that only need a single signal (averaged mix or a specific channel).
+- **`MultiConsumer`** — receives `&[f32]` along with `ChannelsInfo`, so it knows which channel it's looking at and how many there are in total. Used for per-channel work like peak meters. Every `MultiConsumer` automatically implements `MonoConsumer` via a blanket impl, so it can be used anywhere a `MonoConsumer` is expected.
+
+You register consumers with the appropriate method:
 
 ```rust
-dispatcher.add_consumer_averaged(my_waveform.clone());    // gets mono mix
-dispatcher.add_consumer_all(my_peak_meter.clone());       // gets every channel separately
-dispatcher.add_consumer_at_channel(my_fft.clone(), 0);    // gets only channel 0
+dispatcher.add_consumer_averaged(my_waveform.clone());    // MonoConsumer, gets mono mix
+dispatcher.add_consumer_all(my_peak_meter.clone());       // MultiConsumer, gets every channel separately
+dispatcher.add_consumer_at_channel(my_fft.clone(), 0);    // MonoConsumer, gets only channel 0
 ```
 
 During `dispatch()`, the accumulator pops blocks channel by channel (ch0, ch1, ..., then next block set). For each block, the dispatcher:
 
 1. If any consumer wants averaging: accumulates samples into a scratch buffer, dividing by total channels as it goes
-2. Iterates all registered consumers and forwards the block based on their mode:
-   - `Averaged` → waits until the last channel, then sends the averaged buffer
-   - `All` → sends every channel immediately, with full `ChannelsInfo` attached
-   - `Channel(n)` → sends only when `current == n`, raw block as-is
-
-Consumers themselves implement `AudioConsumer` and just receive a `&[f32]`. They don't know or care about channel routing.
+2. Forwards the block to registered consumers:
+   - **Averaged** → waits until the last channel, then sends the averaged buffer to `MonoConsumer`s
+   - **All** → sends every channel immediately with full `ChannelsInfo` to `MultiConsumer`s
+   - **Channel(n)** → sends only when `current == n`, raw block as-is to `MonoConsumer`s

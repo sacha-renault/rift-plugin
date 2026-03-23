@@ -69,19 +69,19 @@ where
 pub trait AudioConsumerDispatchExt {
     /// Adds a new consumer that will receive audio data drained from the accumulator.
     /// for the average of ALL channels
-    fn add_consumer_averaged(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
+    fn add_consumer_averaged(self, consumer: ConsumerCell<dyn MonoConsumer>) -> Self;
 
     /// Adds a new consumer that will receive audio data drained from the accumulator
     /// on a single specific channel
     fn add_consumer_at_channel(
         self,
-        consumer: ConsumerCell<dyn AudioConsumer>,
+        consumer: ConsumerCell<dyn MonoConsumer>,
         channel: usize,
     ) -> Self;
 
     /// Adds a new consumer that will receive audio data drained from the accumulator
     /// on every channel independently.
-    fn add_consumer_all(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self;
+    fn add_consumer_all(self, consumer: ConsumerCell<dyn MultiConsumer>) -> Self;
 
     /// Generates a redraw lens that fires whenever new data arrives in the accumulator.
     ///
@@ -94,17 +94,17 @@ impl<L> AudioConsumerDispatchExt for Handle<'_, AudioConsumerDispatch<L>>
 where
     L: Lens<Target = AudioAccumulator>,
 {
-    fn add_consumer_averaged(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
+    fn add_consumer_averaged(self, consumer: ConsumerCell<dyn MonoConsumer>) -> Self {
         self.modify(|acc_drain| acc_drain.dispatcher.add_consumer_averaged(consumer))
     }
 
-    fn add_consumer_all(self, consumer: ConsumerCell<dyn AudioConsumer>) -> Self {
+    fn add_consumer_all(self, consumer: ConsumerCell<dyn MultiConsumer>) -> Self {
         self.modify(|acc_drain| acc_drain.dispatcher.add_consumer_all(consumer))
     }
 
     fn add_consumer_at_channel(
         self,
-        consumer: ConsumerCell<dyn AudioConsumer>,
+        consumer: ConsumerCell<dyn MonoConsumer>,
         channel: usize,
     ) -> Self {
         self.modify(|acc_drain| {
@@ -139,13 +139,8 @@ mod tests {
         count: usize,
     }
 
-    impl AudioConsumer for MockConsumer {
-        fn consume(
-            &mut self,
-            _: &[f32],
-            _: rift_plugin_core::transport::ChannelsInfo,
-            _: rift_plugin_core::transport::BlockTime,
-        ) {
+    impl MonoConsumer for MockConsumer {
+        fn consume(&mut self, _: &[f32], _: rift_plugin_core::transport::BlockTime) {
             self.count += 1;
         }
     }
