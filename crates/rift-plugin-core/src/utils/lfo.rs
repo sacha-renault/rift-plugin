@@ -134,6 +134,11 @@ impl Lfo {
         );
     }
 
+    /// Get the current position in the lfo. This will always be in [0., 1.] bounds
+    pub fn get_position(&self) -> f32 {
+        self.position.clamp(0., 1.)
+    }
+
     /// Prepares the LFO for a new processing block.
     /// Can be called as many time as wanted in the process function
     pub fn get_lfo_block<'a>(
