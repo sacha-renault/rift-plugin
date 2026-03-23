@@ -2,7 +2,41 @@ use std::sync::Arc;
 
 use rift_plugin_core::params::FloatParam;
 
+use crate::PopupExt;
+
 use super::gui_prelude::*;
+
+#[derive(Lens)]
+struct ValuePopup {
+    is_dragging: bool,
+    is_over: bool,
+}
+
+impl Default for ValuePopup {
+    fn default() -> Self {
+        Self {
+            is_dragging: false,
+            is_over: false,
+        }
+    }
+}
+
+enum ValuePopupEvent {
+    DragEvent(bool),
+    OverEvent(bool),
+}
+
+impl Model for ValuePopup {
+    fn event(&mut self, _: &mut EventContext, event: &mut Event) {
+        event.map(|event, meta| {
+            match *event {
+                ValuePopupEvent::DragEvent(v) => self.is_dragging = v,
+                ValuePopupEvent::OverEvent(v) => self.is_over = v,
+            }
+            meta.consume();
+        });
+    }
+}
 
 /// A control for mapping a [`ClapParam`] to a rotary knob UI element.
 #[derive(ParamViewBuilder)]
@@ -58,6 +92,9 @@ where
 
     #[builder(default = 15.)]
     span: f32,
+
+    #[builder(default = false)]
+    centered: bool,
 }
 
 impl<L, MapFn> DestructThenBuildView for ParamKnob<L, MapFn>
@@ -84,7 +121,9 @@ where
             knob_range: (start_angle, end_angle),
             has_name_label,
             span,
+            centered,
         } = self;
+
         let sweep = end_angle - start_angle;
         let offset = sweep / 2.0;
 
@@ -104,6 +143,8 @@ where
             apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
 
         VStack::new(cx, move |cx| {
+            let popup_model = ValuePopup::default().build(cx);
+
             if has_name_label {
                 Label::new(cx, param_ptr.name())
                     .maybe_apply_modifiers(label_name_modifier.as_deref())
@@ -114,7 +155,7 @@ where
                 ZStack::new(cx, |cx| {
                     ArcTrack::new(
                         cx,
-                        false,
+                        centered,
                         Percentage(100.0),
                         Percentage(span),
                         start_angle,
@@ -130,6 +171,8 @@ where
                     })
                     .maybe_apply_modifiers(tick_modifier.as_deref())
                     .rotate(lens.map(move |v| Angle::Deg(*v * sweep - offset)))
+                    .on_hover(|cx| cx.emit(ValuePopupEvent::OverEvent(true)))
+                    .on_hover_out(|cx| cx.emit(ValuePopupEvent::OverEvent(false)))
                     .class("knob-head");
                 })
             })
@@ -143,6 +186,7 @@ where
             .on_mouse_down(move |cx, mb| {
                 if mb == MouseButton::Left {
                     gesture_start(param_ptr, cx);
+                    cx.emit(ValuePopupEvent::DragEvent(true));
                     if let Some(f) = on_mouse_down.as_ref() {
                         f(cx, mb)
                     }
@@ -151,6 +195,7 @@ where
             .on_mouse_up(move |cx, mb| match mb {
                 MouseButton::Left => {
                     gesture_end(param_ptr, cx);
+                    cx.emit(ValuePopupEvent::DragEvent(false));
                     if let Some(f) = on_mouse_up.as_ref() {
                         f(cx, mb)
                     }
@@ -159,11 +204,19 @@ where
                 _ => {}
             })
             .maybe_apply_modifiers(knob_modifiers.as_deref())
+            .popup_on(
+                move |cx| {
+                    Label::new(cx, text_lens)
+                        .maybe_apply_modifiers(label_text_modifier.as_deref())
+                        .class("knob-value-label");
+                },
+                ValuePopup::is_dragging.or(ValuePopup::is_over),
+            )
             .class("knob");
 
-            Label::new(cx, text_lens)
-                .maybe_apply_modifiers(label_text_modifier.as_deref())
-                .class("knob-value-label");
+            // Label::new(cx, text_lens)
+            //     .maybe_apply_modifiers(label_text_modifier.as_deref())
+            //     .class("knob-value-label");
         })
         .class("knob-container")
     }
