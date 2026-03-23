@@ -221,11 +221,12 @@ impl ControlPointsEditor {
 
     /// Push an event to the param queue *and* apply it locally.
     /// Returns `true` on success.
-    fn try_push_event(&mut self, event: ControlPointEvent) -> bool {
+    fn try_push_event(&mut self, cx: &mut EventContext, event: ControlPointEvent) -> bool {
         if self.param.push_event(event).is_err() {
             return false;
         }
         self.points.handle_event(event);
+        cx.needs_redraw();
         true
     }
 
@@ -275,7 +276,7 @@ impl ControlPointsEditor {
             tension,
         };
 
-        if !self.try_push_event(event) {
+        if !self.try_push_event(cx, event) {
             return;
         }
 
@@ -312,7 +313,7 @@ impl ControlPointsEditor {
             tension,
         };
 
-        if !self.try_push_event(event) {
+        if !self.try_push_event(cx, event) {
             return;
         }
 
@@ -354,7 +355,7 @@ impl ControlPointsEditor {
             tension: 0f32,
         };
 
-        if self.try_push_event(event) {
+        if self.try_push_event(cx, event) {
             self.update_tension_handle_after(cx, idx);
         }
     }
@@ -381,7 +382,7 @@ impl ControlPointsEditor {
             y,
             tension: 0.,
         };
-        if !self.try_push_event(event) {
+        if !self.try_push_event(cx, event) {
             return;
         }
 
@@ -417,7 +418,7 @@ impl ControlPointsEditor {
 
     fn remove_point(&mut self, cx: &mut EventContext, idx: usize) {
         let event = ControlPointEvent::DeletePoint { idx };
-        if !self.try_push_event(event) {
+        if !self.try_push_event(cx, event) {
             return;
         }
 
