@@ -169,7 +169,7 @@ impl PlotData for Vec<f32> {
         // todo!(), maybe we don't always want this interpolation ?
         // Should interpolation be like ... a choice ?
         // To think ...
-        if width >= max {
+        if width <= max {
             let mut iterator = self
                 .iter()
                 .copied()
@@ -273,19 +273,19 @@ mod tests {
     #[test]
     fn test_vec_f32_points_normalized_x() {
         let data = vec![0.0, 0.5, 1.0];
-        data.with_points(0.0, |iter| {
+        data.with_points(3., |iter| {
             let pts: Vec<_> = iter.collect();
             assert_eq!(pts.len(), 3);
             assert_approx_eq!(pts[0].0, 0.0);
-            assert_approx_eq!(pts[1].0, 1.0 / 3.0);
-            assert_approx_eq!(pts[2].0, 2.0 / 3.0);
+            assert_approx_eq!(pts[1].0, 1.0 / 2.);
+            assert_approx_eq!(pts[2].0, 1.0);
         });
     }
 
     #[test]
     fn test_vec_f32_points_y_values_preserved() {
         let data = vec![0.1, 0.5, 0.9];
-        data.with_points(0.0, |iter| {
+        data.with_points(3., |iter| {
             let ys: Vec<f32> = iter.map(|(_, y)| y).collect();
             assert_approx_eq!(ys[0], 0.1);
             assert_approx_eq!(ys[1], 0.5);
@@ -296,7 +296,7 @@ mod tests {
     #[test]
     fn test_vec_tuple_points_passthrough() {
         let data = vec![(0.1, 0.2), (0.5, 0.6), (0.9, 1.0)];
-        data.with_points(0.0, |iter| {
+        data.with_points(3., |iter| {
             let pts: Vec<_> = iter.collect();
             assert_eq!(pts, vec![(0.1, 0.2), (0.5, 0.6), (0.9, 1.0)]);
         });
