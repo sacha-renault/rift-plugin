@@ -1,6 +1,6 @@
 use rift_plugin_accumulator::prelude::*;
 use rift_plugin_core::prelude::ConsumerCell;
-use rift_plugin_core::utils::interpo::cubic_interpolate;
+use rift_plugin_core::utils::interpo::{catmull_buffer, lerp_buffer};
 use rift_plugin_core::utils::spaces::Linspace;
 
 use vizia::vg;
@@ -159,17 +159,30 @@ pub trait PlotData {
 
 // Must implement for useage in oscilloscope
 impl PlotData for Vec<f32> {
-    fn with_points<F, R>(&self, _: f32, f: F) -> R
+    fn with_points<F, R>(&self, width: f32, f: F) -> R
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
-        let length = self.len() as f32;
-        let mut iterator = self
-            .iter()
-            .copied()
-            .enumerate()
-            .map(|(i, y)| ((i as f32) / length, y));
-        f(&mut iterator)
+        let width = width.ceil();
+        let max = (self.len() - 1) as f32;
+
+        // todo!(), maybe we don't always want this interpolation ?
+        // Should interpolation be like ... a choice ?
+        // To think ...
+        if width >= max {
+            let mut iterator = self
+                .iter()
+                .copied()
+                .enumerate()
+                .map(|(i, y)| ((i as f32) / max, y));
+            f(&mut iterator)
+        } else {
+            let mut iterator = Linspace::new(0., 1., width as usize).map(|x| {
+                let y = lerp_buffer(&self, x * max);
+                (x, y)
+            });
+            f(&mut iterator)
+        }
     }
 }
 
@@ -178,6 +191,8 @@ impl PlotData for Vec<(f32, f32)> {
     where
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
+        // todo!()
+        // use the fcking with to interpolate
         let mut iterator = self.iter().copied();
         f(&mut iterator)
     }
@@ -189,6 +204,9 @@ impl<B: Bucket> PlotData for ConsumerCell<WindowBuckets<B>> {
         F: for<'a> FnOnce(&'a mut dyn Iterator<Item = (f32, f32)>) -> R,
     {
         let mut borrow = self.borrow_mut();
+        // todo!()
+        // this is bs, we need to find a way to interpolate instead
+        // of raw set the num buckets to fit width ...
         borrow.set_num_buckets(width.ceil() as usize);
         let length = (borrow.num_points() - 1) as f32;
         let mut iterator = borrow
@@ -214,43 +232,6 @@ where
     }
 }
 
-/// Given a stft, retrieve a value at a fractional index using
-/// cubic interpolation
-///
-/// # Panis:
-/// - bins.len() == 0
-#[inline]
-fn sample_spectrum(bins: &[f32], x: f32) -> f32 {
-    let len = bins.len();
-    assert_ne!(len, 0, "Bins array must not be empty");
-
-    // Safety checks
-    if len == 1 {
-        return bins[0];
-    }
-
-    // handle borders of slice
-    if x <= 0.0 {
-        return bins[0];
-    }
-    if x >= (len - 1) as f32 {
-        return bins[len - 1];
-    }
-
-    let i = x.floor() as usize;
-    let t = x.fract();
-    if t == 0. {
-        return bins[i];
-    }
-
-    let x0 = bins[i.saturating_sub(1)];
-    let x1 = bins[i];
-    let x2 = bins[(i + 1).min(len - 1)];
-    let x3 = bins[(i + 2).min(len - 1)];
-
-    cubic_interpolate(x0, x1, x2, x3, t)
-}
-
 /// Yes, we do display spectrogram in the oscilloscope, it works the same
 /// anyway, we can use Oscilloscope for any data that for y has <= 1 x.
 impl PlotData for ConsumerCell<StftConsumer> {
@@ -274,7 +255,7 @@ impl PlotData for ConsumerCell<StftConsumer> {
         let mut iterator = Linspace::new(0.0, 1.0, num_points).map(|x| {
             let freq = f_min * log_ratio.powf(x);
             let bin_idx = (freq * fft_size) / samplerate;
-            let val = sample_spectrum(bins, bin_idx);
+            let val = catmull_buffer(bins, bin_idx);
             let db = 20.0 * val.max(1e-5).log10();
             (x, db)
         });
@@ -288,39 +269,6 @@ mod tests {
     use super::*;
 
     use rift_plugin_core::assert_approx_eq;
-
-    #[test]
-    fn test_sample_spectrum_single_bin() {
-        assert_eq!(sample_spectrum(&[0.5], 0.0), 0.5);
-    }
-
-    #[test]
-    fn test_sample_spectrum_exact_index() {
-        let bins = [0.0, 1.0, 2.0, 3.0];
-        assert_approx_eq!(sample_spectrum(&bins, 0.0), 0.0);
-        assert_approx_eq!(sample_spectrum(&bins, 1.0), 1.0);
-        assert_approx_eq!(sample_spectrum(&bins, 2.0), 2.0);
-    }
-
-    #[test]
-    fn test_sample_spectrum_clamps_below_zero() {
-        let bins = [1.0, 2.0, 3.0];
-        assert_approx_eq!(sample_spectrum(&bins, -1.0), 1.0);
-    }
-
-    #[test]
-    fn test_sample_spectrum_clamps_above_max() {
-        let bins = [1.0, 2.0, 3.0];
-        assert_approx_eq!(sample_spectrum(&bins, 99.0), 3.0);
-    }
-
-    #[test]
-    fn test_sample_spectrum_interpolates_midpoint() {
-        // For a linear ramp, cubic interpolation at 0.5 between two points should be ~midpoint
-        let bins = [0.0, 0.0, 1.0, 1.0];
-        let mid = sample_spectrum(&bins, 1.5);
-        assert!((0.0..=1.0).contains(&mid));
-    }
 
     #[test]
     fn test_vec_f32_points_normalized_x() {
