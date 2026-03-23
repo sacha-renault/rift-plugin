@@ -30,8 +30,7 @@ pub struct PlotXY<D: 'static> {
     filled_path: bool,
 
     /// This is used to know where to close the wave for the fill
-    /// By default it's 0.5 (the filled path goes through middle)
-    /// but it can be change for abs display of the wave, etc ..
+    /// By default it's 0.0
     #[extension(ext)]
     fill_lign_height: f32,
 
@@ -81,7 +80,7 @@ impl<D: PlotData> PlotXY<D> {
         Self {
             data,
             filled_path: true,
-            fill_lign_height: 0.5,
+            fill_lign_height: 0.,
             filter_transform: None,
             x_range: (0., 1.),
             y_range: (0., 1.),
