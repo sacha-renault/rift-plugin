@@ -11,7 +11,7 @@ use super::gui_prelude::*;
 
 /// Displays an audio waveform buffer as a stroked and filled line.
 ///
-/// The `Oscilloscope` visualizes data from a [`OscilloscopeData`] by plotting peak values
+/// The [`PlotXY`] visualizes data from a [`PlotData`] by plotting peak values
 /// across all frequency buckets. It supports dynamic updates via a redraw lens
 /// that invalidates the view whenever new data arrives in the bound buffer.
 ///
