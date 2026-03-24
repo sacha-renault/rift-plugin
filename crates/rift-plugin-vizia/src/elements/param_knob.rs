@@ -112,7 +112,6 @@ where
 
         VStack::new(cx, move |cx| {
             ActiveElementData::new(CursorIcon::RowResize).build(cx);
-            let is_dragging = ActiveElementData::is_dragging.or(ActiveElementData::is_over);
 
             if has_name_label {
                 Label::new(cx, param_ptr.name())
@@ -179,7 +178,7 @@ where
                         .maybe_apply_modifiers(label_text_modifier.as_deref())
                         .class("knob-value-label");
                 },
-                is_dragging,
+                ActiveElementData::is_active(),
             )
             .class("knob");
 
