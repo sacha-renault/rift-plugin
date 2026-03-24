@@ -113,21 +113,10 @@ impl Lfo {
         self
     }
 
-    pub fn set_block_info(&mut self, infos: Option<BlockInfo>) -> &mut Self {
-        self.infos = infos;
-        self
-    }
-
     /// Sets both mode and frequency
     ///
     /// Calls sequentially [`Lfo::set_mode`] and [`Lfo::set_frequency`]
-    pub fn set_config(
-        &mut self,
-        mode: LfoMode,
-        frequency: LfoFreq,
-        infos: Option<BlockInfo>,
-    ) -> &mut Self {
-        self.infos = infos;
+    pub fn set_config(&mut self, mode: LfoMode, frequency: LfoFreq) -> &mut Self {
         self.set_mode(mode).set_frequency(frequency)
     }
     /// Advances the internal position by `block_size` samples.
@@ -141,6 +130,7 @@ impl Lfo {
             self.infos.as_ref(),
             block_size as f32,
         );
+        self.infos = None;
     }
 
     /// Get the current position in the lfo. This will always be in [0., 1.] bounds
@@ -150,7 +140,12 @@ impl Lfo {
 
     /// Prepares the LFO for a new processing block.
     /// Can be called as many time as wanted in the process function
-    pub fn get_lfo_block<'a>(&mut self, lfo_points: &'a ControlPoints) -> LfoBlock<'a> {
+    pub fn get_lfo_block<'a>(
+        &mut self,
+        lfo_points: &'a ControlPoints,
+        infos: Option<BlockInfo>,
+    ) -> LfoBlock<'a> {
+        self.infos = infos;
         LfoBlock {
             frequency: self.frequency,
             mode: self.mode,
@@ -334,8 +329,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.25, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
         }
 
@@ -346,8 +340,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(1.25, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
         }
 
@@ -358,8 +351,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
 
             let diff = block.get_value(1) - block.get_value(0);
             assert_approx_eq!(diff, 1.0 / SAMPLERATE);
@@ -372,8 +364,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.0, 1.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
         }
 
@@ -384,8 +375,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.0, 5.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
         }
 
@@ -397,12 +387,10 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position(SAMPLERATE as usize);
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.0, 1e-2);
         }
 
@@ -414,13 +402,11 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position((SAMPLERATE * 0.5) as usize);
 
             lfo.retrigger();
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.0, 1e-4);
         }
 
@@ -432,12 +418,10 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position((SAMPLERATE * 1.5) as usize);
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 1.0, 1e-4);
         }
 
@@ -449,13 +433,11 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position((SAMPLERATE * 1.5) as usize);
 
             lfo.retrigger();
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.0, 1e-4);
         }
 
@@ -467,14 +449,12 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.5, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos.clone()));
             let before = block.get_value(0);
 
             lfo.retrigger();
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), before);
         }
 
@@ -485,8 +465,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.5, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.5, 1e-4);
         }
 
@@ -500,12 +479,10 @@ mod tests {
 
             let infos = make_infos(0.5, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let block_lin = lfo.get_lfo_block(&linear_points);
+            let block_lin = lfo.get_lfo_block(&linear_points, Some(infos.clone()));
             let val_lin = block_lin.get_value(0);
 
-            lfo.infos = Some(infos.clone());
-            let block_cur = lfo.get_lfo_block(&curved_points);
+            let block_cur = lfo.get_lfo_block(&curved_points, Some(infos));
             let val_cur = block_cur.get_value(0);
 
             assert!(
@@ -522,14 +499,11 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position(1000);
 
-            lfo.infos = Some(infos.clone());
-            let block1 = lfo.get_lfo_block(&points);
-            lfo.infos = Some(infos);
-            let block2 = lfo.get_lfo_block(&points);
+            let block1 = lfo.get_lfo_block(&points, Some(infos.clone()));
+            let block2 = lfo.get_lfo_block(&points, Some(infos));
 
             for idx in [0, 10, 50, 100] {
                 assert_approx_eq!(block1.get_value(idx), block2.get_value(idx));
@@ -543,8 +517,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
 
             let forward: Vec<f32> = (0..128).map(|i| block.get_value(i)).collect();
             let backward: Vec<f32> = (0..128).rev().map(|i| block.get_value(i)).collect();
@@ -563,12 +536,10 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position(4410);
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.1, 1e-3);
         }
     }
@@ -585,8 +556,7 @@ mod tests {
 
             let points = make_points(&[]);
             let infos = make_infos(0.5, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.0);
         }
 
@@ -597,8 +567,7 @@ mod tests {
 
             let points = make_points(&[(0.5, 0.7)]);
             let infos = make_infos(0.0, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.7, 1e-4);
         }
 
@@ -609,8 +578,7 @@ mod tests {
 
             let points = make_points(&[(0.0, 0.3), (0.5, 0.8), (1.0, 0.1)]);
             let infos = make_infos(0.5, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.8, 1e-4);
         }
 
@@ -622,12 +590,10 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos);
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos));
             lfo.update_lfo_position((SAMPLERATE * 0.3) as usize);
 
-            lfo.infos = None;
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, None);
             assert_approx_eq!(block.get_value(0), block.get_value(100));
         }
 
@@ -639,16 +605,15 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos);
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos));
             lfo.update_lfo_position((SAMPLERATE * 0.3) as usize);
 
-            lfo.infos = None;
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, None);
             let before = block.get_value(0);
 
             lfo.update_lfo_position(4096);
-            let block = lfo.get_lfo_block(&points);
+
+            let block = lfo.get_lfo_block(&points, None);
             assert_approx_eq!(block.get_value(0), before);
         }
 
@@ -660,8 +625,7 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(2.0, 0.0, 120.0, false);
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             let v0 = block.get_value(0);
             let v100 = block.get_value(100);
 
@@ -678,8 +642,7 @@ mod tests {
 
             let points = ramp_points();
             let infos = make_infos(0.0025, 0.0, 120.0, true);
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.25, 1e-3);
         }
 
@@ -691,14 +654,12 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos.clone()));
             assert_approx_eq!(block.get_value(0), 0.0, 1e-4);
 
             lfo.update_lfo_position(4410);
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.1, 1e-3);
         }
 
@@ -710,12 +671,10 @@ mod tests {
             let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
 
-            lfo.infos = Some(infos.clone());
-            let _ = lfo.get_lfo_block(&points);
+            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
             lfo.update_lfo_position(SAMPLERATE as usize);
 
-            lfo.infos = Some(infos);
-            let block = lfo.get_lfo_block(&points);
+            let block = lfo.get_lfo_block(&points, Some(infos));
             assert_approx_eq!(block.get_value(0), 0.5, 1e-2);
         }
     }
