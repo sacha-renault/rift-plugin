@@ -25,6 +25,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
 
     fn on_midi_message(&mut self, midi: MidiMessage);
 
+    fn param_changed(&mut self, id: ClapId);
+
     /// Processes audio data for one block of time.
     ///
     /// The host owns the lifetime of `buffers` and `context`; they are invalid

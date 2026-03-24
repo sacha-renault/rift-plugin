@@ -30,14 +30,16 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     }
 
     #[inline]
-    fn handle_gui_param_change(&self, event: GuiParamEvent, outputs: &mut OutputEvents) {
+    fn handle_gui_param_change(&mut self, event: GuiParamEvent, outputs: &mut OutputEvents) {
         if let err @ Err(..) = outputs.try_push(event.to_raw()) {
             log::error!("There was an error push event {err:?}")
         }
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
-            GuiParamEventKind::Value(_) => {}
+            GuiParamEventKind::Value(_) => {
+                self.plugin.param_changed(event.param_id);
+            }
         }
     }
 }
@@ -51,6 +53,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
                 };
                 let value = param_event.value();
                 self.shared.params.set_value(id, value);
+                self.plugin.param_changed(id);
             } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
                 self.plugin.on_midi_message(midi_event.into());
             }

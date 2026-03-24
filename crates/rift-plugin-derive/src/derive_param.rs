@@ -3,6 +3,7 @@ use std::collections::HashSet;
 // In your proc-macro crate
 use darling::{FromDeriveInput, FromField, ast};
 use proc_macro::TokenStream;
+use proc_macro2::Span;
 use quote::quote;
 use syn::{DeriveInput, parse_macro_input};
 
@@ -70,6 +71,11 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 
     let param_count = param_fields_idents.len() as u32;
     let param_indices: Vec<u32> = (0..param_count).collect();
+    let param_name_id: Vec<_> = param_fields_names
+        .iter()
+        .map(|name| name.replace(" ", "_") + "_ID")
+        .map(|name| syn::Ident::new(&name, Span::call_site()))
+        .collect();
 
     // Persistent fields get indices after param fields (for __initialize ClapId)
     let persist_indices: Vec<u32> =
@@ -207,7 +213,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 #(
                     self.#param_fields_idents.__initialize(
                         #param_fields_names.to_string(),
-                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::from(#param_indices),
+                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(#param_indices),
                         None,
                     );
                 )*
@@ -215,7 +221,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 #(
                     self.#persist_fields_idents.__initialize(
                         #persist_fields_names.to_string(),
-                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::from(#persist_indices),
+                        ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(#persist_indices),
                         None,
                     );
                 )*
@@ -231,6 +237,13 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 #( _assert_clap_param::<#param_fields_types>(); )*
             }
         };
+
+        pub mod param_ids {
+            #(
+                pub const #param_name_id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId
+                    = ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(#param_indices);
+            )*
+        }
     };
 
     TokenStream::from(expanded)
