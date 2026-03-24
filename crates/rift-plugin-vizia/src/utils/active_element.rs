@@ -8,6 +8,14 @@ pub struct ActiveElementData {
 }
 
 impl ActiveElementData {
+    /// Return a lens that is true if either `ActiveElementData::is_draggin` or
+    /// `ActiveElementData::is_over` is true.
+    pub fn is_active() -> impl Lens<Source = Self, Target = bool> {
+        Self::is_dragging.or(Self::is_over)
+    }
+}
+
+impl ActiveElementData {
     pub fn new(cursor: CursorIcon) -> Self {
         Self {
             is_dragging: false,
