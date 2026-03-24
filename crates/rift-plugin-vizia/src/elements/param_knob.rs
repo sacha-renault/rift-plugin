@@ -6,63 +6,6 @@ use crate::PopupExt;
 
 use super::gui_prelude::*;
 
-#[derive(Lens)]
-struct ValuePopup {
-    is_dragging: bool,
-    is_over: bool,
-    cursor: CursorIcon,
-}
-
-impl ValuePopup {
-    fn new(cursor: CursorIcon) -> Self {
-        Self {
-            is_dragging: false,
-            is_over: false,
-            cursor,
-        }
-    }
-}
-
-impl Default for ValuePopup {
-    fn default() -> Self {
-        Self::new(CursorIcon::Default)
-    }
-}
-
-enum ValuePopupEvent {
-    DragEvent(bool),
-    OverEvent(bool),
-}
-
-impl Model for ValuePopup {
-    fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
-        event.map(|event, meta| {
-            match *event {
-                ValuePopupEvent::DragEvent(v) => {
-                    self.is_dragging = v;
-                    if v {
-                        cx.lock_cursor_icon();
-                        cx.emit(WindowEvent::SetCursor(self.cursor));
-                    } else {
-                        cx.unlock_cursor_icon();
-                    }
-                }
-                ValuePopupEvent::OverEvent(v) => {
-                    self.is_over = v;
-                    if !cx.is_cursor_icon_locked() {
-                        if v {
-                            cx.emit(WindowEvent::SetCursor(self.cursor));
-                        } else {
-                            cx.emit(WindowEvent::SetCursor(CursorIcon::Default));
-                        }
-                    }
-                }
-            }
-            meta.consume();
-        });
-    }
-}
-
 /// A control for mapping a [`ClapParam`] to a rotary knob UI element.
 #[derive(ParamViewBuilder)]
 pub struct ParamKnob<L, MapFn>
@@ -168,8 +111,8 @@ where
             apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
 
         VStack::new(cx, move |cx| {
-            ValuePopup::new(CursorIcon::RowResize).build(cx);
-            let is_dragging = ValuePopup::is_dragging.or(ValuePopup::is_over);
+            ActiveElementData::new(CursorIcon::RowResize).build(cx);
+            let is_dragging = ActiveElementData::is_dragging.or(ActiveElementData::is_over);
 
             if has_name_label {
                 Label::new(cx, param_ptr.name())
@@ -197,8 +140,8 @@ where
                     })
                     .maybe_apply_modifiers(tick_modifier.as_deref())
                     .rotate(lens.map(move |v| Angle::Deg(*v * sweep - offset)))
-                    .on_hover(|cx| cx.emit(ValuePopupEvent::OverEvent(true)))
-                    .on_hover_out(|cx| cx.emit(ValuePopupEvent::OverEvent(false)))
+                    .on_hover(|cx| cx.emit(ActiveElementEvent::StartHover))
+                    .on_hover_out(|cx| cx.emit(ActiveElementEvent::EndHover))
                     .class("knob-head");
                 })
             })
@@ -212,7 +155,7 @@ where
             .on_mouse_down(move |cx, mb| {
                 if mb == MouseButton::Left {
                     gesture_start(param_ptr, cx);
-                    cx.emit(ValuePopupEvent::DragEvent(true));
+                    cx.emit(ActiveElementEvent::StartDragging);
                     if let Some(f) = on_mouse_down.as_ref() {
                         f(cx, mb)
                     }
@@ -221,7 +164,7 @@ where
             .on_mouse_up(move |cx, mb| match mb {
                 MouseButton::Left => {
                     gesture_end(param_ptr, cx);
-                    cx.emit(ValuePopupEvent::DragEvent(false));
+                    cx.emit(ActiveElementEvent::EndDragging);
                     if let Some(f) = on_mouse_up.as_ref() {
                         f(cx, mb)
                     }
