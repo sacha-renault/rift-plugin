@@ -63,6 +63,26 @@ impl ControlPoints {
         self.points.capacity()
     }
 
+    pub fn get_value(&self, position: f32) -> f32 {
+        let Some(right_idx) = self.points.iter().position(|p| p.x >= position) else {
+            // Past all points - hold last value
+            return self.points.last().map(|p| p.y).unwrap_or_default();
+        };
+
+        let right = &self.points[right_idx];
+
+        let value = if right_idx == 0 {
+            right.y
+        } else {
+            let left = &self.points[right_idx - 1];
+            let fract = (position - left.x) / (right.x - left.x);
+            let (_, y) = pow_interpolation(left, right, fract);
+            y
+        };
+
+        value
+    }
+
     fn can_add_point(&self) -> bool {
         !self.points.is_full()
     }
@@ -114,5 +134,24 @@ impl ParamQueueType for ControlPoints {
     fn snapshot(&self) -> Self {
         // Snapshot should provide the full array with same capacity
         self.clone()
+    }
+}
+
+fn pow_interpolation(p1: &ControlPoint, p2: &ControlPoint, t: f32) -> (f32, f32) {
+    let x = p1.x + (p2.x - p1.x) * t;
+    let y = p1.y + (p2.y - p1.y) * shape(t, p1.tension);
+    (x, y)
+}
+
+fn shape(t: f32, curve_amount: f32) -> f32 {
+    if curve_amount.abs() < 1e-6 {
+        return t;
+    }
+
+    let exp = curve_amount.exp2();
+    if curve_amount > 0.0 {
+        t.powf(exp)
+    } else {
+        1.0 - (1.0 - t).powf(exp.recip())
     }
 }
