@@ -36,7 +36,6 @@ impl View for CustomPopup {
     }
 
     fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
-        log::info!("Popup event");
         self.is_open.event(cx, event);
     }
 }

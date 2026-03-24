@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use rift_plugin_core::gui::{GuiContext, GuiParamEvent};
 
@@ -52,5 +53,9 @@ impl GuiContext for GuiContextImpl {
         {
             log::error!("Couldn't push callback request");
         }
+    }
+
+    fn is_playing(&self) -> Arc<AtomicBool> {
+        self.states.is_playing.clone()
     }
 }
