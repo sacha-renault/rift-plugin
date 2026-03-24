@@ -10,14 +10,22 @@ use super::gui_prelude::*;
 struct ValuePopup {
     is_dragging: bool,
     is_over: bool,
+    cursor: CursorIcon,
+}
+
+impl ValuePopup {
+    fn new(cursor: CursorIcon) -> Self {
+        Self {
+            is_dragging: false,
+            is_over: false,
+            cursor,
+        }
+    }
 }
 
 impl Default for ValuePopup {
     fn default() -> Self {
-        Self {
-            is_dragging: false,
-            is_over: false,
-        }
+        Self::new(CursorIcon::Default)
     }
 }
 
@@ -27,11 +35,28 @@ enum ValuePopupEvent {
 }
 
 impl Model for ValuePopup {
-    fn event(&mut self, _: &mut EventContext, event: &mut Event) {
+    fn event(&mut self, cx: &mut EventContext, event: &mut Event) {
         event.map(|event, meta| {
             match *event {
-                ValuePopupEvent::DragEvent(v) => self.is_dragging = v,
-                ValuePopupEvent::OverEvent(v) => self.is_over = v,
+                ValuePopupEvent::DragEvent(v) => {
+                    self.is_dragging = v;
+                    if v {
+                        cx.lock_cursor_icon();
+                        cx.emit(WindowEvent::SetCursor(self.cursor));
+                    } else {
+                        cx.unlock_cursor_icon();
+                    }
+                }
+                ValuePopupEvent::OverEvent(v) => {
+                    self.is_over = v;
+                    if !cx.is_cursor_icon_locked() {
+                        if v {
+                            cx.emit(WindowEvent::SetCursor(self.cursor));
+                        } else {
+                            cx.emit(WindowEvent::SetCursor(CursorIcon::Default));
+                        }
+                    }
+                }
             }
             meta.consume();
         });
@@ -143,7 +168,8 @@ where
             apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
 
         VStack::new(cx, move |cx| {
-            ValuePopup::default().build(cx);
+            ValuePopup::new(CursorIcon::RowResize).build(cx);
+            let is_dragging = ValuePopup::is_dragging.or(ValuePopup::is_over);
 
             if has_name_label {
                 Label::new(cx, param_ptr.name())
@@ -210,7 +236,7 @@ where
                         .maybe_apply_modifiers(label_text_modifier.as_deref())
                         .class("knob-value-label");
                 },
-                ValuePopup::is_dragging.or(ValuePopup::is_over),
+                is_dragging,
             )
             .class("knob");
 

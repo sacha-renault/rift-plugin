@@ -1624,7 +1624,7 @@ dependencies = [
 [[package]]
 name = "vizia"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "vizia_baseview",
  "vizia_core",
@@ -1633,7 +1633,7 @@ dependencies = [
 [[package]]
 name = "vizia_baseview"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "baseview",
  "gl",
@@ -1647,7 +1647,7 @@ dependencies = [
 [[package]]
 name = "vizia_core"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "accesskit",
  "bitflags 2.10.0",
@@ -1677,7 +1677,7 @@ dependencies = [
 [[package]]
 name = "vizia_derive"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1687,12 +1687,12 @@ dependencies = [
 [[package]]
 name = "vizia_id"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 
 [[package]]
 name = "vizia_input"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "bitflags 2.10.0",
  "keyboard-types",
@@ -1702,7 +1702,7 @@ dependencies = [
 [[package]]
 name = "vizia_storage"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "vizia_id",
 ]
@@ -1710,7 +1710,7 @@ dependencies = [
 [[package]]
 name = "vizia_style"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "bitflags 2.10.0",
  "cssparser",
@@ -1725,7 +1725,7 @@ dependencies = [
 [[package]]
 name = "vizia_window"
 version = "0.3.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=event-queue-per-instance#879e78caccfae700261d1ad5074ad0db7f12ef06"
+source = "git+https://github.com/sacha-renault/vizia?branch=rift-vizia#879e78caccfae700261d1ad5074ad0db7f12ef06"
 dependencies = [
  "bitflags 2.10.0",
  "vizia_input",

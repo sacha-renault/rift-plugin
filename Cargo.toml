@@ -34,7 +34,7 @@ rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-core = { path = "crates/rift-plugin-core" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 
-vizia = { git = "https://github.com/sacha-renault/vizia", branch = "event-queue-per-instance", default-features = false, features = [
+vizia = { git = "https://github.com/sacha-renault/vizia", branch = "rift-vizia", default-features = false, features = [
  "baseview", 
 #  "rayon" 
 ]}
