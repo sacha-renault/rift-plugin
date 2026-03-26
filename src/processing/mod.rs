@@ -1,3 +1,3 @@
 mod buffer;
 
-pub use buffer::Buffers;
+pub use buffer::{Buffer, Buffers};
