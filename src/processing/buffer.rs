@@ -223,7 +223,8 @@ impl<'a> Buffer<'a> {
     /// compiler cannot auto-vectorize this pattern. For pure per-channel processing
     /// (gain, EQ, distortion), prefer [`Buffer::iter_channels_mut`] which gives the
     /// compiler a straight contiguous slice to work with.
-    pub fn iter_samples(&'a self) -> SamplesIterator<'a> {
+    #[allow(unused_mut)]
+    pub fn iter_samples(&'a mut self) -> SamplesIterator<'a> {
         let samples = self.samples();
         let channels = self.channels();
         SamplesIterator {
@@ -245,10 +246,12 @@ impl<'a> Buffer<'a> {
     /// Preferred for per-channel DSP (gain, filters, saturation) - the compiler
     /// can auto-vectorize over the contiguous slice. For inter-channel processing,
     /// see [`Buffer::iter_samples`].
-    pub fn iter_channels_mut(&'a self) -> impl Iterator<Item = &'a mut [f32]> {
+    #[allow(unused_mut)]
+    pub fn iter_channels_mut(&'a mut self) -> impl Iterator<Item = &'a mut [f32]> {
+        let samples = self.samples();
         self.raw_data()
             .iter()
-            .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, self.samples()) })
+            .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, samples) })
     }
 }
 
