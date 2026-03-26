@@ -1,13 +1,10 @@
-use clack_plugin::{
-    plugin::PluginError,
-    prelude::ChannelPair,
-    process::{
-        Audio,
-        audio::{InputChannels, OutputChannels},
-    },
-};
+use clack_plugin::plugin::PluginError;
+use clack_plugin::prelude::ChannelPair;
+use clack_plugin::process::Audio;
 
 use crate::prelude::MainAudioPort;
+
+use super::Buffer;
 
 /// Handles audio buffer management for a plugin instance.
 ///
@@ -159,102 +156,6 @@ impl<'a> Buffers<'a> {
     }
 }
 
-pub enum Buffer<'a> {
-    OutputChannels(OutputChannels<'a, f32>),
-    InputChannels(InputChannels<'a, f32>),
-    RawData {
-        raw_data: &'a [*mut f32],
-        frames_count: u32,
-    },
-}
-
-impl<'a> Buffer<'a> {
-    #[inline]
-    pub(crate) fn output(data: OutputChannels<'a, f32>) -> Self {
-        Self::OutputChannels(data)
-    }
-
-    #[inline]
-    pub(crate) fn input(data: InputChannels<'a, f32>) -> Self {
-        Self::InputChannels(data)
-    }
-
-    #[inline]
-    pub fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
-        Self::RawData {
-            raw_data,
-            frames_count,
-        }
-    }
-
-    /// Return the number of channels in this buffer.
-    #[inline]
-    pub fn channels(&self) -> usize {
-        match self {
-            Self::OutputChannels(data) => data.channel_count() as usize,
-            Self::InputChannels(data) => data.channel_count() as usize,
-            Self::RawData { raw_data, .. } => raw_data.len(),
-        }
-    }
-
-    /// Return the number of samples per channel in this buffer
-    #[inline]
-    pub fn samples(&self) -> usize {
-        match self {
-            Self::OutputChannels(data) => data.frames_count() as usize,
-            Self::InputChannels(data) => data.frames_count() as usize,
-            Self::RawData { frames_count, .. } => *frames_count as usize,
-        }
-    }
-
-    #[inline]
-    pub(crate) fn raw_data(&'a self) -> &'a [*mut f32] {
-        match self {
-            Self::OutputChannels(data) => data.raw_data(),
-            Self::InputChannels(data) => data.raw_data(),
-            Self::RawData { raw_data, .. } => raw_data,
-        }
-    }
-
-    /// Iterates sample-by-sample, yielding all channels at each time position.
-    ///
-    /// Note: because audio is stored in planar format (one contiguous buffer per
-    /// channel), this iterator accesses non-contiguous memory at each step. The
-    /// compiler cannot auto-vectorize this pattern. For pure per-channel processing
-    /// (gain, EQ, distortion), prefer [`Buffer::iter_channels_mut`] which gives the
-    /// compiler a straight contiguous slice to work with.
-    #[allow(unused_mut)]
-    pub fn iter_samples(&'a mut self) -> SamplesIterator<'a> {
-        let samples = self.samples();
-        let channels = self.channels();
-        SamplesIterator {
-            vec: self.raw_data(),
-            position: 0,
-            channels,
-            samples,
-        }
-    }
-
-    pub fn iter_channels(&self) -> impl Iterator<Item = &[f32]> {
-        self.raw_data()
-            .iter()
-            .map(move |&ptr| unsafe { std::slice::from_raw_parts(ptr, self.samples()) })
-    }
-
-    /// Iterates channel-by-channel, yielding a contiguous `&mut [f32]` for each channel.
-    ///
-    /// Preferred for per-channel DSP (gain, filters, saturation) - the compiler
-    /// can auto-vectorize over the contiguous slice. For inter-channel processing,
-    /// see [`Buffer::iter_samples`].
-    #[allow(unused_mut)]
-    pub fn iter_channels_mut(&'a mut self) -> impl Iterator<Item = &'a mut [f32]> {
-        let samples = self.samples();
-        self.raw_data()
-            .iter()
-            .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, samples) })
-    }
-}
-
 impl<'a> Drop for Buffers<'a> {
     fn drop(&mut self) {
         match self.main_config {
@@ -266,64 +167,6 @@ impl<'a> Drop for Buffers<'a> {
             // We might wanna add later something
             // in the case output only, if it wasn't cleared might
             _ => {}
-        }
-    }
-}
-
-/// This struct iter over the buffer, yielding all
-/// channels at time n
-/// Ex: [
-///     [1,2,3],
-///     [4,5,6]
-/// ]
-/// Will yield [(1, 4), (2, 5), (3, 6)]
-pub struct SamplesIterator<'a> {
-    vec: &'a [*mut f32],
-    position: usize,
-    channels: usize,
-    samples: usize,
-}
-
-impl<'a> Iterator for SamplesIterator<'a> {
-    type Item = ChannelSamples<'a>;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.position < self.samples {
-            let item = Some(ChannelSamples {
-                vec: self.vec,
-                position: 0,
-                channel_position: self.position,
-                channels: self.channels,
-            });
-            self.position += 1;
-            item
-        } else {
-            None
-        }
-    }
-}
-
-pub struct ChannelSamples<'a> {
-    vec: &'a [*mut f32],
-    channel_position: usize,
-    position: usize,
-    channels: usize,
-}
-
-impl<'a> Iterator for ChannelSamples<'a> {
-    type Item = &'a mut f32;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.position < self.channels {
-            let position = self.position;
-            self.position += 1;
-            let ptr = self.vec[position];
-
-            unsafe { Some(&mut (*ptr.add(self.channel_position))) }
-        } else {
-            None
         }
     }
 }
