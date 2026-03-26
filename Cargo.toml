@@ -24,7 +24,8 @@ members = [
   "crates/rift-plugin-derive", 
   "crates/rift-plugin-resolver", 
   "crates/rift-plugin-core", 
-  "crates/rift-plugin-vizia"
+  "crates/rift-plugin-vizia", 
+  "examples/buffer-iter-benchmark"
 ]
 
 [workspace.dependencies]
