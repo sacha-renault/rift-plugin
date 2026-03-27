@@ -3,7 +3,7 @@ use std::collections::VecDeque;
 /// A ring buffer that has a flat cache where we copy the
 /// values of the [`VecDeque`] to have contiguous view.
 ///
-/// # Notes:
+/// **Notes**:
 /// The size on heap will be twice bigger than a single [`VecDeque`],
 /// but [`VecDeque::make_contiguous`] may have multiple copy pass, when [`Self::as_contiguous`]
 /// always have a single copy pass.

@@ -52,7 +52,7 @@ impl<B: Bucket> WindowBuckets<B> {
     /// Updates the number of buckets (visual segments) then recalculate the number of sample required
     /// per bucket and resize `buckets`.
     ///
-    /// # Note:
+    /// **Notes**:
     /// - This function will allocate.
     /// - if `num_buckets` is 0, it will be clamped to the minimal value: 1.
     pub fn set_num_buckets(&mut self, mut num_buckets: usize) {

@@ -19,7 +19,7 @@ use super::gui_prelude::*;
 /// - `buffer`: Optional reference to the audio buffer. If present, peaks are drawn.
 /// - `min` / `max`: Clamping bounds for the y-axis normalization (defaults: -1.0 to 1.0).
 ///
-/// # Note:
+/// **Notes**:
 /// This struct will redraw only if a lens for redraw is given. You must have [`RedrawOnExt`] trait in
 /// scope to add the lens.
 #[derive(HandleExtension)]

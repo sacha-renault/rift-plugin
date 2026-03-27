@@ -11,7 +11,7 @@ use super::Buffer;
 /// Wraps [`Audio`] and [`MainAudioPort`] to provide access to inputs, outputs, and the main I/O port.
 /// Centralizes logic for retrieving buffers while accounting for host limitations (e.g., copying input to output).
 ///
-/// # Note:
+/// **Notes**:
 /// (and todo!()) since accessing any port requires a mutable reference, it isn't possible to use main and auxiliary port
 /// in the same time. The plugin needs to hold a scratch buffer (allocated during activation) and copy required auxiliary port
 /// into it.

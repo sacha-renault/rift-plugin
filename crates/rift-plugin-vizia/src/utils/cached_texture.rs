@@ -5,7 +5,7 @@ use vizia::vg::{AlphaType, Color, ColorType, ISize, Image, ImageInfo};
 
 /// A struct to cache a draw to avoid re-resterize complexe vector
 ///
-/// # Notes:
+/// **Notes**:
 /// This store the image behind a RefCell as the view in
 /// [`vizia::prelude::View::draw`] is immuatble. Be aware this can
 pub struct CachedTexture {

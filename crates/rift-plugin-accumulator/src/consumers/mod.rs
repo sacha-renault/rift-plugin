@@ -17,7 +17,7 @@ pub use windowed_peaks::{Bucket, PeakBucket, WindowBuckets};
 pub trait WrapsConsumer {
     /// Wraps an [`AudioConsumer`] into a [`ConsumerCell`].
     ///
-    /// # Notes:
+    /// **Notes**:
     /// [`ConsumerCell`] is a pretty name for [`Rc<RefCell<_>>`]
     fn wraps_consumer(self) -> ConsumerCell<Self>;
 }
