@@ -27,72 +27,101 @@ pub enum LfoFreq {
 
 /// LFO that reads its waveform from a set of [`ControlPoints`] (x/y in [0, 1]).
 ///
-/// See [`LfoMode`] and [`LfoFrequency`]
+/// See [`LfoMode`] and [`LfoFreq`].
 ///
 /// # Position
+///
 /// `position` is always in [0, 1] and represents where we are in the control-point
-/// curve. [`update_lfo_position`](Lfo::update_lfo_position) must be called once at the end
-/// of each block. The first call after a retrigger always reads position 0.
+/// curve. The first call after a retrigger always reads position 0.
 ///
-/// # Usage
-/// Since `get_value` computes position from `sample_idx` without mutating state,
-/// it returns the same value for a given index regardless of iteration order.
-/// This means both per-sample and per-channel iteration are correct:
+/// # Block setup
 ///
-/// # Per-block lifecycle
+/// [`set_block_info`](Lfo::set_block_info) **must** be called at the start of every
+/// processing block, before reading any value. It provides the transport state
+/// (tempo, playback position, playing flag) needed to compute the LFO phase.
+/// Control points can also be updated per-block via
+/// [`set_control_points`](Lfo::set_control_points) if needed.
+///
+/// # Two ways to read the LFO
+///
+/// ## 1. Sample-accurate (per-sample loop)
+///
+/// Call [`get_next`](Lfo::get_next) once per sample. Each call advances the
+/// internal position by one sample and returns the new value.
+/// No call to [`update_lfo_position`](Lfo::update_lfo_position) is needed
+/// since the position is already up to date.
 ///
 /// ```text
-/// get_lfo_block(points, infos)
+/// set_block_info(infos)
 ///         │
 ///         ▼
-///   get_value(0) ──► sample 0
-///   get_value(1) ──► sample 1
-///   get_value(2) ──► sample 2
+///   get_next() --> sample 0
+///   get_next() --> sample 1
 ///         ...
-///   get_value(N) ──► sample N
+///   get_next() --> sample N-1
+/// ```
+///
+/// ```ignore
+/// self.lfo.set_block_info(ctx.block_info());
+///
+/// let main_buffer = buffers.main()?;
+/// for sample_iter in main_buffer.iter_samples() {
+///     let lfo_value = self.lfo.get_next();
+///     for sample in sample_iter {
+///         *sample *= lfo_value;
+///     }
+/// }
+/// ```
+///
+/// ## 2. Block-rate (one value per block)
+///
+/// Call [`get_current`](Lfo::get_current) once to read the value at the current
+/// position, then [`update_lfo_position`](Lfo::update_lfo_position) at the end
+/// of the block to advance by `block_size` samples.
+///
+/// ```text
+/// set_block_info(infos)
+///         │
+///         ▼
+///   get_current() --> use for entire block
 ///         │
 ///         ▼
 ///   update_lfo_position(block_size)
 /// ```
 ///
-/// # Example:
-///
 /// ```ignore
-/// let lfo_points = self.params.lfo.value();
-/// let lfo1_block = self.lfo1.get_lfo_block(lfo_points, ctx.block_info());
-/// let lfo2_block = self.lfo2.get_lfo_block(lfo_points, ctx.block_info());
-
+/// self.lfo.set_block_info(ctx.block_info());
+/// let lfo_value = self.lfo.get_current();
+///
 /// let main_buffer = buffers.main()?;
-/// for (idx, sample_iter) in main_buffer.iter_samples().enumerate() {
-///     let lfo_value = lfo1_block.get_value(idx);
-///     let lfo_value2 = lfo2_block.get_value(idx);
+/// for sample_iter in main_buffer.iter_samples() {
 ///     for sample in sample_iter {
 ///         *sample *= lfo_value;
-///         // Do something with lfo_value2 :)
 ///     }
 /// }
-/// // We just need to update the param at the very end
-/// self.lfo1.update_lfo_position(main_buffer.samples());
-/// self.lfo2.update_lfo_position(main_buffer.samples());
+///
+/// self.lfo.update_lfo_position(main_buffer.samples());
 /// ```
 pub struct Lfo {
     position: f32,
     samplerate_recip: f32,
     mode: LfoMode,
     frequency: LfoFreq,
+    points: ControlPoints,
     infos: Option<BlockInfo>,
 }
 
 impl Lfo {
     /// Creates a new LFO with the given mode and frequency.
     /// Defaults to 44100 Hz samplerate.
-    pub fn new(mode: LfoMode, frequency: LfoFreq) -> Self {
+    pub fn new(mode: LfoMode, frequency: LfoFreq, points: ControlPoints) -> Self {
         Self {
             samplerate_recip: 44100f32.recip(),
             position: 0.,
             mode,
             frequency,
             infos: None,
+            points,
         }
     }
 
@@ -107,53 +136,70 @@ impl Lfo {
         self
     }
 
-    /// Sets the LFO frequency. See [`LfoFrequency`].
+    /// Sets the transport info for the current block. **Must** be called at the
+    /// start of every processing block, before [`get_current`](Lfo::get_current)
+    /// or [`get_next`](Lfo::get_next). Pass `None` to freeze the LFO position.
+    pub fn set_block_info(&mut self, infos: Option<BlockInfo>) -> &mut Self {
+        self.infos = infos;
+        self
+    }
+
+    /// Sets the LFO frequency. See [`LfoFreq`].
     pub fn set_frequency(&mut self, frequency: LfoFreq) -> &mut Self {
         self.frequency = frequency;
         self
     }
 
-    /// Sets both mode and frequency
-    ///
-    /// Calls sequentially [`Lfo::set_mode`] and [`Lfo::set_frequency`]
-    pub fn set_config(&mut self, mode: LfoMode, frequency: LfoFreq) -> &mut Self {
-        self.set_mode(mode).set_frequency(frequency)
+    /// Replaces the control points that define the LFO waveform.
+    /// Can be called per-block if points are automated.
+    pub fn set_control_points(&mut self, control_points: ControlPoints) {
+        self.points = control_points;
     }
-    /// Advances the internal position by `block_size` samples.
-    /// Must be called once at the end of each block, after all [`get_value`](Lfo::get_value) calls.
-    pub fn update_lfo_position(&mut self, block_size: usize) {
-        self.position = get_position(
-            self.position,
-            self.samplerate_recip,
-            self.frequency,
-            self.mode,
-            self.infos.as_ref(),
-            block_size as f32,
+
+    /// Returns the LFO value at the current position without advancing.
+    /// Useful for block-rate usage where one value is used for the entire block.
+    /// Call [`update_lfo_position`](Lfo::update_lfo_position) at the end of the block to advance.
+    ///
+    /// # Notes:
+    /// You **MUST** call [`Self::set_block_info`] before calling this function !
+    pub fn get_current(&self) -> f32 {
+        debug_assert!(
+            self.points
+                .iter()
+                .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)),
+            "ControlPoints must be in [0, 1]"
         );
+        debug_assert!(
+            self.points.is_sorted_by(|l, r| l.x <= r.x),
+            "ControlPoints must be sorted by x"
+        );
+
+        self.points.get_value(self.position)
+    }
+
+    /// Advances the position by one sample and returns the new LFO value.
+    /// Use this in a per-sample loop for sample-accurate modulation.
+    ///
+    /// # Notes:
+    /// You **MUST** call [`Self::set_block_info`] before calling this function !
+    #[inline]
+    pub fn get_next(&mut self) -> f32 {
+        self.advance_by(1);
+        self.get_current()
+    }
+
+    /// Advances the internal position by `block_size` samples and clears block info.
+    /// Must be called once at the end of each block when using block-rate mode
+    /// ([`get_current`](Lfo::get_current)). Not needed when using [`get_next`](Lfo::get_next)
+    /// per sample.
+    pub fn update_lfo_position(&mut self, block_size: usize) {
+        self.advance_by(block_size);
         self.infos = None;
     }
 
     /// Get the current position in the lfo. This will always be in [0., 1.] bounds
     pub fn get_position(&self) -> f32 {
         self.position.clamp(0., 1.)
-    }
-
-    /// Prepares the LFO for a new processing block.
-    /// Can be called as many time as wanted in the process function
-    pub fn get_lfo_block<'a>(
-        &mut self,
-        lfo_points: &'a ControlPoints,
-        infos: Option<BlockInfo>,
-    ) -> LfoBlock<'a> {
-        self.infos = infos;
-        LfoBlock {
-            frequency: self.frequency,
-            mode: self.mode,
-            position: self.position,
-            samplerate_recip: self.samplerate_recip,
-            lfo_points,
-            infos: self.infos.clone(),
-        }
     }
 
     /// Resets position to 0 for [`LfoMode::Retrigger`] and [`LfoMode::Enveloppe`].
@@ -164,46 +210,17 @@ impl Lfo {
             LfoMode::Classic => {}
         }
     }
-}
 
-pub struct LfoBlock<'a> {
-    lfo_points: &'a ControlPoints,
-    infos: Option<BlockInfo>,
-
-    /// We could get this one in lfo but this saves one indirection
-    mode: LfoMode,
-    frequency: LfoFreq,
-    position: f32,
-    samplerate_recip: f32,
-}
-
-impl<'a> LfoBlock<'a> {
-    /// Returns the current LFO value in [0, 1] and advances the position.
-    ///
-    /// `points` must be sorted by `x` and fully within [0, 1] (debug-asserted).
-    /// Freezes when transport is stopped (`time` is `None`).
-    #[inline]
-    pub fn get_value(&self, sample_idx: usize) -> f32 {
-        debug_assert!(
-            self.lfo_points
-                .iter()
-                .all(|p| (0.0..=1.0).contains(&p.x) && (0.0..=1.0).contains(&p.y)),
-            "ControlPoints must be in [0, 1]"
-        );
-        debug_assert!(
-            self.lfo_points.is_sorted_by(|l, r| l.x <= r.x),
-            "ControlPoints must be sorted by x"
-        );
-
-        let position = get_position(
+    /// Internal help to advance position by `samples`.
+    fn advance_by(&mut self, samples: usize) {
+        self.position = get_position(
             self.position,
             self.samplerate_recip,
             self.frequency,
             self.mode,
             self.infos.as_ref(),
-            sample_idx as f32,
+            samples as f32,
         );
-        self.lfo_points.get_value(position)
     }
 }
 
@@ -324,166 +341,167 @@ mod tests {
 
         #[test]
         fn classic_hz_position_from_absolute_time() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.25, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
+            lfo.set_block_info(Some(infos));
+            // get_next advances by 1 sample which triggers position computation
+            assert_approx_eq!(lfo.get_next(), 0.25, 1e-3);
         }
 
         #[test]
         fn classic_hz_wraps_at_period() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(1.25, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), 0.25, 1e-3);
         }
 
         #[test]
         fn classic_hz_sample_accurate_within_block() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
+            lfo.set_block_info(Some(infos));
 
-            let diff = block.get_value(1) - block.get_value(0);
+            let v0 = lfo.get_current();
+            let v1 = lfo.get_next();
+            let diff = v1 - v0;
             assert_approx_eq!(diff, 1.0 / SAMPLERATE);
         }
 
         #[test]
         fn classic_beats_position_from_beat_time() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Beats(4.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Beats(4.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 1.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), 0.25, 1e-3);
         }
 
         #[test]
         fn classic_beats_wraps() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Beats(4.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Beats(4.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 5.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.25, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), 0.25, 1e-3);
         }
 
         #[test]
         fn retrigger_hz_advances_and_wraps() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
+            lfo.set_block_info(Some(infos.clone()));
             lfo.update_lfo_position(SAMPLERATE as usize);
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.0, 1e-2);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.0, 1e-2);
         }
 
         #[test]
         fn retrigger_resets_on_retrigger() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
+            lfo.set_block_info(Some(infos.clone()));
             lfo.update_lfo_position((SAMPLERATE * 0.5) as usize);
 
             lfo.retrigger();
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.0, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.0, 1e-4);
         }
 
         #[test]
         fn envelope_does_not_wrap() {
-            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
+            lfo.set_block_info(Some(infos.clone()));
             lfo.update_lfo_position((SAMPLERATE * 1.5) as usize);
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 1.0, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 1.0, 1e-4);
         }
 
         #[test]
         fn envelope_retrigger_resets() {
-            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Enveloppe, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
+            lfo.set_block_info(Some(infos.clone()));
             lfo.update_lfo_position((SAMPLERATE * 1.5) as usize);
 
             lfo.retrigger();
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.0, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.0, 1e-4);
         }
 
         #[test]
         fn classic_retrigger_is_noop() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.5, 0.0, 120.0, true);
-
-            let block = lfo.get_lfo_block(&points, Some(infos.clone()));
-            let before = block.get_value(0);
+            lfo.set_block_info(Some(infos.clone()));
+            let before = lfo.get_next();
 
             lfo.retrigger();
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), before);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), before, 1e-3);
         }
 
         #[test]
         fn interpolation_midpoint() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.5, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.5, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), 0.5, 1e-3);
         }
 
         #[test]
         fn tension_affects_interpolation() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
-            lfo.set_samplerate(SAMPLERATE);
-
             let linear_points = make_points(&[(0.0, 0.0), (1.0, 1.0)]);
             let curved_points = make_points_with_tension(&[(0.0, 0.0, 2.0), (1.0, 1.0, 0.0)]);
 
+            let mut lfo_lin = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), linear_points);
+            lfo_lin.set_samplerate(SAMPLERATE);
+
+            let mut lfo_cur = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), curved_points);
+            lfo_cur.set_samplerate(SAMPLERATE);
+
             let infos = make_infos(0.5, 0.0, 120.0, true);
 
-            let block_lin = lfo.get_lfo_block(&linear_points, Some(infos.clone()));
-            let val_lin = block_lin.get_value(0);
+            lfo_lin.set_block_info(Some(infos.clone()));
+            let val_lin = lfo_lin.get_next();
 
-            let block_cur = lfo.get_lfo_block(&curved_points, Some(infos));
-            let val_cur = block_cur.get_value(0);
+            lfo_cur.set_block_info(Some(infos));
+            let val_cur = lfo_cur.get_next();
 
             assert!(
                 val_cur < val_lin,
@@ -492,55 +510,34 @@ mod tests {
         }
 
         #[test]
-        fn multiple_lfo_blocks_same_result() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(2.0));
+        fn get_next_advances_monotonically() {
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(2.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
+            lfo.set_block_info(Some(infos));
 
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
-            lfo.update_lfo_position(1000);
-
-            let block1 = lfo.get_lfo_block(&points, Some(infos.clone()));
-            let block2 = lfo.get_lfo_block(&points, Some(infos));
-
-            for idx in [0, 10, 50, 100] {
-                assert_approx_eq!(block1.get_value(idx), block2.get_value(idx));
-            }
-        }
-
-        #[test]
-        fn iteration_order_does_not_matter() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(2.0));
-            lfo.set_samplerate(SAMPLERATE);
-
-            let points = ramp_points();
-            let infos = make_infos(0.0, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-
-            let forward: Vec<f32> = (0..128).map(|i| block.get_value(i)).collect();
-            let backward: Vec<f32> = (0..128).rev().map(|i| block.get_value(i)).collect();
-            let backward_rev: Vec<f32> = backward.into_iter().rev().collect();
-
-            for i in 0..128 {
-                assert_approx_eq!(forward[i], backward_rev[i]);
+            let mut prev = lfo.get_current();
+            for _ in 0..100 {
+                let val = lfo.get_next();
+                assert!(val >= prev, "expected monotonic increase on ramp");
+                prev = val;
             }
         }
 
         #[test]
         fn update_position_advances_across_blocks() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
+            lfo.set_block_info(Some(infos.clone()));
             lfo.update_lfo_position(4410);
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.1, 1e-3);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.1, 1e-3);
         }
     }
 
@@ -551,83 +548,90 @@ mod tests {
 
         #[test]
         fn empty_points_returns_zero() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = make_points(&[]);
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = make_points(&[]);
             let infos = make_infos(0.5, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.0);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.0);
         }
 
         #[test]
         fn single_point_returns_its_value() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = make_points(&[(0.5, 0.7)]);
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = make_points(&[(0.5, 0.7)]);
             let infos = make_infos(0.0, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.7, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.7, 1e-4);
         }
 
         #[test]
         fn position_exactly_on_point() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = make_points(&[(0.0, 0.3), (0.5, 0.8), (1.0, 0.1)]);
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = make_points(&[(0.0, 0.3), (0.5, 0.8), (1.0, 0.1)]);
             let infos = make_infos(0.5, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.8, 1e-4);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), 0.8, 1e-3);
         }
 
         #[test]
         fn none_infos_freezes_position() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos));
+            lfo.set_block_info(Some(infos));
             lfo.update_lfo_position((SAMPLERATE * 0.3) as usize);
 
-            let block = lfo.get_lfo_block(&points, None);
-            assert_approx_eq!(block.get_value(0), block.get_value(100));
+            lfo.set_block_info(None);
+            let v0 = lfo.get_current();
+            // Advancing with None infos should not change position
+            let v1 = lfo.get_next();
+            assert_approx_eq!(v0, v1);
         }
 
         #[test]
         fn none_infos_update_does_not_advance() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos));
+            lfo.set_block_info(Some(infos));
             lfo.update_lfo_position((SAMPLERATE * 0.3) as usize);
 
-            let block = lfo.get_lfo_block(&points, None);
-            let before = block.get_value(0);
+            lfo.set_block_info(None);
+            let before = lfo.get_current();
 
             lfo.update_lfo_position(4096);
 
-            let block = lfo.get_lfo_block(&points, None);
-            assert_approx_eq!(block.get_value(0), before);
+            lfo.set_block_info(None);
+            assert_approx_eq!(lfo.get_current(), before);
         }
 
         #[test]
         fn classic_not_playing_falls_back_to_retrig() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(2.0, 0.0, 120.0, false);
+            lfo.set_block_info(Some(infos));
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            let v0 = block.get_value(0);
-            let v100 = block.get_value(100);
+            let v0 = lfo.get_current();
+            let v100 = {
+                // Advance 100 samples
+                for _ in 0..100 {
+                    lfo.get_next();
+                }
+                lfo.get_current()
+            };
 
             assert!(
                 (v100 - v0).abs() > 1e-6,
@@ -637,45 +641,43 @@ mod tests {
 
         #[test]
         fn high_frequency_wraps_correctly() {
-            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(100.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Classic, LfoFreq::Hz(100.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0025, 0.0, 120.0, true);
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.25, 1e-3);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_next(), 0.25, 1e-2);
         }
 
         #[test]
         fn block_rate_usage() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Hz(1.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let block = lfo.get_lfo_block(&points, Some(infos.clone()));
-            assert_approx_eq!(block.get_value(0), 0.0, 1e-4);
+            lfo.set_block_info(Some(infos.clone()));
+            assert_approx_eq!(lfo.get_current(), 0.0, 1e-4);
 
             lfo.update_lfo_position(4410);
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.1, 1e-3);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.1, 1e-3);
         }
 
         #[test]
         fn retrigger_beats_advances_correctly() {
-            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Beats(4.0));
+            let points = ramp_points();
+            let mut lfo = Lfo::new(LfoMode::Retrigger, LfoFreq::Beats(4.0), points);
             lfo.set_samplerate(SAMPLERATE);
 
-            let points = ramp_points();
             let infos = make_infos(0.0, 0.0, 120.0, true);
-
-            let _ = lfo.get_lfo_block(&points, Some(infos.clone()));
+            lfo.set_block_info(Some(infos.clone()));
             lfo.update_lfo_position(SAMPLERATE as usize);
 
-            let block = lfo.get_lfo_block(&points, Some(infos));
-            assert_approx_eq!(block.get_value(0), 0.5, 1e-2);
+            lfo.set_block_info(Some(infos));
+            assert_approx_eq!(lfo.get_current(), 0.5, 1e-2);
         }
     }
 }
