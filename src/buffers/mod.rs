@@ -6,3 +6,4 @@ pub(crate) mod zip_events;
 
 pub use buffer::Buffer;
 pub use buffers::Buffers;
+pub use zip_events::InputEvent;

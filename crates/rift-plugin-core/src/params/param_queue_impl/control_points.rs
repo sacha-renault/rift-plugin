@@ -64,7 +64,7 @@ impl ControlPoints {
 
         // This will panic if other.points.len() > self.points.capacity()
         // but it will NEVER reallocate.
-        self.points.copy_from_slice(&other.points);
+        self.points.extend_from_slice(&other.points);
         self.max_tension = other.max_tension;
     }
 
