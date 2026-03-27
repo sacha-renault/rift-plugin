@@ -63,6 +63,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
         &mut self,
         buffers: Buffers,
         context: ProcessContext<Self>,
+        input_events: &InputEvents,
     ) -> Result<ProcessStatus, PluginError>;
 
     /// Called when a MIDI message is received.

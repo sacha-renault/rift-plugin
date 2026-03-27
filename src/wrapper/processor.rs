@@ -129,13 +129,12 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             states: self.shared.states.clone(),
             shared: self.shared.other.clone(),
             process,
-            input_events: events.input,
             samplerate: self.samplerate,
             num_events: 0,
             outputs_events: events.output,
             block_index: self.block_index.increment(),
         };
 
-        self.plugin.process(buffers, context)
+        self.plugin.process(buffers, context, events.input)
     }
 }
