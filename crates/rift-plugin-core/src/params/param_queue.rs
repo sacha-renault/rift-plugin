@@ -87,7 +87,7 @@ impl<T: ParamQueueType> ParamQueue<T> {
         // This shouldn't be poping anything as
         // UI is the only one to write events, and audio thread
         // should have drain all events already, but still.
-        while let Some(_) = self.inner.queue.pop() {}
+        while self.inner.queue.pop().is_some() {}
         unsafe { (&*self.inner.cache.get()).snapshot() }
     }
 

@@ -4,7 +4,7 @@ use super::gui_prelude::*;
 
 /// Builds the content for a dropdown.
 /// Iterates through items and creates labels with attached actions.
-fn build_popup_content(cx: &mut Context, items: &Vec<DropdownItem>) {
+fn build_popup_content(cx: &mut Context, items: &[DropdownItem]) {
     for DropdownItem {
         name,
         action,

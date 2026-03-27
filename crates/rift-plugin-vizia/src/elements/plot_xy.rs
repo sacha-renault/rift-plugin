@@ -177,7 +177,7 @@ impl PlotData for Vec<f32> {
             f(&mut iterator)
         } else {
             let mut iterator = Linspace::new(0., 1., width as usize).map(|x| {
-                let y = lerp_interpolate_buffer(&self, x * max);
+                let y = lerp_interpolate_buffer(self, x * max);
                 (x, y)
             });
             f(&mut iterator)

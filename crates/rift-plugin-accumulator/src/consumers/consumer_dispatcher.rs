@@ -62,6 +62,12 @@ pub struct ConsumerDispatcher {
     channel_consumers: Vec<ChannelConsumer>,
 }
 
+impl Default for ConsumerDispatcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConsumerDispatcher {
     /// Creates an empty dispatcher with no consumers registered.
     pub fn new() -> Self {
