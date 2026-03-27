@@ -14,6 +14,9 @@ pub enum GuiParamEventKind {
     GestureBegin,
     /// End of a mouse gesture interaction.
     GestureEnd,
+    /// This allow the audio thread the a value as changed
+    /// without a f64 value.
+    ValueLess,
 }
 
 /// The GUI-side event wrapper passed to `GuiView::handle_event` for parameter interactions.
@@ -48,12 +51,19 @@ impl GuiParamEvent {
         }
     }
 
+    pub fn value_less(param_id: ClapId) -> Self {
+        Self {
+            param_id,
+            kind: GuiParamEventKind::ValueLess,
+        }
+    }
+
     /// Converts this GUI event into the raw type expected by the host plugin.
     ///
     /// # Note
     /// This creates new instances wrapping the original event ID and value.
-    pub fn to_raw(&self) -> RawParamEvent {
-        match self.kind {
+    pub fn maybe_to_raw(&self) -> Option<RawParamEvent> {
+        let raw = match self.kind {
             GuiParamEventKind::Value(v) => RawParamEvent::Value(ParamValueEvent::new(
                 0,
                 self.param_id,
@@ -67,7 +77,10 @@ impl GuiParamEvent {
             GuiParamEventKind::GestureEnd => {
                 RawParamEvent::GestureEnd(ParamGestureEndEvent::new(0, self.param_id))
             }
-        }
+            _ => return None,
+        };
+
+        Some(raw)
     }
 }
 
@@ -121,19 +134,25 @@ mod tests {
     #[test]
     fn test_to_raw_value() {
         let e = GuiParamEvent::value(id(1), 0.5);
-        assert!(matches!(e.to_raw(), RawParamEvent::Value(_)));
+        assert!(matches!(e.maybe_to_raw(), Some(RawParamEvent::Value(_))));
     }
 
     #[test]
     fn test_to_raw_gesture_begin() {
         let e = GuiParamEvent::gesture_start(id(1));
-        assert!(matches!(e.to_raw(), RawParamEvent::GestureBegin(_)));
+        assert!(matches!(
+            e.maybe_to_raw(),
+            Some(RawParamEvent::GestureBegin(_))
+        ));
     }
 
     #[test]
     fn test_to_raw_gesture_end() {
         let e = GuiParamEvent::gesture_end(id(1));
-        assert!(matches!(e.to_raw(), RawParamEvent::GestureEnd(_)));
+        assert!(matches!(
+            e.maybe_to_raw(),
+            Some(RawParamEvent::GestureEnd(_))
+        ));
     }
 
     #[test]
@@ -145,7 +164,7 @@ mod tests {
             GuiParamEvent::gesture_end(id(1)),
         ];
         for e in events {
-            let _: &UnknownEvent = e.to_raw().as_ref();
+            let _: &UnknownEvent = e.maybe_to_raw().unwrap().as_ref();
         }
     }
 

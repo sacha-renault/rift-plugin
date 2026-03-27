@@ -1,6 +1,9 @@
-use rift_plugin_core::params::{
-    ParamQueue, ParamQueueType,
-    param_queue_impl::{ControlPoint, ControlPointEvent, ControlPoints},
+use rift_plugin_core::{
+    gui::GuiParamEvent,
+    params::{
+        ParamQueue, ParamQueueType,
+        param_queue_impl::{ControlPoint, ControlPointEvent, ControlPoints},
+    },
 };
 use vizia::{
     events::EventMeta,
@@ -113,7 +116,7 @@ pub struct ControlPointsEditor {
 }
 
 impl ControlPointsEditor {
-    pub fn new(
+    pub unsafe fn new(
         cx: &mut Context,
         param: ParamQueue<ControlPoints>,
         rule: fn(usize, ControlPoint, &ControlPoints) -> ControlPoint,
@@ -224,6 +227,10 @@ impl ControlPointsEditor {
         if self.param.push_event(event).is_err() {
             return false;
         }
+
+        // We push a dummy param so that processor thread know this param has changed, but the value is irrelevant.
+        cx.emit(GuiParamEvent::value_less(self.param.id()));
+
         self.points.handle_event(event);
         cx.needs_redraw();
         true

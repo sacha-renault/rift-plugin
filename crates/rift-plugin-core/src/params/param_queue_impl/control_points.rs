@@ -59,6 +59,15 @@ impl ControlPoints {
         }
     }
 
+    pub fn copy_from(&mut self, other: &ControlPoints) {
+        self.points.clear();
+
+        // This will panic if other.points.len() > self.points.capacity()
+        // but it will NEVER reallocate.
+        self.points.copy_from_slice(&other.points);
+        self.max_tension = other.max_tension;
+    }
+
     pub fn capacity(&self) -> usize {
         self.points.capacity()
     }

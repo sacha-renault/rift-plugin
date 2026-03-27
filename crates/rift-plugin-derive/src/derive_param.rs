@@ -76,6 +76,11 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
         .map(|name| name.replace(" ", "_") + "_ID")
         .map(|name| syn::Ident::new(&name, Span::call_site()))
         .collect();
+    let persist_name_id: Vec<_> = persist_fields_names
+        .iter()
+        .map(|name| name.replace(" ", "_") + "_ID")
+        .map(|name| syn::Ident::new(&name, Span::call_site()))
+        .collect();
 
     // Persistent fields get indices after param fields (for __initialize ClapId)
     let persist_indices: Vec<u32> =
@@ -242,6 +247,11 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
             #(
                 pub const #param_name_id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId
                     = ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(#param_indices);
+            )*
+
+            #(
+                pub const #persist_name_id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId
+                    = ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(#persist_indices);
             )*
         }
     };
