@@ -37,9 +37,9 @@ pub trait AudioAccumulatorErased: private::Sealed + Send + Sync + 'static {
     ///
     /// This function is lock-free and allocation-free and may be called from
     /// the audio thread.
-    fn push_slices<'a>(
+    fn push_slices(
         &self,
-        slices: &mut dyn Iterator<Item = &'a [f32]>,
+        slices: &mut dyn Iterator<Item = &[f32]>,
         block_info_opt: Option<BlockInfo>,
     );
 
@@ -150,9 +150,9 @@ impl AudioAccumulatorErased for AudioAccumulator {
     }
 
     #[inline]
-    fn push_slices<'a>(
+    fn push_slices(
         &self,
-        slices: &mut dyn Iterator<Item = &'a [f32]>,
+        slices: &mut dyn Iterator<Item = &[f32]>,
         block_info_opt: Option<BlockInfo>,
     ) {
         self.inner.push_slices(slices, block_info_opt);

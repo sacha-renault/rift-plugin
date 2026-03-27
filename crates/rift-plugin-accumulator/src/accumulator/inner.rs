@@ -48,9 +48,9 @@ impl<const N: usize> AudioAccumulatorErased for InnerAudioAccumulator<N> {
         self.channels.len()
     }
 
-    fn push_slices<'a>(
+    fn push_slices(
         &self,
-        slices: &mut dyn Iterator<Item = &'a [f32]>,
+        slices: &mut dyn Iterator<Item = &[f32]>,
         block_info_opt: Option<BlockInfo>,
     ) {
         if let Some(block_info) = block_info_opt {

@@ -71,16 +71,14 @@ impl ControlPoints {
 
         let right = &self.points[right_idx];
 
-        let value = if right_idx == 0 {
+        if right_idx == 0 {
             right.y
         } else {
             let left = &self.points[right_idx - 1];
             let fract = (position - left.x) / (right.x - left.x);
             let (_, y) = pow_interpolation(left, right, fract);
             y
-        };
-
-        value
+        }
     }
 
     fn can_add_point(&self) -> bool {

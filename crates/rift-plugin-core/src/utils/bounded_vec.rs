@@ -87,6 +87,13 @@ impl<T> BoundedVec<T> {
         self.inner.len()
     }
 
+    /// Returns true if the vector contains no elements.
+    /// [`Vec::is_empty`]
+    #[inline(always)]
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
     /// Returns `true` if `len == capacity`. no more elements can be pushed.
     pub fn is_full(&self) -> bool {
         self.capacity() == self.len()

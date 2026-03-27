@@ -14,9 +14,9 @@ impl AudioBuffer {
         for channel_idx in 0..num_channels {
             let mut channel = vec![0.0f32; samples];
             let frequency = 440.0 * (channel_idx + 1) as f32;
-            for i in 0..samples {
+            for (i, item) in channel.iter_mut().enumerate().take(samples) {
                 let t = i as f32 / samples as f32;
-                channel[i] = (t * 2.0 * std::f32::consts::PI * frequency).sin() * 0.5;
+                *item = (t * 2.0 * std::f32::consts::PI * frequency).sin() * 0.5;
             }
             channels.push(channel);
         }

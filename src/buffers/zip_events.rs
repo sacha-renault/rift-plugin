@@ -84,6 +84,10 @@ impl<'a, P: ClapPlugin> Iterator for FrameEvents<'a, P> {
 
             // We yield events here ONLY if the wrapper didn't already
             // "consume" them in the pre-process flush.
+
+            // We don't wanna collapse those, because if one as_event is true
+            // any other won't be
+            #[allow(clippy::collapsible_if)]
             if let Some(&param_event) = event.as_event::<ParamValueEvent>() {
                 if !P::PARAM_EVENT_AUTO_HANDLING {
                     return Some(InputEvent::ParamEvent(param_event));
