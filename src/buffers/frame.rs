@@ -1,6 +1,6 @@
 use clack_plugin::prelude::InputEvents;
 
-use crate::buffers::zip_events::FramesEventZipped;
+use crate::{buffers::zip_events::FramesEventZipped, wrapper::ClapPlugin};
 
 /// Iterates over the buffer one sample frame at a time.
 ///
@@ -41,7 +41,7 @@ impl<'a> Iterator for SampleFrames<'a> {
 }
 
 impl<'a> SampleFrames<'a> {
-    pub fn zip_events(self, events: &'a InputEvents) -> FramesEventZipped<'a> {
+    pub fn zip_events<P: ClapPlugin>(self, events: &'a InputEvents) -> FramesEventZipped<'a, P> {
         FramesEventZipped::from_frame_iter(self, events)
     }
 }
