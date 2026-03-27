@@ -194,7 +194,6 @@ impl Lfo {
     /// per sample.
     pub fn update_lfo_position(&mut self, block_size: usize) {
         self.advance_by(block_size);
-        self.infos = None;
     }
 
     /// Get the current position in the lfo. This will always be in [0., 1.] bounds
