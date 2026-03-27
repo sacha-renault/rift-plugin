@@ -15,51 +15,72 @@ pub mod shared;
 pub mod shared_states;
 
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
-    /// Params for the plugin
+    /// The parameters for the plugin.
+    /// These are automatically synchronized between the GUI and Audio threads.
     type ParamType: Params + __ParamsInitializer + Default + Send + Sync + 'static;
 
-    /// Anything else that should be shared, must just be thread safe
+    /// Shared state accessible by the GUI, Main, and Audio threads.
+    /// Use this for non-parameter state like preset data or analysis results.
     type SharedType: Send + Sync + Default + 'static;
 
+    /// If `true`, the wrapper automatically updates `ParamType` and calls [`Self::param_changed`]
+    /// for every parameter event before [`Self::process`] is called.
+    ///
+    /// If `false`, parameter events are ignored by the wrapper and must be handled manually
+    /// via the [`ProcessContext`] events iterator.
+    ///
+    /// # Notes:
+    /// Param events from GUI cannot really be sample accurate and GUI change will trigger
+    /// [`Self::param_changed`] calls even if this is true!
     const PARAM_EVENT_AUTO_HANDLING: bool;
+
+    /// If `true`, the wrapper automatically calls [`Self::on_midi_message`] for every MIDI
+    /// event before [`Self::process`] is called.
+    ///
+    /// If `false`, MIDI events must be handled manually (sample-accurately)
+    /// via the [`ProcessContext`] events iterator.
     const MIDI_EVENT_AUTO_HANDLING: bool;
 
+    /// Creates a new instance of the plugin.
+    ///
+    /// This is called on the Main thread. Use this to initialize state that doesn't
+    /// depend on the sample rate or buffer size.
     fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
 
-    /// This function is called only if [`Self::MIDI_EVENT_AUTO_HANDLING`] is
-    /// set to true. if false, this function is never called and you want to use
-    /// [`ProcessContext::zip_events`]
-    fn on_midi_message(&mut self, midi: MidiMessage);
-
-    fn param_changed(&mut self, id: ClapId);
-
-    /// Processes audio data for one block of time.
+    /// Called by the host once initialization is complete and the audio engine is ready.
     ///
-    /// The host owns the lifetime of `buffers` and `context`; they are invalid
-    /// once this function returns.
+    /// Use this to prepare internal DSP (filters, oscillators) for a specific sample rate.
+    /// **Note:** You may allocate memory during this call.
+    fn activate(&mut self, config: PluginAudioConfiguration, context: InitContext);
+
+    /// Processes one block of audio and events.
     ///
-    /// #Note
-    /// You MUST NEVER allocate during the process funciton, as it might block and cracks the audio thread.
-    /// Use scratch buffer you initialized during [`Self::activate`]
+    /// This is the "Hot Path." **Strictly avoid any operations that can block**,
+    /// such as memory allocation, file I/O, or acquiring non-recursive mutexes.
+    ///
+    /// To handle events sample-accurately, use `context.zipped_events()`.
     fn process(
         &mut self,
         buffers: Buffers,
         context: ProcessContext<Self>,
     ) -> Result<ProcessStatus, PluginError>;
 
-    /// Called by the host once initialization is complete.
+    /// Called when a MIDI message is received.
     ///
-    /// # Responsibility
-    /// Sets up internal audio graphs, buffer sizes, and prepares for processing.
-    /// You may allocate during this function
-    fn activate(&mut self, config: PluginAudioConfiguration, context: InitContext);
+    /// This is only triggered if [`Self::MIDI_EVENT_AUTO_HANDLING`] is set to `true`.
+    /// Messages are delivered once per block, before the call to [`Self::process`].
+    fn on_midi_message(&mut self, midi: MidiMessage);
 
-    /// Called by the host to create a GUI factory for this plugin.
+    /// Called when a parameter value is changed by the host or the GUI.
     ///
-    /// # Note
-    /// The returned `Box<dyn GuiFactory>` is owned by the host.
-    /// Do not keep references to internal state created here across GUI redraws;
-    /// rely on [`Self::SharedType`] or external state management instead.
+    /// If [`Self::PARAM_EVENT_AUTO_HANDLING`] is `true`, this is called automatically.
+    /// If `false`, this is only called for GUI-driven changes to keep the DSP in sync.
+    fn param_changed(&mut self, id: ClapId);
+
+    /// Creates the GUI factory for this plugin.
+    ///
+    /// Since the GUI runs on a separate thread (or even a separate process),
+    /// communication with the processor must happen via `params` or `shared`.
     fn gui(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Box<dyn GuiFactory>;
 
     // ... Later more methods :)
