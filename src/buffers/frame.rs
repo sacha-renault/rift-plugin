@@ -1,3 +1,7 @@
+use clack_plugin::prelude::InputEvents;
+
+use crate::buffers::zip_events::FramesEventZipped;
+
 /// Iterates over the buffer one sample frame at a time.
 ///
 /// Each frame yields all channels at a given time step. For a stereo buffer
@@ -33,6 +37,12 @@ impl<'a> Iterator for SampleFrames<'a> {
         } else {
             None
         }
+    }
+}
+
+impl<'a> SampleFrames<'a> {
+    pub fn zip_events(self, events: &'a InputEvents) -> FramesEventZipped<'a> {
+        FramesEventZipped::from_frame_iter(self, events)
     }
 }
 
