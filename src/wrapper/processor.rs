@@ -52,7 +52,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                 if let Some(id) = param_event.param_id() {
                     let value = param_event.value();
                     self.shared.params.set_value(id, value);
-                    self.plugin.param_changed(id);
+                    self.plugin.param_changed_host(id);
                 }
             } else if P::MIDI_EVENT_AUTO_HANDLING
                 && let Some(&midi_event) = event.as_event::<MidiEvent>()
@@ -64,15 +64,18 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
     #[inline]
     fn handle_gui_param_change(&mut self, event: GuiParamEvent, outputs: &mut OutputEvents) {
-        if let err @ Err(..) = outputs.try_push(event.to_raw()) {
-            log::error!("There was an error push event {err:?}")
+        if let Some(raw_event) = event.maybe_to_raw() {
+            if let err @ Err(..) = outputs.try_push(raw_event) {
+                log::error!("There was an error push event {err:?}")
+            }
         }
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
             GuiParamEventKind::Value(_) => {
-                self.plugin.param_changed(event.param_id);
+                self.plugin.param_changed_gui(event.param_id);
             }
+            GuiParamEventKind::ValueLess => self.plugin.param_changed_gui(event.param_id),
         }
     }
 }

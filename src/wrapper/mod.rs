@@ -23,7 +23,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Use this for non-parameter state like preset data or analysis results.
     type SharedType: Send + Sync + Default + 'static;
 
-    /// If `true`, the wrapper automatically updates `ParamType` and calls [`Self::param_changed`]
+    /// If `true`, the wrapper automatically updates `ParamType` and calls [`Self::param_changed_host`]
     /// for every parameter event before [`Self::process`] is called.
     ///
     /// If `false`, parameter events are ignored by the wrapper and must be handled manually
@@ -31,7 +31,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// # Notes:
     /// Param events from GUI cannot really be sample accurate and GUI change will trigger
-    /// [`Self::param_changed`] calls even if this is true!
+    /// [`Self::param_changed_gui`] calls even if this is true!
     const PARAM_EVENT_AUTO_HANDLING: bool;
 
     /// If `true`, the wrapper automatically calls [`Self::on_midi_message`] for every MIDI
@@ -72,11 +72,16 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Messages are delivered once per block, before the call to [`Self::process`].
     fn on_midi_message(&mut self, midi: MidiMessage);
 
-    /// Called when a parameter value is changed by the host or the GUI.
+    /// Called when a parameter value is changed by the host.
     ///
     /// If [`Self::PARAM_EVENT_AUTO_HANDLING`] is `true`, this is called automatically.
-    /// If `false`, this is only called for GUI-driven changes to keep the DSP in sync.
-    fn param_changed(&mut self, id: ClapId);
+    /// If `false`, this is never called.
+    fn param_changed_host(&mut self, id: ClapId);
+
+    /// Called when a parameter value is changed by the GUI.
+    ///
+    /// This function isn't impacted by [`Self::PARAM_EVENT_AUTO_HANDLING`].
+    fn param_changed_gui(&mut self, id: ClapId);
 
     /// Creates the GUI factory for this plugin.
     ///
