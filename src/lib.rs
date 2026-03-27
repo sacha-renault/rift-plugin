@@ -1,5 +1,6 @@
 mod buffers;
 mod context;
+mod ty;
 mod type_wrapper;
 mod wrapper;
 
@@ -43,6 +44,8 @@ pub mod prelude {
 
     pub use buffers::*;
     pub use context::*;
+
+    pub use ty::*;
 }
 
 #[doc(hidden)]

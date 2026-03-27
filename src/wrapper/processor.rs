@@ -1,7 +1,9 @@
 use std::sync::atomic::Ordering;
 
 use clack_extensions::params::*;
-use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
+use clack_plugin::events::event_types::{
+    MidiEvent, ParamValueEvent, TransportEvent, TransportFlags,
+};
 use clack_plugin::prelude::*;
 
 use rift_plugin_core::gui::{GuiParamEvent, GuiParamEventKind};
@@ -10,6 +12,7 @@ use rift_plugin_core::transport::BlockIndex;
 
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};
 use crate::prelude::Buffers;
+use crate::ty::EventSource;
 use crate::wrapper::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
 
 pub struct WrapperProcessor<'a, P: ClapPlugin> {
@@ -46,18 +49,20 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         }
 
         for event in events.iter() {
-            if P::PARAM_EVENT_AUTO_HANDLING
-                && let Some(param_event) = event.as_event::<ParamValueEvent>()
-            {
-                if let Some(id) = param_event.param_id() {
-                    let value = param_event.value();
+            if let Some(event) = event.as_event::<ParamValueEvent>() {
+                if P::PARAM_EVENT_AUTO_HANDLING
+                    && let Some(id) = event.param_id()
+                {
+                    let value = event.value();
                     self.shared.params.set_value(id, value);
-                    self.plugin.param_changed_host(id);
+                    self.plugin.param_changed(id, EventSource::Host);
                 }
-            } else if P::MIDI_EVENT_AUTO_HANDLING
-                && let Some(&midi_event) = event.as_event::<MidiEvent>()
-            {
-                self.plugin.on_midi_message(midi_event.into());
+            } else if let Some(event) = event.as_event::<MidiEvent>() {
+                if P::MIDI_EVENT_AUTO_HANDLING {
+                    self.plugin.on_midi_message((*event).into());
+                }
+            } else if let Some(event) = event.as_event::<TransportEvent>() {
+                log::info!("{event:?}");
             }
         }
     }
@@ -73,9 +78,11 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
             GuiParamEventKind::Value(_) => {
-                self.plugin.param_changed_gui(event.param_id);
+                self.plugin.param_changed(event.param_id, EventSource::GUI);
             }
-            GuiParamEventKind::ValueLess => self.plugin.param_changed_gui(event.param_id),
+            GuiParamEventKind::ValueLess => {
+                self.plugin.param_changed(event.param_id, EventSource::GUI)
+            }
         }
     }
 }
