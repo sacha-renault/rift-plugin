@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use clack_plugin::{
     events::event_types::{MidiEvent, ParamValueEvent},
     prelude::InputEvents,
@@ -6,6 +8,7 @@ use clack_plugin::{
 use crate::{
     buffers::frame::{Frame, SampleFrames},
     prelude::MidiMessage,
+    wrapper::ClapPlugin,
 };
 
 pub enum InputEvent {
@@ -13,18 +16,20 @@ pub enum InputEvent {
     ParamEvent(ParamValueEvent),
 }
 
-pub struct FramesEventZipped<'a> {
+pub struct FramesEventZipped<'a, P: ClapPlugin> {
     inner: SampleFrames<'a>,
     events: &'a InputEvents<'a>,
     events_position: usize,
+    _p: PhantomData<P>,
 }
 
-impl<'a> FramesEventZipped<'a> {
+impl<'a, P: ClapPlugin> FramesEventZipped<'a, P> {
     pub(crate) fn from_frame_iter(frames: SampleFrames<'a>, events: &'a InputEvents) -> Self {
         Self {
             inner: frames,
             events,
             events_position: 0,
+            _p: PhantomData,
         }
     }
 
@@ -37,8 +42,8 @@ impl<'a> FramesEventZipped<'a> {
     }
 }
 
-impl<'a> Iterator for FramesEventZipped<'a> {
-    type Item = (FrameEvents<'a>, Frame<'a>);
+impl<'a, P: ClapPlugin> Iterator for FramesEventZipped<'a, P> {
+    type Item = (FrameEvents<'a, P>, Frame<'a>);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -51,6 +56,7 @@ impl<'a> Iterator for FramesEventZipped<'a> {
                 events: self.events,
                 position: start,
                 end: self.events_position,
+                _p: PhantomData,
             };
 
             Some((event_iter, frame))
@@ -60,13 +66,14 @@ impl<'a> Iterator for FramesEventZipped<'a> {
     }
 }
 
-pub struct FrameEvents<'a> {
+pub struct FrameEvents<'a, P: ClapPlugin> {
     events: &'a InputEvents<'a>,
     position: usize,
     end: usize,
+    _p: PhantomData<P>,
 }
 
-impl<'a> Iterator for FrameEvents<'a> {
+impl<'a, P: ClapPlugin> Iterator for FrameEvents<'a, P> {
     type Item = InputEvent;
 
     #[inline]
@@ -75,10 +82,16 @@ impl<'a> Iterator for FrameEvents<'a> {
             let event = &self.events[self.position];
             self.position += 1;
 
+            // We yield events here ONLY if the wrapper didn't already
+            // "consume" them in the pre-process flush.
             if let Some(&param_event) = event.as_event::<ParamValueEvent>() {
-                return Some(InputEvent::ParamEvent(param_event));
+                if !P::PARAM_EVENT_AUTO_HANDLING {
+                    return Some(InputEvent::ParamEvent(param_event));
+                }
             } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
-                return Some(InputEvent::MidiEvent(midi_event.into()));
+                if !P::MIDI_EVENT_AUTO_HANDLING {
+                    return Some(InputEvent::MidiEvent(midi_event.into()));
+                }
             }
             // Unknown event type, skip it, try next
         }

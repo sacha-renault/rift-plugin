@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use clack_plugin::events::event_types::{MidiEvent, TransportFlags};
 use clack_plugin::host::HostAudioProcessorHandle;
-use clack_plugin::prelude::OutputEvents;
+use clack_plugin::prelude::{InputEvents, OutputEvents};
 use clack_plugin::process::Process;
 
 use rift_plugin_core::transport::{BlockIndex, BlockInfo};
 
+use crate::buffers::Buffer;
+use crate::buffers::zip_events::FramesEventZipped;
 use crate::prelude::MidiMessage;
 use crate::wrapper::{ClapPlugin, shared_states::SharedQueues};
 
@@ -17,6 +19,7 @@ pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) process: Process<'a>,
     pub(crate) samplerate: f64,
     pub(crate) block_index: BlockIndex,
+    pub(crate) input_events: &'a InputEvents<'a>,
 
     /// Count of pending events to be drained. MUST be initialized to 0; dropping with >0
     /// triggers a callback request to the host via the destructor.
@@ -52,6 +55,10 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
     /// Add a midi message as output event
     pub fn add_output_midi_event(&mut self, event: MidiMessage) {
         let _ = self.outputs_events.try_push::<MidiEvent>(event.into());
+    }
+
+    pub fn zip_events(&self, buffer: &'a mut Buffer<'a>) -> FramesEventZipped<'a, P> {
+        buffer.iter_samples().zip_events(self.input_events)
     }
 }
 

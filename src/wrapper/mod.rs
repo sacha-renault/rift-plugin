@@ -21,8 +21,14 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Anything else that should be shared, must just be thread safe
     type SharedType: Send + Sync + Default + 'static;
 
+    const PARAM_EVENT_AUTO_HANDLING: bool;
+    const MIDI_EVENT_AUTO_HANDLING: bool;
+
     fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
 
+    /// This function is called only if [`Self::MIDI_EVENT_AUTO_HANDLING`] is
+    /// set to true. if false, this function is never called and you want to use
+    /// [`ProcessContext::zip_events`]
     fn on_midi_message(&mut self, midi: MidiMessage);
 
     fn param_changed(&mut self, id: ClapId);

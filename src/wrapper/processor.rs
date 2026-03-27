@@ -21,11 +21,44 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
 }
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
+    fn handle_audio_thread_tasks(&mut self, outputs: &mut OutputEvents) {
+        while let Some(task) = self.shared.states.pop_audio_thread_tasks() {
+            use AudioThreadTask::*;
+
+            match task {
+                GuiParamEvent(event) => self.handle_gui_param_change(event, outputs),
+                RequestCallback => self.host.request_callback(),
+            }
+        }
+    }
+
     fn request_flush(&self) {
         if let Some(ext) = self.host.get_extension::<HostParams>() {
             ext.request_flush(self.host.as_shared());
         } else {
             log::error!("Flush failed")
+        }
+    }
+
+    fn handle_event_auto(&mut self, events: &InputEvents) {
+        if !P::MIDI_EVENT_AUTO_HANDLING && !P::PARAM_EVENT_AUTO_HANDLING {
+            return;
+        }
+
+        for event in events.iter() {
+            if P::PARAM_EVENT_AUTO_HANDLING
+                && let Some(param_event) = event.as_event::<ParamValueEvent>()
+            {
+                if let Some(id) = param_event.param_id() {
+                    let value = param_event.value();
+                    self.shared.params.set_value(id, value);
+                    self.plugin.param_changed(id);
+                }
+            } else if P::MIDI_EVENT_AUTO_HANDLING
+                && let Some(&midi_event) = event.as_event::<MidiEvent>()
+            {
+                self.plugin.on_midi_message(midi_event.into());
+            }
         }
     }
 
@@ -46,31 +79,8 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
 impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
     fn flush(&mut self, inputs: &InputEvents, outputs: &mut OutputEvents) {
-        for event in inputs.iter() {
-            if let Some(param_event) = event.as_event::<ParamValueEvent>() {
-                let Some(id) = param_event.param_id() else {
-                    continue;
-                };
-                let value = param_event.value();
-                self.shared.params.set_value(id, value);
-                self.plugin.param_changed(id);
-            } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
-                self.plugin.on_midi_message(midi_event.into());
-            }
-
-            // todo!() ?
-            // maybe handle other kind of events ?
-            // if let Some(some_event) = event.as_event::<SomeEvent>() { ... }
-        }
-
-        while let Some(task) = self.shared.states.pop_audio_thread_tasks() {
-            use AudioThreadTask::*;
-
-            match task {
-                GuiParamEvent(event) => self.handle_gui_param_change(event, outputs),
-                RequestCallback => self.host.request_callback(),
-            }
-        }
+        self.handle_audio_thread_tasks(outputs);
+        self.handle_event_auto(inputs);
     }
 }
 
@@ -119,6 +129,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             states: self.shared.states.clone(),
             shared: self.shared.other.clone(),
             process,
+            input_events: events.input,
             samplerate: self.samplerate,
             num_events: 0,
             outputs_events: events.output,
