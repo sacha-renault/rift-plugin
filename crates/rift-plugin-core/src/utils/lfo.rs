@@ -152,8 +152,8 @@ impl Lfo {
 
     /// Replaces the control points that define the LFO waveform.
     /// Can be called per-block if points are automated.
-    pub fn set_control_points(&mut self, control_points: ControlPoints) {
-        self.points = control_points;
+    pub fn set_control_points(&mut self, control_points: &ControlPoints) {
+        self.points.copy_from(control_points);
     }
 
     /// Returns the LFO value at the current position without advancing.
