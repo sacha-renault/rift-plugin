@@ -45,13 +45,12 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// This is called on the Main thread. Use this to initialize state that doesn't
     /// depend on the sample rate or buffer size.
-    fn create(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Self;
-
-    /// Called by the host once initialization is complete and the audio engine is ready.
-    ///
-    /// Use this to prepare internal DSP (filters, oscillators) for a specific sample rate.
-    /// **Note:** You may allocate memory during this call.
-    fn activate(&mut self, config: PluginAudioConfiguration, context: InitContext);
+    fn create(
+        params: Arc<Self::ParamType>,
+        shared: Arc<Self::SharedType>,
+        config: PluginAudioConfiguration,
+        context: InitContext,
+    ) -> Self;
 
     /// Processes one block of audio and events.
     ///
