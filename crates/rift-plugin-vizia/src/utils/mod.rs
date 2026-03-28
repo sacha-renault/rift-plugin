@@ -3,6 +3,7 @@
 
 pub(crate) mod active_element;
 pub(crate) mod cached_texture;
+pub(crate) mod comparative_vec;
 pub(crate) mod draw_utils;
 pub(crate) mod gui_events;
 pub(crate) mod handle_generic_extensions;
@@ -11,6 +12,7 @@ pub(crate) mod viewport_transform;
 
 pub use active_element::{ActiveElementData, ActiveElementEvent};
 pub use cached_texture::CachedTexture;
+pub use comparative_vec::ComparativeVec;
 pub use draw_utils::{change_color_opacity, clip_bounds, make_strokepath};
 pub use gui_events::{gesture_end, gesture_start, set_value, set_value_normalized};
 pub use handle_generic_extensions::{
