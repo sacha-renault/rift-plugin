@@ -19,7 +19,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// These are automatically synchronized between the GUI and Audio threads.
     type ParamType: Params + __ParamsInitializer + Default + Send + Sync + 'static;
 
-    /// Shared state accessible by the GUI, Main, and Audio threads.
+    /// Shared state accessible by the GUI (=Main), and Audio threads.
     /// Use this for non-parameter state like preset data or analysis results.
     type SharedType: Send + Sync + Default + 'static;
 
@@ -29,7 +29,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// If `false`, parameter events are ignored by the wrapper and must be handled manually
     /// via the [`ProcessContext`] events iterator.
     ///
-    /// # Notes:
+    /// **Notes**:
     /// Param events from GUI cannot really be sample accurate and GUI change will trigger
     /// [`Self::param_changed`] calls even if this is false!
     const PARAM_EVENT_AUTO_HANDLING: bool;
@@ -43,8 +43,9 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
 
     /// Creates a new instance of the plugin.
     ///
-    /// This is called on the Main thread. Use this to initialize state that doesn't
-    /// depend on the sample rate or buffer size.
+    /// Use this to prepare internal DSP (filters, oscillators) for a specific sample rate.
+    /// **Notes**:
+    /// You may allocate memory during this call.
     fn create(
         params: Arc<Self::ParamType>,
         shared: Arc<Self::SharedType>,

@@ -160,7 +160,7 @@ impl Lfo {
     /// Useful for block-rate usage where one value is used for the entire block.
     /// Call [`update_lfo_position`](Lfo::update_lfo_position) at the end of the block to advance.
     ///
-    /// # Notes:
+    /// **Notes**:
     /// You **MUST** call [`Self::set_block_info`] before calling this function !
     pub fn get_current(&self) -> f32 {
         debug_assert!(
@@ -180,7 +180,7 @@ impl Lfo {
     /// Advances the position by one sample and returns the new LFO value.
     /// Use this in a per-sample loop for sample-accurate modulation.
     ///
-    /// # Notes:
+    /// **Notes**:
     /// You **MUST** call [`Self::set_block_info`] before calling this function !
     #[inline]
     pub fn get_next(&mut self) -> f32 {

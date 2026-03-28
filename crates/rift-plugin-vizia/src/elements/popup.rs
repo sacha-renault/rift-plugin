@@ -95,7 +95,7 @@ pub trait PopupExt {
     /// - Mouse cannot reach the popup before it disappears
     /// - Popup captures clicks unexpectedly
     ///
-    /// # Notes:
+    /// **Notes**:
     /// it's not really deprecated because it has never been ready but people
     /// will read doc when seeing deprecated and that's what i want
     #[deprecated = "UNSTABLE"]
