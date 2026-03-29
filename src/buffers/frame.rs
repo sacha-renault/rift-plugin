@@ -41,6 +41,29 @@ impl<'a> Iterator for SampleFrames<'a> {
 }
 
 impl<'a> SampleFrames<'a> {
+    /// Pairs each audio frame with its corresponding CLAP input events.
+    ///
+    /// This method zips the frame iterator with an event stream, yielding
+    /// `(FrameEvents, Frame)` pairs where each `FrameEvents` contains only
+    /// the events whose timestamp matches that frame's position.
+    ///
+    /// Events that were already auto-handled by the wrapper (controlled by
+    /// [`ClapPlugin::PARAM_EVENT_AUTO_HANDLING`] and
+    /// [`ClapPlugin::MIDI_EVENT_AUTO_HANDLING`]) are silently skipped.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// for (events, frame) in sample_frames.zip_events::<Self>(&input_events) {
+    ///     for event in events {
+    ///         match event {
+    ///             InputEvent::MidiEvent(msg) => { /* handle MIDI */ }
+    ///             InputEvent::ParamEvent(val) => { /* handle param change */ }
+    ///         }
+    ///     }
+    ///     // process `frame` audio data
+    /// }
+    /// ```
     pub fn zip_events<P: ClapPlugin>(self, events: &'a InputEvents) -> FramesEventZipped<'a, P> {
         FramesEventZipped::from_frame_iter(self, events)
     }
