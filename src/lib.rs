@@ -31,9 +31,8 @@ pub mod prelude {
     pub use rift_plugin_core::params::*;
     pub use rift_plugin_core::prelude::*;
     pub use rift_plugin_core::utils;
-    pub use rift_plugin_derive::{
-        DeriveEnumValues, DeriveParams, HandleExtension, ParamViewBuilder,
-    };
+    pub use rift_plugin_derive::{DeriveEnumValues, DeriveParams};
+    pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
 
     pub use super::export_clap_plugin;
 

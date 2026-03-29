@@ -10,6 +10,8 @@ pub mod prelude {
     /// Type alias of [`Rc<RefCell<T>>`]
     pub type ConsumerCell<T> = Rc<RefCell<T>>;
     pub use transport::{BlockInfo, BlockTime, ChannelsInfo};
+
+    pub use utils::atomic_f32::AtomicF32;
 }
 
 // Remove the cfg test so it can be used anywhere
