@@ -1264,6 +1264,7 @@ dependencies = [
  "rift-plugin-accumulator",
  "rift-plugin-core",
  "rift-plugin-derive",
+ "rift-plugin-oscillator",
  "serde_json",
 ]
 

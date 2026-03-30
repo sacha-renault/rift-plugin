@@ -7,6 +7,7 @@ edition = "2024"
 rift-plugin-derive = { workspace = true }
 rift-plugin-core = { workspace = true }
 rift-plugin-accumulator = { workspace = true }
+rift-plugin-oscillator = { workspace = true }
 
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace =  true }
@@ -34,6 +35,7 @@ rift-plugin-resolver = { path = "crates/rift-plugin-resolver" }
 rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-core = { path = "crates/rift-plugin-core" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
+rift-plugin-oscillator = { path = "crates/rift-plugin-oscillator" }
 
 vizia = { git = "https://github.com/sacha-renault/vizia", branch = "rift-vizia", default-features = false, features = [
  "baseview", 
