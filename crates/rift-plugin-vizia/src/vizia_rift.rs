@@ -108,11 +108,11 @@ impl<F> ViziaGui<F>
 where
     F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
 {
-    pub fn factory(size: (u32, u32), app_fn: F) -> ViziaGuiFactory<F> {
-        ViziaGuiFactory {
+    pub fn factory(size: (u32, u32), app_fn: F) -> Box<dyn GuiFactory> {
+        Box::new(ViziaGuiFactory {
             app_fn: Arc::new(app_fn),
             size,
-        }
+        })
     }
 }
 
