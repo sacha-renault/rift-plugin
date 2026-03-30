@@ -203,3 +203,41 @@ pub trait __ParamsInitializer {
     #[doc(hidden)]
     fn __initialize(&mut self);
 }
+
+impl __ParamsInitializer for () {
+    fn __initialize(&mut self) {}
+}
+
+impl Params for () {
+    fn count(&self) -> u32 {
+        0
+    }
+
+    fn deserialize(&self, _: &mut dyn Read) -> Result<(), PluginError> {
+        Ok(())
+    }
+
+    fn get_param_info<'a>(&'a self, _: u32) -> Option<ParamInfo<'a>> {
+        None
+    }
+
+    fn get_value(&self, _: ClapId) -> Option<f64> {
+        None
+    }
+
+    fn serialize(&self, _: &mut dyn Write) -> Result<(), PluginError> {
+        Ok(())
+    }
+
+    fn set_value(&self, _: ClapId, _: f64) {}
+
+    fn set_value_normalized(&self, _: ClapId, _: f64) {}
+
+    fn text_to_value(&self, _: ClapId, _: &CStr) -> Option<f64> {
+        None
+    }
+
+    fn value_to_text(&self, _: ClapId, _: f64, _: &mut ParamDisplayWriter) -> std::fmt::Result {
+        Err(std::fmt::Error)
+    }
+}
