@@ -1300,6 +1300,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "rift-plugin-oscillator"
+version = "0.1.0"
+
+[[package]]
 name = "rift-plugin-resolver"
 version = "0.1.0"
 dependencies = [
