@@ -26,7 +26,7 @@ members = [
   "crates/rift-plugin-core", 
   "crates/rift-plugin-vizia", 
   "examples/buffer-iter-benchmark"
-]
+, "crates/rift-plugin-oscillator"]
 
 [workspace.dependencies]
 rift-plugin-derive  = { path = "crates/rift-plugin-derive" }
