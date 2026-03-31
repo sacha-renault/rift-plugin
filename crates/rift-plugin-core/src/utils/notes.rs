@@ -1,4 +1,4 @@
-pub const A4_MIDI: f32 = 60.;
+pub const A4_MIDI: f32 = 81.;
 pub const A4_FREQUENCY: f32 = 440.;
 
 pub fn midi_to_frequency(midi_note: u8) -> f32 {
