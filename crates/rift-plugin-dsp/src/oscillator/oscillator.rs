@@ -1,6 +1,6 @@
 use rift_plugin_core::utils::{bounded_vec::BoundedVec, notes::midi_to_frequency};
 
-use crate::prelude::OscillatorPosition;
+use super::OscillatorPosition;
 
 pub struct Oscillator {
     voices: BoundedVec<OscillatorPosition>,
