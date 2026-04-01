@@ -1,5 +1,5 @@
 [package]
-name = "rift-plugin-oscillator"
+name = "rift-plugin-dsp"
 version = "0.1.0"
 edition = "2024"
 
