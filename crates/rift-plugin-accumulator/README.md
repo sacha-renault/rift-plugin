@@ -73,8 +73,8 @@ This is where channel routing lives. Instead of every consumer implementing its 
 
 There are two consumer traits:
 
-- **`MonoConsumer`** — receives a plain `&[f32]` block with no channel context. Used for consumers that only need a single signal (averaged mix or a specific channel).
-- **`MultiConsumer`** — receives `&[f32]` along with `ChannelsInfo`, so it knows which channel it's looking at and how many there are in total. Used for per-channel work like peak meters. Every `MultiConsumer` automatically implements `MonoConsumer` via a blanket impl, so it can be used anywhere a `MonoConsumer` is expected.
+- **`MonoConsumer`** - receives a plain `&[f32]` block with no channel context. Used for consumers that only need a single signal (averaged mix or a specific channel).
+- **`MultiConsumer`** - receives `&[f32]` along with `ChannelsInfo`, so it knows which channel it's looking at and how many there are in total. Used for per-channel work like peak meters. Every `MultiConsumer` automatically implements `MonoConsumer` via a blanket impl, so it can be used anywhere a `MonoConsumer` is expected.
 
 You register consumers with the appropriate method:
 

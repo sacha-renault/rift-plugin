@@ -1,3 +1,5 @@
+// Butterworth Q values for each cascade stage, by filter order.
+// Ensures maximally flat magnitude response when stages are cascaded.
 const Q_ORDER_2: [f32; 1] = [0.70710678];
 const Q_ORDER_4: [f32; 2] = [0.54119610, 1.3065630];
 const Q_ORDER_6: [f32; 3] = [0.51763809, 0.70710678, 1.9318517];
@@ -21,8 +23,11 @@ const Q_ORDER_20: [f32; 10] = [
     2.1418288, 6.3727474,
 ];
 
+/// Maximum number of biquad stages in a cascade. Corresponds to order 20.
 pub const CASCADE_MAX_DEPTH: usize = 10;
 
+/// Filter order for a [`super::BiquadCascade`], from 2nd to 20th order (even only).
+/// Each order adds one biquad stage, with Q values tuned for Butterworth response.
 #[derive(Clone, Copy, PartialEq)]
 pub enum FilterOrder {
     Two,
@@ -38,8 +43,7 @@ pub enum FilterOrder {
 }
 
 impl FilterOrder {
-    /// Get the correct Q depending on the order
-    /// 0 correspond to order 2, 1 to 4 etc ...
+    /// Returns the Butterworth Q for the given stage index (0-based).
     pub fn get_q(&self, cascade_depth: usize) -> f32 {
         match self {
             FilterOrder::Two => Q_ORDER_2[cascade_depth],
@@ -55,6 +59,7 @@ impl FilterOrder {
         }
     }
 
+    /// Returns the number of biquad stages for this order.
     pub fn get_num_stages(&self) -> usize {
         match self {
             FilterOrder::Two => 1,
@@ -71,8 +76,9 @@ impl FilterOrder {
     }
 }
 
+/// Filter topology for a [`super::BiquadCascade`].
 #[derive(Clone, Copy, PartialEq)]
 pub enum FilterMode {
-    /// Lowpass with cutoff frequency
+    /// Cutoff frequency in Hz.
     LowPass { cutoff: f32 },
 }

@@ -1,6 +1,7 @@
 use super::biquad_args::FilterMode;
 use super::utils::*;
 
+/// Pre-normalized biquad coefficients (all divided by a0).
 #[derive(Clone)]
 pub struct BiquadCoefficient {
     /// b0 / a0
@@ -52,6 +53,7 @@ impl BiquadCoefficient {
     }
 }
 
+/// Per-sample state for a single biquad (the two delay lines).
 #[derive(Clone, Default)]
 pub struct BiquadStates {
     /// previous x: x_n-1
@@ -73,6 +75,9 @@ impl BiquadStates {
     }
 }
 
+/// A single second-order IIR filter section.
+///
+/// Inactive stages pass the signal through unchanged.
 #[derive(Clone)]
 pub struct BiquadFilter {
     pub(crate) states: BiquadStates,
@@ -91,6 +96,10 @@ impl BiquadFilter {
 
     #[inline]
     pub fn process(&mut self, xn: f32) -> f32 {
+        if !self.is_active {
+            return xn;
+        }
+
         let yn = self.coefficients.b0_a0 * xn
             + self.coefficients.b1_a0 * self.states.xn_1
             + self.coefficients.b2_a0 * self.states.xn_2

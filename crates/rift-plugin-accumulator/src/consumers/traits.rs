@@ -11,9 +11,9 @@ use rift_plugin_core::prelude::{BlockTime, ChannelsInfo};
 pub trait MonoConsumer: 'static {
     /// Processes one block of PCM samples.
     ///
-    /// - `block` — f32 samples for a single channel.
+    /// - `block` - f32 samples for a single channel.
     ///   Length may be less than `N` for the final chunk of a render cycle.
-    /// - `time` — transport position at the start of this block, or
+    /// - `time` - transport position at the start of this block, or
     ///   [`BlockTime::none`] if timing information was unavailable.
     fn consume(&mut self, block: &[f32], time: BlockTime);
 }
@@ -29,11 +29,11 @@ pub trait MonoConsumer: 'static {
 pub trait MultiConsumer: 'static {
     /// Processes one block of PCM samples for a specific channel.
     ///
-    /// - `block` — f32 samples for the current channel.
+    /// - `block` - f32 samples for the current channel.
     ///   Length may be less than `N` for the final chunk of a render cycle.
-    /// - `channel_info` — identifies which channel this block belongs to
+    /// - `channel_info` - identifies which channel this block belongs to
     ///   and how many channels are in the bus in total.
-    /// - `time` — transport position at the start of this block, or
+    /// - `time` - transport position at the start of this block, or
     ///   [`BlockTime::none`] if timing information was unavailable.
     fn consume(&mut self, block: &[f32], channel_info: ChannelsInfo, time: BlockTime);
 }

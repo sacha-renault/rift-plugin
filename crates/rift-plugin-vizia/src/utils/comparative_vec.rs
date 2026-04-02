@@ -1,7 +1,7 @@
 //! A [`Vec`] wrapper with cheap equality checks for vizia's reactive data system.
 //!
 //! Tracks identity and a mutation counter instead of deep-comparing elements.
-//! Mutable borrows always bump the counter, even if nothing actually changes —
+//! Mutable borrows always bump the counter, even if nothing actually changes,
 //! this can cause redundant re-renders but never incorrect behavior.
 
 use std::ops::{Deref, DerefMut};
