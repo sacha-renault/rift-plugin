@@ -8,7 +8,7 @@ mod spectrogram;
 mod traits;
 mod windowed_peaks;
 
-pub use audio_peaks::AudioPeaks;
+pub use audio_peaks::AudioPeak;
 pub use consumer_dispatcher::{ChannelMode, ConsumerDispatcher};
 pub use spectrogram::StftConsumer;
 pub use traits::{MonoConsumer, MultiConsumer};
