@@ -1,5 +1,5 @@
 use rift_plugin_accumulator::prelude::AudioPeak;
-use rift_plugin_core::prelude::ConsumerCell;
+use rift_plugin_core::prelude::{ConsumerCell, MultiChannel};
 use rift_plugin_core::utils::conversion::{linear_to_db, normalize_by_range};
 use vizia::vg::{Paint, PaintCap, PaintStyle, Rect};
 
@@ -18,7 +18,7 @@ use super::gui_prelude::*;
 #[derive(ParamViewBuilder)]
 pub struct PeaksViewer {
     #[builder(new)]
-    data: ConsumerCell<AudioPeak>,
+    data: ConsumerCell<MultiChannel<AudioPeak>>,
 
     /// Range of the peak meter (in db).
     #[builder(default = (-120., 6.))]
@@ -58,7 +58,7 @@ impl DestructThenBuildView for PeaksViewer {
 /// # TODO:
 /// This component might overlap on the border of parent if no padding is added.
 struct PeakAmplitude {
-    data: ConsumerCell<AudioPeak>,
+    data: ConsumerCell<MultiChannel<AudioPeak>>,
     channel: usize,
     range: (f32, f32),
 }
@@ -66,7 +66,7 @@ struct PeakAmplitude {
 impl PeakAmplitude {
     fn new(
         cx: &mut Context,
-        data: ConsumerCell<AudioPeak>,
+        data: ConsumerCell<MultiChannel<AudioPeak>>,
         channel: usize,
         range: (f32, f32),
     ) -> Handle<'_, Self> {
@@ -85,7 +85,11 @@ impl PeakAmplitude {
 /// We might wanna add some color palette here!
 impl View for PeakAmplitude {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Some(peak) = self.data.borrow().peak(self.channel) else {
+        let Some(peak) = self
+            .data
+            .borrow()
+            .try_with_channel(self.channel, |p| p.peak())
+        else {
             return;
         };
 
