@@ -54,7 +54,7 @@ impl<T> MultiChannel<T> {
     where
         F: FnOnce(&T) -> R,
     {
-        self.channels.get(channel).map(|channel| func(channel))
+        self.channels.get(channel).map(func)
     }
 
     /// Calls `func` with a mutable reference to the channel at `channel`.
@@ -75,7 +75,23 @@ impl<T> MultiChannel<T> {
     where
         F: FnOnce(&mut T) -> R,
     {
-        self.channels.get_mut(channel).map(|channel| func(channel))
+        self.channels.get_mut(channel).map(func)
+    }
+
+    /// Fold on all channels. Same as [`Iterator::fold`].
+    pub fn fold<F, B>(&self, init: B, func: F) -> B
+    where
+        F: FnMut(B, &T) -> B,
+    {
+        self.channels.iter().fold(init, func)
+    }
+
+    /// Calls `func` on ALL channels.
+    pub fn apply_all<F>(&mut self, func: F)
+    where
+        F: FnMut(&mut T),
+    {
+        self.channels.iter_mut().for_each(func);
     }
 
     /// Returns the number of channels this instance was created with.
