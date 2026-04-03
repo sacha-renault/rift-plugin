@@ -205,8 +205,25 @@ mod tests {
             *c = 5;
         }
 
+        for i in 0..5 {
+            assert_eq!(mc[i], 5);
+        }
+    }
+
+    #[test]
+    fn index_mut() {
+        let mut mc = MultiChannel::new(5, || 3i32);
+
         for c in mc.iter() {
-            assert_eq!(*c, 5);
+            assert_eq!(*c, 3);
+        }
+
+        for i in 0..5 {
+            mc[i] = 5;
+        }
+
+        for i in 0..5 {
+            assert_eq!(mc[i], 5);
         }
     }
 }

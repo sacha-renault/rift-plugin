@@ -55,12 +55,12 @@ impl BiquadCascade {
         self.mode = Some(mode);
         self.order = Some(order);
 
-        let num_stages = order.get_num_stages();
+        let num_stages = order.num_stages();
         for (idx, filter) in self.stages.iter_mut().enumerate() {
             if idx < num_stages {
                 filter.is_active = true;
-                filter.coefficients =
-                    BiquadCoefficient::new(self.samplerate, mode, order.get_q(idx));
+                let args = BiquadConfig::new(mode, order, idx);
+                filter.coefficients = BiquadCoefficient::new(self.samplerate, args);
             } else {
                 filter.is_active = false;
             }
@@ -68,7 +68,8 @@ impl BiquadCascade {
 
         // only if there is more things to allocate
         for idx in self.stages.len()..num_stages {
-            let filter = BiquadFilter::new(self.samplerate, mode, order.get_q(idx), true);
+            let args = BiquadConfig::new(mode, order, idx);
+            let filter = BiquadFilter::new(self.samplerate, args, true);
             self.stages.push(filter);
         }
     }
