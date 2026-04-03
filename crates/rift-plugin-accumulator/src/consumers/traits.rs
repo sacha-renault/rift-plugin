@@ -1,4 +1,4 @@
-use rift_plugin_core::prelude::{BlockTime, ChannelsInfo};
+use rift_plugin_core::prelude::{BlockTime, ChannelsInfo, MultiChannel};
 
 /// A consumer that receives a single-channel audio block.
 ///
@@ -38,11 +38,17 @@ pub trait MultiConsumer: 'static {
     fn consume(&mut self, block: &[f32], channel_info: ChannelsInfo, time: BlockTime);
 }
 
-impl<T> MonoConsumer for T
+impl<T> MultiConsumer for MultiChannel<T>
 where
-    T: MultiConsumer,
+    T: MonoConsumer,
 {
-    fn consume(&mut self, block: &[f32], time: BlockTime) {
-        self.consume(block, ChannelsInfo::mono(), time);
+    fn consume(&mut self, block: &[f32], info: ChannelsInfo, time: BlockTime) {
+        let channel_idx = info.current;
+
+        #[cfg(debug_assertions)]
+        self.with_channel_mut(channel_idx, |consumer| consumer.consume(block, time));
+
+        #[cfg(not(debug_assertions))]
+        self.try_with_channel_mut(channel_idx, |consumer| consumer.consume(block, time));
     }
 }
