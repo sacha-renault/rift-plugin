@@ -1,4 +1,6 @@
-use rift_plugin_core::prelude::{BlockTime, ChannelsInfo, MultiChannel};
+use std::{cell::RefCell, rc::Rc};
+
+use rift_plugin_core::prelude::{BlockTime, ChannelsInfo, ConsumerCell, MultiChannel};
 
 /// A consumer that receives a single-channel audio block.
 ///
@@ -16,6 +18,13 @@ pub trait MonoConsumer: 'static {
     /// - `time` - transport position at the start of this block, or
     ///   [`BlockTime::none`] if timing information was unavailable.
     fn consume(&mut self, block: &[f32], time: BlockTime);
+
+    fn wraps_consumer(self) -> ConsumerCell<Self>
+    where
+        Self: Sized,
+    {
+        Rc::new(RefCell::new(self))
+    }
 }
 
 /// A consumer that receives per-channel audio blocks with channel context.
@@ -36,6 +45,13 @@ pub trait MultiConsumer: 'static {
     /// - `time` - transport position at the start of this block, or
     ///   [`BlockTime::none`] if timing information was unavailable.
     fn consume(&mut self, block: &[f32], channel_info: ChannelsInfo, time: BlockTime);
+
+    fn wraps_consumer(self) -> ConsumerCell<Self>
+    where
+        Self: Sized,
+    {
+        Rc::new(RefCell::new(self))
+    }
 }
 
 impl<T> MultiConsumer for MultiChannel<T>
