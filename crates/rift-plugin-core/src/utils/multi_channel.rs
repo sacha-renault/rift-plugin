@@ -96,6 +96,16 @@ impl<T> MultiChannel<T> {
         self.channels.iter_mut().for_each(func);
     }
 
+    /// Iterator over the channels
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.channels.iter()
+    }
+
+    /// Mutable iterator over the channels
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.channels.iter_mut()
+    }
+
     /// Returns the number of channels this instance was created with.
     pub fn num_channels(&self) -> usize {
         self.channels.len()
