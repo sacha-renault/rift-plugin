@@ -1,3 +1,5 @@
+use crate::filters::biquads::biquad_args::BiquadConfig;
+
 use super::biquad_args::FilterMode;
 use super::utils::*;
 
@@ -21,11 +23,11 @@ pub struct BiquadCoefficient {
 }
 
 impl BiquadCoefficient {
-    pub fn new(samplerate: f32, mode: FilterMode, q: f32) -> Self {
+    pub fn new(samplerate: f32, args: BiquadConfig) -> Self {
         use FilterMode::*;
 
-        match mode {
-            LowPass { cutoff } => Self::lowpass(cutoff, q, samplerate),
+        match args.mode {
+            LowPass { cutoff } => Self::lowpass(cutoff, args.get_q(), samplerate),
         }
     }
 
@@ -86,10 +88,10 @@ pub struct BiquadFilter {
 }
 
 impl BiquadFilter {
-    pub fn new(samplerate: f32, mode: FilterMode, q: f32, is_active: bool) -> Self {
+    pub fn new(samplerate: f32, args: BiquadConfig, is_active: bool) -> Self {
         Self {
             states: BiquadStates::default(),
-            coefficients: BiquadCoefficient::new(samplerate, mode, q),
+            coefficients: BiquadCoefficient::new(samplerate, args),
             is_active,
         }
     }

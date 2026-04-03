@@ -5,6 +5,7 @@
 mod biquad_args;
 mod biquad_cascade;
 mod biquad_filter;
+mod biquad_qs;
 mod utils;
 
 pub use biquad_args::{FilterMode, FilterOrder};
