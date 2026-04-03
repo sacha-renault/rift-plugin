@@ -43,7 +43,7 @@ impl DestructThenBuildView for PeaksViewer {
                 .class("peak-graduation");
 
             HStack::new(cx, |cx| {
-                for i in 0..data.borrow().num_channels() {
+                for i in 0..data.borrow().channels() {
                     PeakAmplitude::new(cx, data.clone(), i, range).class("peak-amplitude");
                 }
             })
