@@ -1,3 +1,5 @@
+use std::ops::{Index, IndexMut};
+
 /// A fixed-size collection of per-channel state.
 ///
 /// [`MultiChannel<T>`] holds one `T` per audio channel, created at construction
@@ -97,5 +99,19 @@ impl<T> MultiChannel<T> {
     /// Returns the number of channels this instance was created with.
     pub fn num_channels(&self) -> usize {
         self.channels.len()
+    }
+}
+
+impl<T> Index<usize> for MultiChannel<T> {
+    type Output = T;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.channels[index]
+    }
+}
+
+impl<T> IndexMut<usize> for MultiChannel<T> {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        &mut self.channels[index]
     }
 }
