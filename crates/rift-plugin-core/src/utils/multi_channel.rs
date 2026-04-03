@@ -31,7 +31,7 @@ impl<T> MultiChannel<T> {
     /// of `T`, each produced by calling `factory`.
     pub fn new<F>(channels_count: usize, factory: F) -> Self
     where
-        F: Fn() -> T,
+        F: FnMut() -> T,
     {
         let mut channels = Vec::new();
         channels.resize_with(channels_count, factory);
@@ -107,7 +107,7 @@ impl<T> MultiChannel<T> {
     }
 
     /// Returns the number of channels this instance was created with.
-    pub fn num_channels(&self) -> usize {
+    pub fn channels(&self) -> usize {
         self.channels.len()
     }
 }
@@ -123,5 +123,90 @@ impl<T> Index<usize> for MultiChannel<T> {
 impl<T> IndexMut<usize> for MultiChannel<T> {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.channels[index]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn with_channel() {
+        let mc = MultiChannel::new(5, || 3i32);
+        assert_eq!(mc.with_channel(0, |c| *c), 3);
+        assert_eq!(mc.channels(), 5);
+    }
+
+    #[test]
+    #[should_panic]
+    fn with_channel_out_of_bound() {
+        let mc = MultiChannel::new(5, || 3i32);
+        mc.with_channel(5, |_| ());
+    }
+
+    #[test]
+    fn try_with_channel() {
+        let mc = MultiChannel::new(5, || 3i32);
+        assert_eq!(mc.try_with_channel(0, |c| *c), Some(3))
+    }
+
+    #[test]
+    fn try_with_channel_out_of_bounds() {
+        let mc = MultiChannel::new(5, || 3i32);
+        assert!(mc.try_with_channel(5, |c| *c).is_none())
+    }
+
+    #[test]
+    fn with_channel_mut() {
+        let mut mc = MultiChannel::new(5, || 3i32);
+        assert_eq!(mc.with_channel(0, |c| *c), 3);
+        mc.with_channel_mut(0, |c| *c = 5);
+        assert_eq!(mc.with_channel(0, |c| *c), 5);
+    }
+
+    #[test]
+    fn try_with_channel_mut() {
+        let mut mc = MultiChannel::new(5, || 3i32);
+        assert_eq!(mc.try_with_channel_mut(0, |c| *c), Some(3));
+        mc.with_channel_mut(0, |c| *c = 5);
+        assert_eq!(mc.try_with_channel_mut(0, |c| *c), Some(5));
+    }
+
+    #[test]
+    fn fold_all_channels() {
+        let mc = MultiChannel::new(5, || 3i32);
+        assert_eq!(mc.fold(0, |acc, c| acc + *c), 15);
+    }
+
+    #[test]
+    fn apply_all_channels() {
+        let mut mc = MultiChannel::new(5, || 3i32);
+
+        for c in mc.iter() {
+            assert_eq!(*c, 3);
+        }
+
+        mc.apply_all(|c| *c = 5);
+
+        for c in mc.iter() {
+            assert_eq!(*c, 5);
+        }
+    }
+
+    #[test]
+    fn iter_mut() {
+        let mut mc = MultiChannel::new(5, || 3i32);
+
+        for c in mc.iter() {
+            assert_eq!(*c, 3);
+        }
+
+        for c in mc.iter_mut() {
+            *c = 5;
+        }
+
+        for c in mc.iter() {
+            assert_eq!(*c, 5);
+        }
     }
 }
