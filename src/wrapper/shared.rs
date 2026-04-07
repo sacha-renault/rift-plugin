@@ -34,7 +34,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
         Self {
             params: Arc::new(params),
             other: Arc::new(P::SharedType::default()),
-            states: Arc::new(SharedQueues::default()),
+            states: Arc::new(SharedQueues::new(P::TASKS_CAPACITY)),
         }
     }
 }

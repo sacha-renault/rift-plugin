@@ -5,8 +5,6 @@ use crossbeam_queue::ArrayQueue;
 
 use crate::context::{AudioThreadTask, MainThreadTask};
 
-const TASKS_CAPACITY: usize = 2048;
-
 /// Shared state for an audio plugin accessed by both the main and audio threads.
 ///
 /// Contains bounded queues for posting tasks to the opposite thread.
@@ -21,18 +19,16 @@ pub(crate) struct SharedQueues {
     pub(crate) audio_thread_tasks: ArrayQueue<AudioThreadTask>,
 }
 
-impl Default for SharedQueues {
-    fn default() -> Self {
+impl SharedQueues {
+    pub fn new(task_capacity: usize) -> Self {
         Self {
             latency: AtomicU32::new(0),
             is_playing: Arc::new(AtomicBool::new(false)),
-            main_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
-            audio_thread_tasks: ArrayQueue::new(TASKS_CAPACITY),
+            main_thread_tasks: ArrayQueue::new(task_capacity),
+            audio_thread_tasks: ArrayQueue::new(task_capacity),
         }
     }
-}
 
-impl SharedQueues {
     /// Updates the plugin's processing latency in samples.
     #[inline]
     pub fn set_latency(&self, latency: u32) {

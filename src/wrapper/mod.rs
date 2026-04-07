@@ -41,6 +41,12 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// via the [`ProcessContext`] events iterator.
     const MIDI_EVENT_AUTO_HANDLING: bool;
 
+    /// Define the maximum number of task the plugin can hold at the same time, before dropping
+    /// events. See [`MainThreadTask`] and [`AudioThreadTask`].
+    ///
+    /// Default to `2048`.
+    const TASKS_CAPACITY: usize = 2048;
+
     /// Creates a new instance of the plugin.
     ///
     /// Use this to prepare internal DSP (filters, oscillators) for a specific sample rate.
