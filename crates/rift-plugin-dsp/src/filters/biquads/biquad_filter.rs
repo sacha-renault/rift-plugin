@@ -4,6 +4,9 @@ use super::biquad_args::FilterMode;
 use super::utils::*;
 
 /// Pre-normalized biquad coefficients (all divided by a0).
+///
+/// See cookbook at:
+/// `https://webaudio.github.io/Audio-EQ-Cookbook/audio-eq-cookbook.html`
 #[derive(Clone)]
 pub struct BiquadCoefficient {
     /// b0 / a0
@@ -28,6 +31,7 @@ impl BiquadCoefficient {
 
         match args.mode {
             LowPass { cutoff } => Self::lowpass(cutoff, args.get_q(), samplerate),
+            HighPass { cutoff } => Self::highpass(cutoff, args.get_q(), samplerate),
         }
     }
 
@@ -47,6 +51,19 @@ impl BiquadCoefficient {
 
         let b0 = (1. - w0.cos()) / 2.;
         let b1 = 1. - w0.cos();
+        let b2 = b0;
+        let a0 = 1. + alpha;
+        let a1 = -2. * w0.cos();
+        let a2 = 1. - alpha;
+        Self::from_coeff(a0, a1, a2, b0, b1, b2)
+    }
+
+    pub fn highpass(cutoff: f32, q: f32, samplerate: f32) -> Self {
+        let w0 = compute_w0(cutoff, samplerate);
+        let alpha = compute_alpha(w0, q);
+
+        let b0 = (1. + w0.cos()) / 2.;
+        let b1 = -(1. + w0.cos());
         let b2 = b0;
         let a0 = 1. + alpha;
         let a1 = -2. * w0.cos();
