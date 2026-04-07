@@ -42,13 +42,16 @@ impl FilterOrder {
 pub enum FilterMode {
     /// Cutoff frequency in Hz.
     LowPass { cutoff: f32 },
+
+    /// Cutoff frequency in Hz.
+    HighPass { cutoff: f32 },
 }
 
 impl FilterMode {
     /// Returns the Butterworth Q for the given stage index (0-based).
     pub fn get_q(&self, order: FilterOrder, cascade_depth: usize) -> f32 {
         let qs = match self {
-            FilterMode::LowPass { .. } => PASS_Q_ORDER,
+            FilterMode::LowPass { .. } | FilterMode::HighPass { .. } => PASS_Q_ORDER,
         };
         let num_stages = order.num_stages();
         qs[num_stages - 1][cascade_depth]
