@@ -26,6 +26,12 @@ impl<T> From<Vec<T>> for ComparativeVec<T> {
     }
 }
 
+impl<T> Default for ComparativeVec<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> ComparativeVec<T> {
     pub fn new() -> Self {
         Self::from_vec(Vec::new())

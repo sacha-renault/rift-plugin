@@ -35,6 +35,12 @@ pub struct AudioPeak {
     lerp_factor: f32,
 }
 
+impl Default for AudioPeak {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AudioPeak {
     /// Creates a new `AudioPeaks` with both peaks starting at `0.0`.
     ///

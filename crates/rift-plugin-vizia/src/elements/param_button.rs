@@ -71,7 +71,7 @@ where
 
                         // use callback
                         if let Some(f) = on_press.as_ref() {
-                            f(cx, new_value as f32)
+                            f(cx, new_value)
                         }
                     }
                 })

@@ -103,8 +103,8 @@ where
         let param_ptr_x = lens.map(move |ps| accessor_x(ps).as_ptr()).get(cx);
         let param_ptr_y = lens.map(move |ps| accessor_y(ps).as_ptr()).get(cx);
         let xy = (
-            param_ptr_x.get_normalized() as f32,
-            param_ptr_y.get_normalized() as f32,
+            param_ptr_x.get_normalized(),
+            param_ptr_y.get_normalized(),
         );
 
         // let text_lens = make_lens(lens, accessor, move |p| {
@@ -161,7 +161,7 @@ where
             lens.map(move |ps| accessor_x(ps).get_normalized()),
             move |cx, lens| {
                 let value = lens.get(cx);
-                cx.emit_to(entity, SetPadValue::X(value as f32));
+                cx.emit_to(entity, SetPadValue::X(value));
             },
         );
         Binding::new(
@@ -169,7 +169,7 @@ where
             lens.map(move |ps| accessor_y(ps).get_normalized()),
             move |cx, lens| {
                 let value = lens.get(cx);
-                cx.emit_to(entity, SetPadValue::Y(value as f32));
+                cx.emit_to(entity, SetPadValue::Y(value));
             },
         );
 
