@@ -30,8 +30,11 @@ impl BiquadCoefficient {
         use FilterMode::*;
 
         match args.mode {
-            LowPass { cutoff } => Self::lowpass(cutoff, args.get_q(), samplerate),
-            HighPass { cutoff } => Self::highpass(cutoff, args.get_q(), samplerate),
+            LowPass { cutoff, .. } => Self::lowpass(cutoff, args.get_q(), samplerate),
+            HighPass { cutoff, .. } => Self::highpass(cutoff, args.get_q(), samplerate),
+            Peaking {
+                frequency, gain, ..
+            } => Self::peaking(frequency, args.get_q(), samplerate, gain),
         }
     }
 
@@ -68,6 +71,21 @@ impl BiquadCoefficient {
         let a0 = 1. + alpha;
         let a1 = -2. * w0.cos();
         let a2 = 1. - alpha;
+        Self::from_coeff(a0, a1, a2, b0, b1, b2)
+    }
+
+    pub fn peaking(frequency: f32, q: f32, samplerate: f32, gain: f32) -> Self {
+        let a = 10f32.powf(gain / 40f32);
+        let w0 = compute_w0(frequency, samplerate);
+        let alpha = compute_alpha(w0, q);
+
+        let b0 = 1. + alpha * a;
+        let b1 = -2. * w0.cos();
+        let b2 = 1. - alpha * a;
+        let a0 = 1. + alpha / a;
+        let a1 = -2. * w0.cos();
+        let a2 = 1. - alpha / a;
+
         Self::from_coeff(a0, a1, a2, b0, b1, b2)
     }
 }
