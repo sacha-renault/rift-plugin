@@ -48,38 +48,38 @@ impl ClapParam for ParamPtr {
     }
 
     #[inline]
-    fn get_raw(&self) -> f64 {
+    fn get_raw(&self) -> f32 {
         unsafe { (*self.ptr).get_raw() }
     }
 
     #[inline]
-    fn set_raw(&self, value: f64) {
+    fn set_raw(&self, value: f32) {
         unsafe { (*self.ptr).set_raw(value) }
     }
 
     #[inline]
-    fn default_raw(&self) -> f64 {
+    fn default_raw(&self) -> f32 {
         unsafe { (*self.ptr).default_raw() }
     }
 
     #[inline]
-    fn get_normalized(&self) -> f64 {
+    fn get_normalized(&self) -> f32 {
         unsafe { (*self.ptr).get_normalized() }
     }
 
     #[inline]
-    fn set_normalized(&self, normalized: f64) {
+    fn set_normalized(&self, normalized: f32) {
         unsafe { (*self.ptr).set_normalized(normalized) }
     }
 
     // Display formatting
     #[inline]
-    fn value_to_text(&self, value: f64, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
+    fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
         unsafe { (*self.ptr).value_to_text(value, writer) }
     }
 
     #[inline]
-    fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f64> {
+    fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f32> {
         unsafe { (*self.ptr).text_to_value(value) }
     }
 
@@ -89,22 +89,22 @@ impl ClapParam for ParamPtr {
     }
 
     #[inline]
-    fn normalize(&self, value: f64) -> f64 {
+    fn normalize(&self, value: f32) -> f32 {
         unsafe { (*self.ptr).normalize(value) }
     }
 
     #[inline]
-    fn denormalize(&self, normalized: f64) -> f64 {
+    fn denormalize(&self, normalized: f32) -> f32 {
         unsafe { (*self.ptr).denormalize(normalized) }
     }
 
     #[inline]
-    fn min_value(&self) -> f64 {
+    fn min_value(&self) -> f32 {
         unsafe { (*self.ptr).min_value() }
     }
 
     #[inline]
-    fn max_value(&self) -> f64 {
+    fn max_value(&self) -> f32 {
         unsafe { (*self.ptr).max_value() }
     }
 
@@ -119,11 +119,11 @@ mod tests {
     use clack_plugin::prelude::ClapId;
 
     struct MockParam {
-        value: std::cell::Cell<f64>,
+        value: std::cell::Cell<f32>,
     }
 
     impl MockParam {
-        fn new(value: f64) -> Self {
+        fn new(value: f32) -> Self {
             Self {
                 value: std::cell::Cell::new(value),
             }
@@ -146,31 +146,31 @@ mod tests {
         fn unit(&self) -> &str {
             "dB"
         }
-        fn get_raw(&self) -> f64 {
+        fn get_raw(&self) -> f32 {
             self.value.get()
         }
-        fn set_raw(&self, value: f64) {
+        fn set_raw(&self, value: f32) {
             self.value.set(value);
         }
-        fn default_raw(&self) -> f64 {
+        fn default_raw(&self) -> f32 {
             0.5
         }
-        fn get_normalized(&self) -> f64 {
+        fn get_normalized(&self) -> f32 {
             self.normalize(self.value.get())
         }
-        fn set_normalized(&self, normalized: f64) {
+        fn set_normalized(&self, normalized: f32) {
             self.value.set(self.denormalize(normalized));
         }
-        fn normalize(&self, value: f64) -> f64 {
+        fn normalize(&self, value: f32) -> f32 {
             value / 100.0
         }
-        fn denormalize(&self, normalized: f64) -> f64 {
+        fn denormalize(&self, normalized: f32) -> f32 {
             normalized * 100.0
         }
-        fn min_value(&self) -> f64 {
+        fn min_value(&self) -> f32 {
             0.0
         }
-        fn max_value(&self) -> f64 {
+        fn max_value(&self) -> f32 {
             100.0
         }
         fn flags(&self) -> ParamInfoFlags {

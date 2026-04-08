@@ -24,7 +24,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
                     continue;
                 };
                 let value = param_event.value();
-                self.shared.params.set_value(id, value);
+                self.shared.params.set_value(id, value as f32);
             };
         }
         // todo!()
@@ -39,12 +39,15 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
 
     fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
         log::debug!("PluginMainThreadParams::get_value");
-        self.shared.params.get_value(param_id)
+        self.shared.params.get_value(param_id).map(|x| x as f64)
     }
 
     fn text_to_value(&mut self, param_id: ClapId, text: &std::ffi::CStr) -> Option<f64> {
         log::debug!("PluginMainThreadParams::text_to_value");
-        self.shared.params.text_to_value(param_id, text)
+        self.shared
+            .params
+            .text_to_value(param_id, text)
+            .map(|x| x as f64)
     }
 
     fn value_to_text(
@@ -54,6 +57,8 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
         writer: &mut ParamDisplayWriter,
     ) -> core::fmt::Result {
         log::debug!("PluginMainThreadParams::value_to_text");
-        self.shared.params.value_to_text(param_id, value, writer)
+        self.shared
+            .params
+            .value_to_text(param_id, value as f32, writer)
     }
 }

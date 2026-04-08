@@ -18,12 +18,12 @@ impl Model for DataXY {
             SetPadValue::XY(x, y) => {
                 if self.xy.0 != x {
                     self.xy.0 = x;
-                    set_value_normalized(self.param_ptr_x, cx, x as f64);
+                    set_value_normalized(self.param_ptr_x, cx, x);
                 }
 
                 if self.xy.1 != y {
                     self.xy.1 = y;
-                    set_value_normalized(self.param_ptr_y, cx, y as f64);
+                    set_value_normalized(self.param_ptr_y, cx, y);
                 }
             }
             SetPadValue::X(x) => self.xy.0 = x,

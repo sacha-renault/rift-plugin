@@ -39,36 +39,36 @@ pub trait ClapParam: NamedParam {
     /// Get the raw, un-normalized value of the parameter.
     ///
     /// Raw values are often used for audio algorithms (e.g., filter cutoff in Hz) before being mapped to UI ranges.
-    fn get_raw(&self) -> f64;
+    fn get_raw(&self) -> f32;
 
     /// Set the raw, un-normalized value.
-    fn set_raw(&self, value: f64);
+    fn set_raw(&self, value: f32);
 
     /// Get the default raw value.
-    fn default_raw(&self) -> f64;
+    fn default_raw(&self) -> f32;
 
     /// Get the minimum raw value (e.g., 20.0 Hz).
-    fn min_value(&self) -> f64;
+    fn min_value(&self) -> f32;
 
     /// Get the maximum raw value (e.g., 20000.0 Hz).
-    fn max_value(&self) -> f64;
+    fn max_value(&self) -> f32;
 
     /// Convert a raw value to its normalized range [0.0, 1.0].
     ///
     /// # Behavior
     /// * Values outside `[min_value(), max_value()]` are clamped or undefined depending on implementation.
-    fn get_normalized(&self) -> f64;
+    fn get_normalized(&self) -> f32;
 
     /// Set the normalized value [0.0, 1.0].
     ///
     /// # Warning
     /// If you set a value outside `[0.0, 1.0]`, the behavior is undefined. Always clamp inputs or use `set_raw()`.
-    fn set_normalized(&self, normalized: f64);
+    fn set_normalized(&self, normalized: f32);
 
     /// Format a raw value into text with optional unit suffix.
     ///
     /// By default, this simply writes `{value}{unit}`. Custom implementations should handle rounding and special cases (e.g., "120.00 Hz" vs "120 Hz").
-    fn value_to_text(&self, value: f64, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
+    fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
         write!(writer, "{}{}", value, self.unit())
     }
 
@@ -83,16 +83,16 @@ pub trait ClapParam: NamedParam {
     ///
     /// # Parsing Rules
     /// 1. The input string is trimmed and checked to end with the result of `unit()`.
-    /// 2. If the suffix matches, it is stripped, and the remaining part is parsed as `f64`.
+    /// 2. If the suffix matches, it is stripped, and the remaining part is parsed as `f32`.
     /// 3. Returns `None` if the string does not match the unit or fails to parse.
-    fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f64> {
+    fn text_to_value(&self, value: &std::ffi::CStr) -> Option<f32> {
         let str_val = value.to_str().ok()?.trim();
         let unit = self.unit();
         if !str_val.ends_with(unit) {
             None
         } else {
             let no_unit_val = str_val.strip_suffix(unit).unwrap_or(str_val);
-            no_unit_val.trim().parse::<f64>().ok()
+            no_unit_val.trim().parse::<f32>().ok()
         }
     }
 
@@ -102,10 +102,10 @@ pub trait ClapParam: NamedParam {
     /// Apply the normalization tension to a raw value.
     ///
     /// Generally equivalent to `get_normalized()` but allows manual conversion.
-    fn normalize(&self, value: f64) -> f64;
+    fn normalize(&self, value: f32) -> f32;
 
     /// Inverse of `normalize()`. Converts [0.0, 1.0] back to the raw scale.
-    fn denormalize(&self, normalized: f64) -> f64;
+    fn denormalize(&self, normalized: f32) -> f32;
 
     /// Build the complete [`ParamInfo`] struct for this parameter.
     ///
@@ -118,9 +118,9 @@ pub trait ClapParam: NamedParam {
             cookie: Cookie::empty(),
             name: self.name().as_bytes(),
             module: self.module().unwrap_or("").as_bytes(),
-            min_value: self.min_value(),
-            max_value: self.max_value(),
-            default_value: self.default_raw(),
+            min_value: self.min_value() as f64,
+            max_value: self.max_value() as f64,
+            default_value: self.default_raw() as f64,
         }
     }
 
@@ -164,22 +164,22 @@ pub trait Params: Sync + Send + 'static {
     fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>>;
 
     /// Get the raw value for a parameter by its `ClapId`.
-    fn get_value(&self, id: ClapId) -> Option<f64>;
+    fn get_value(&self, id: ClapId) -> Option<f32>;
 
     /// Set the raw value for a parameter.
-    fn set_value(&self, id: ClapId, value: f64);
+    fn set_value(&self, id: ClapId, value: f32);
 
     /// Set the normalized value (0.0–1.0).
-    fn set_value_normalized(&self, id: ClapId, value: f64);
+    fn set_value_normalized(&self, id: ClapId, value: f32);
 
     /// Parse text into a raw value for a specific parameter ID.
-    fn text_to_value(&self, id: ClapId, text: &CStr) -> Option<f64>;
+    fn text_to_value(&self, id: ClapId, text: &CStr) -> Option<f32>;
 
     /// Format a raw value into a display buffer.
     fn value_to_text(
         &self,
         id: ClapId,
-        value: f64,
+        value: f32,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result;
 
@@ -221,7 +221,7 @@ impl Params for () {
         None
     }
 
-    fn get_value(&self, _: ClapId) -> Option<f64> {
+    fn get_value(&self, _: ClapId) -> Option<f32> {
         None
     }
 
@@ -229,15 +229,15 @@ impl Params for () {
         Ok(())
     }
 
-    fn set_value(&self, _: ClapId, _: f64) {}
+    fn set_value(&self, _: ClapId, _: f32) {}
 
-    fn set_value_normalized(&self, _: ClapId, _: f64) {}
+    fn set_value_normalized(&self, _: ClapId, _: f32) {}
 
-    fn text_to_value(&self, _: ClapId, _: &CStr) -> Option<f64> {
+    fn text_to_value(&self, _: ClapId, _: &CStr) -> Option<f32> {
         None
     }
 
-    fn value_to_text(&self, _: ClapId, _: f64, _: &mut ParamDisplayWriter) -> std::fmt::Result {
+    fn value_to_text(&self, _: ClapId, _: f32, _: &mut ParamDisplayWriter) -> std::fmt::Result {
         Err(std::fmt::Error)
     }
 }

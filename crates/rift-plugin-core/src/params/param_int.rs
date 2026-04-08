@@ -74,48 +74,48 @@ impl ClapParam for IntParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f64) {
+    fn set_raw(&self, value: f32) {
         let int_value = (value as i32).clamp(self.min_value, self.max_value);
         self.value.store(int_value, Ordering::SeqCst);
     }
 
-    fn get_raw(&self) -> f64 {
-        self.value.load(Ordering::SeqCst) as f64
+    fn get_raw(&self) -> f32 {
+        self.value.load(Ordering::SeqCst) as f32
     }
 
-    fn default_raw(&self) -> f64 {
-        self.default as f64
+    fn default_raw(&self) -> f32 {
+        self.default as f32
     }
 
-    fn get_normalized(&self) -> f64 {
+    fn get_normalized(&self) -> f32 {
         let value = self.get_raw();
         self.normalize(value)
     }
 
-    fn set_normalized(&self, normalized: f64) {
+    fn set_normalized(&self, normalized: f32) {
         self.set_raw(self.denormalize(normalized));
     }
 
-    fn min_value(&self) -> f64 {
-        self.min_value as f64
+    fn min_value(&self) -> f32 {
+        self.min_value as f32
     }
 
-    fn max_value(&self) -> f64 {
-        self.max_value as f64
+    fn max_value(&self) -> f32 {
+        self.max_value as f32
     }
 
     fn flags(&self) -> ParamInfoFlags {
         self.flags
     }
 
-    fn normalize(&self, value: f64) -> f64 {
-        let range = (self.max_value - self.min_value) as f64;
-        (value - self.min_value as f64) / range
+    fn normalize(&self, value: f32) -> f32 {
+        let range = (self.max_value - self.min_value) as f32;
+        (value - self.min_value as f32) / range
     }
 
-    fn denormalize(&self, normalized: f64) -> f64 {
-        let range = (self.max_value - self.min_value) as f64;
-        normalized * range + self.min_value as f64
+    fn denormalize(&self, normalized: f32) -> f32 {
+        let range = (self.max_value - self.min_value) as f32;
+        normalized * range + self.min_value as f32
     }
 
     fn as_ptr(&self) -> ParamPtr {

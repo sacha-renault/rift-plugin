@@ -23,7 +23,7 @@ where
     on_value_changed: Option<Arc<dyn Fn(&mut EventContext, f32)>>,
     on_mouse_down: Option<Arc<dyn Fn(&mut EventContext, MouseButton) + Send + Sync>>,
     on_mouse_up: Option<Arc<dyn Fn(&mut EventContext, MouseButton) + Send + Sync>>,
-    value_text_formater: Option<fn(f64, &str) -> String>,
+    value_text_formater: Option<fn(f32, &str) -> String>,
 
     /// A function that will be called on the [`Handle<'_, Knob<L>>`]. It allow to modify
     /// the [`Handle`] as [`LayoutModifiers`] and [`StyleModifiers`]
@@ -33,21 +33,6 @@ where
     label_name_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     arctrack_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
     tick_modifier: Option<Arc<dyn Fn(Handle<'_, FView>) -> Handle<'_, FView>>>,
-
-    /// Function to map the param to a value in the UI.
-    ///
-    /// Composing [`ParamKnob::taper`] with [`ParamKnob::taper_inverse`]
-    /// must return the initial value. Plugin won't crash if not but the behavior
-    /// would be weird.
-    #[builder(default = None)]
-    taper: Option<fn(f32) -> f32>,
-
-    /// Function to map back the UI value to the parameter expected value.
-    ///
-    /// Composing [`ParamKnob::taper`] with [`ParamKnob::taper_inverse`]
-    /// must return the initial value. Plugin won't crash if not but the behavior
-    /// would be weird.
-    taper_inverse: Option<fn(f32) -> f32>,
 
     /// Range of the knob (start, end)
     ///
@@ -84,8 +69,6 @@ where
             label_name_modifier,
             arctrack_modifier,
             tick_modifier,
-            taper,
-            taper_inverse,
             knob_range: (start_angle, end_angle),
             has_name_label,
             span,
@@ -96,9 +79,7 @@ where
         let offset = sweep / 2.0;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, move |p| {
-            apply_transform_opt(taper, p.get_normalized() as f32)
-        });
+        let value_lens = make_lens(lens, accessor, move |p| p.get_normalized());
 
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = value_text_formater {
@@ -107,8 +88,7 @@ where
                 format!("{:.2}{}", p.get_raw(), p.unit())
             }
         });
-        let default_value =
-            apply_transform_opt(taper, param_ptr.normalize(param_ptr.default_raw()) as f32);
+        let default_value = param_ptr.normalize(param_ptr.default_raw());
 
         VStack::new(cx, move |cx| {
             ActiveElementData::new(CursorIcon::RowResize).build(cx);
@@ -145,8 +125,7 @@ where
                 })
             })
             .on_change(move |cx, v| {
-                let v = apply_transform_opt(taper_inverse, v);
-                set_value_normalized(param_ptr, cx, v as f64);
+                set_value_normalized(param_ptr, cx, v);
                 if let Some(f) = on_value_changed.as_ref() {
                     f(cx, v)
                 }

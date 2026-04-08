@@ -68,11 +68,11 @@ impl ClapParam for BoolParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f64) {
+    fn set_raw(&self, value: f32) {
         self.value.store(value >= 0.5, Ordering::SeqCst);
     }
 
-    fn get_raw(&self) -> f64 {
+    fn get_raw(&self) -> f32 {
         if self.value.load(Ordering::SeqCst) {
             1.0
         } else {
@@ -80,15 +80,15 @@ impl ClapParam for BoolParam {
         }
     }
 
-    fn default_raw(&self) -> f64 {
+    fn default_raw(&self) -> f32 {
         if self.default { 1.0 } else { 0.0 }
     }
 
-    fn get_normalized(&self) -> f64 {
+    fn get_normalized(&self) -> f32 {
         self.get_raw()
     }
 
-    fn set_normalized(&self, normalized: f64) {
+    fn set_normalized(&self, normalized: f32) {
         self.set_raw(normalized);
     }
 
@@ -96,23 +96,23 @@ impl ClapParam for BoolParam {
         self.flags
     }
 
-    fn min_value(&self) -> f64 {
+    fn min_value(&self) -> f32 {
         0.0
     }
 
-    fn max_value(&self) -> f64 {
+    fn max_value(&self) -> f32 {
         1.0
     }
 
     #[inline]
-    fn normalize(&self, value: f64) -> f64 {
+    fn normalize(&self, value: f32) -> f32 {
         // bool param already have
         // normalized value (0.0 or 1.0)
         value
     }
 
     #[inline]
-    fn denormalize(&self, normalized: f64) -> f64 {
+    fn denormalize(&self, normalized: f32) -> f32 {
         // bool param already have
         // normalized value (0.0 or 1.0)
         normalized
