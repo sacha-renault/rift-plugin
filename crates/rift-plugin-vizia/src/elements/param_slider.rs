@@ -59,7 +59,7 @@ where
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, move |p| p.get_normalized());
+        let value_lens = make_lens(lens, accessor, move |p| p.normalized());
         let (start, end) = (param_ptr.min_value(), param_ptr.max_value());
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = value_text_formater {

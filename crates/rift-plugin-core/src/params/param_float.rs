@@ -7,7 +7,7 @@ use clack_plugin::utils::ClapId;
 use super::ptr::ParamPtr;
 use super::traits::{__ParamInitializer, ClapParam, TypedParam};
 
-use crate::params::NamedParam;
+use crate::params::{NamedParam, Persistent};
 use crate::utils::atomic_f32::AtomicF32;
 
 #[derive(bon::Builder)]
@@ -55,7 +55,10 @@ impl TypedParam for FloatParam {
     }
 
     fn set_value(&self, value: Self::Type) {
-        self.value.store(value, Ordering::SeqCst);
+        self.value.store(
+            value.clamp(self.min_value, self.max_value),
+            Ordering::SeqCst,
+        );
     }
 }
 
@@ -90,7 +93,7 @@ impl ClapParam for FloatParam {
         self.default
     }
 
-    fn get_normalized(&self) -> f32 {
+    fn normalized(&self) -> f32 {
         let value = self.get_raw();
         self.normalize(value)
     }
@@ -152,7 +155,7 @@ impl RangeMapping {
     }
 }
 
-impl super::Persistent for FloatParam {
+impl Persistent for FloatParam {
     fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
         let value: f32 = serde_json::from_reader(reader)
             .map_err(|_| PluginError::Message("deserialize error"))?;
@@ -167,9 +170,164 @@ impl super::Persistent for FloatParam {
 }
 
 impl __ParamInitializer for FloatParam {
+    #[doc(hidden)]
     fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
         self.name = name;
         self.id = id;
         self.module = module;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use crate::assert_approx_eq;
+
+    use super::*;
+
+    #[test]
+    fn builder_create_correct_param() {
+        let param = FloatParam::builder()
+            .unit("dB")
+            .default(0.)
+            .min_value(-1.)
+            .max_value(1.)
+            .flags(ParamInfoFlags::IS_AUTOMATABLE)
+            .mapping(RangeMapping::Linear)
+            .build();
+
+        assert_eq!(param.unit(), "dB");
+        assert_eq!(param.default_raw(), 0.);
+        assert_eq!(param.normalized(), 0.5);
+        assert_eq!(param.max_value(), 1.);
+        assert_eq!(param.min_value(), -1.);
+        assert_eq!(param.id(), ClapId::new(0)); // param aren't initialized at this point.
+        assert_eq!(param.name(), ""); // param aren't initialized at this point.
+        assert_eq!(param.module(), None); // param aren't initialized at this point.
+
+        assert!(param.flags().contains(ParamInfoFlags::IS_AUTOMATABLE));
+        assert!(
+            !param
+                .flags()
+                .contains(ParamInfoFlags::IS_AUTOMATABLE_PER_CHANNEL)
+        );
+    }
+
+    #[test]
+    fn ptr_change_param() {
+        let param = FloatParam::builder()
+            .unit("dB")
+            .default(0.)
+            .min_value(-1.)
+            .max_value(1.)
+            .build();
+
+        let ptr = param.as_ptr();
+        ptr.set_normalized(0.);
+
+        assert_approx_eq!(param.value(), -1.);
+    }
+
+    #[test]
+    fn set_value_typed_param() {
+        let param = FloatParam::builder()
+            .unit("dB")
+            .default(0.)
+            .min_value(-1.)
+            .max_value(1.)
+            .build();
+
+        param.set_value(0.5);
+        assert_approx_eq!(param.value(), 0.5);
+        param.set_value(1.5);
+        assert_approx_eq!(param.value(), 1.);
+    }
+
+    #[test]
+    fn test_serialize_roundtrip() {
+        let param = FloatParam::builder().default(0.5).build();
+
+        param.set_value(0.75);
+
+        let mut buf = Vec::new();
+        param.serialize(&mut buf).unwrap();
+
+        let param2 = FloatParam::builder().default(0.0).build();
+
+        let mut reader = Cursor::new(&buf);
+        param2.deserialize(&mut reader).unwrap();
+
+        assert_approx_eq!(param2.value(), 0.75);
+    }
+
+    #[test]
+    fn test_serialize_default_value() {
+        let param = FloatParam::builder().default(0.42).build();
+
+        let mut buf = Vec::new();
+        param.serialize(&mut buf).unwrap();
+
+        let param2 = FloatParam::builder().default(0.0).build();
+
+        let mut reader = Cursor::new(&buf);
+        param2.deserialize(&mut reader).unwrap();
+
+        assert_approx_eq!(param2.value(), 0.42);
+    }
+
+    #[test]
+    fn test_deserialize_invalid_data() {
+        let param = FloatParam::builder().default(0.5).build();
+
+        let mut reader = Cursor::new(b"not a number");
+        assert!(param.deserialize(&mut reader).is_err());
+    }
+
+    #[test]
+    fn test_initializer() {
+        let mut param = FloatParam::builder().default(0.0).build();
+        param.__initialize(
+            "Gain".to_string(),
+            ClapId::new(42),
+            Some("mixer".to_string()),
+        );
+
+        assert_eq!(param.name, "Gain");
+        assert_eq!(param.id, ClapId::new(42));
+        assert_eq!(param.module.as_deref(), Some("mixer"));
+    }
+
+    #[test]
+    fn skew_range_mapping() {
+        // Linear sanity check
+        let linear = RangeMapping::Linear;
+        assert_approx_eq!(linear.denormalize(0.0, 0.0, 100.0), 0.0);
+        assert_approx_eq!(linear.denormalize(0.5, 0.0, 100.0), 50.0);
+        assert_approx_eq!(linear.denormalize(1.0, 0.0, 100.0), 100.0);
+
+        // Skew: endpoints should always map exactly
+        let skew = RangeMapping::Skew(3.0);
+        assert_approx_eq!(skew.denormalize(0.0, 20.0, 20000.0), 20.0);
+        assert_approx_eq!(skew.denormalize(1.0, 20.0, 20000.0), 20000.0);
+
+        // Skew > 1: midpoint should map below the linear midpoint
+        let mid = skew.denormalize(0.5, 0.0, 1000.0);
+        assert!(mid < 500.0);
+
+        // Skew < 1: midpoint should map above the linear midpoint
+        let skew_inv = RangeMapping::Skew(0.3);
+        let mid_inv = skew_inv.denormalize(0.5, 0.0, 1000.0);
+        assert!(mid_inv > 500.0);
+
+        // Roundtrip: normalize(denormalize(x)) == x
+        for &s in &[0.3_f32, 1.0, 2.0, 3.0] {
+            let mapping = RangeMapping::Skew(s);
+            for &n in &[0.0_f32, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
+                let value = mapping.denormalize(n, 20.0, 20000.0);
+                let back = mapping.normalize(value, 20.0, 20000.0);
+                assert_approx_eq!(back, n, 1e-5);
+            }
+        }
     }
 }

@@ -51,14 +51,14 @@ where
         } = self;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, |p| p.get_normalized() > 0.5);
+        let value_lens = make_lens(lens, accessor, |p| p.normalized() > 0.5);
 
         HStack::new(cx, move |cx| {
             Button::new(cx, |cx| Label::new(cx, param_ptr.name()))
                 .toggle_class("accent", value_lens)
                 .on_mouse_down(move |cx, mb| {
                     if mb == MouseButton::Left {
-                        let new_value = if param_ptr.get_normalized() > 0.5 {
+                        let new_value = if param_ptr.normalized() > 0.5 {
                             0.0
                         } else {
                             1.0
