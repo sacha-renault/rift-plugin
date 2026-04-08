@@ -64,11 +64,14 @@ impl OscillatorPosition {
         self.position
     }
 
-    /// Advances the phase by one sample and returns the new position.
+    /// First get current value then advance by once
+    ///
+    /// **FIX**: Now get the value directly to avoid skipping value on the first call.
     #[inline]
-    pub fn get_next(&mut self) -> f32 {
+    pub fn get_next_phase(&mut self) -> f32 {
+        let value = self.get_current();
         self.advance_by(1);
-        self.get_current()
+        value
     }
 
     /// Advances the phase by `sample_count` samples.
