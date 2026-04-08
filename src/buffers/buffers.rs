@@ -97,18 +97,22 @@ impl<'a> Buffers<'a> {
         self.get_output(0)
     }
 
-    /// Get the declared main buffer.
+    /// Gets the declared main buffer.
     ///
-    /// Depeding on [`MainAudioPort`], it can return different kinds of buffers. Wrapped in a
-    /// convinient struct for consistant api calls.
+    /// Depending on [`MainAudioPort`], this returns different kinds of buffers,
+    /// wrapped in a [`Buffer`] for a consistent API:
+    ///
     /// - [`MainAudioPort::InputOnly`]: the input channels.
-    /// - [`MainAudioPort::OutputOnly`]: the output channels. This channels has no
-    ///   certainty to be empty, so if you don't process it, you might want to set 0s at least
-    ///   to avoid noizy output.
-    /// - [`MainAudioPort::InputOutput`]: copies input into output then returns
+    /// - [`MainAudioPort::OutputOnly`]: the output channels. These are **not**
+    ///   guaranteed to be zeroed, silence them yourself if you don't process them.
+    /// - [`MainAudioPort::InputOutput`]: copies input into output, then returns
     ///   the output buffer. If the host provides an in-place buffer, no copy
     ///   is performed and the single buffer is returned directly.
-    pub fn main(&mut self) -> Result<Buffer<'_>, PluginError> {
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError`] if the requested port is unavailable.
+    pub fn try_main(&mut self) -> Result<Buffer<'_>, PluginError> {
         match self.main_config {
             MainAudioPort::InputOnly(_) => self.get_input(0),
             MainAudioPort::OutputOnly(_) => self.get_output(0),
@@ -116,15 +120,21 @@ impl<'a> Buffers<'a> {
         }
     }
 
-    /// Same as [`Buffers::main`], but will panic if it returns a [`Result::Err`].
-    pub fn main_unchecked(&mut self) -> Buffer<'_> {
-        self.main().unwrap()
+    /// Like [`Buffers::try_main`], but panics on failure.
+    #[inline(always)]
+    pub fn main(&mut self) -> Buffer<'_> {
+        self.try_main().expect("Failed to get main.")
     }
 
     /// Returns the auxiliary input at `index`.
     ///
-    /// As main ports are always 0, index may be shifted by one.
-    pub fn input_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
+    /// The index is relative to auxiliary ports only, the main port is
+    /// excluded automatically.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError`] if `index` is out of bounds.
+    pub fn try_input_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::OutputOnly(_) => 0,
             _ => 1,
@@ -133,15 +143,21 @@ impl<'a> Buffers<'a> {
         self.get_input(start_idx + index)
     }
 
-    /// Same as [`Buffers::input_aux`], but will panic if it returns a [`Result::Err`].
-    pub fn input_aux_unchecked(&mut self, index: usize) -> Buffer<'_> {
-        self.input_aux(index).unwrap()
+    /// Like [`Buffers::try_input_aux`], but panics on failure.
+    pub fn input_aux(&mut self, index: usize) -> Buffer<'_> {
+        self.try_input_aux(index)
+            .unwrap_or_else(|_| panic!("Failed to get input aux at index {index}"))
     }
 
     /// Returns the auxiliary output at `index`.
     ///
-    /// As main ports are always 0, index may be shifted by one.
-    pub fn output_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
+    /// The index is relative to auxiliary ports only, the main port is
+    /// excluded automatically.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`PluginError`] if `index` is out of bounds.
+    pub fn try_output_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::InputOnly(_) => 0,
             _ => 1,
@@ -150,9 +166,10 @@ impl<'a> Buffers<'a> {
         self.get_output(start_idx + index)
     }
 
-    /// Same as [`Buffers::output_aux`], but will panic if it returns a [`Result::Err`].
-    pub fn output_aux_unchecked(&mut self, index: usize) -> Buffer<'_> {
-        self.output_aux(index).unwrap()
+    /// Like [`Buffers::try_output_aux`], but panics on failure.
+    pub fn output_aux(&mut self, index: usize) -> Buffer<'_> {
+        self.try_output_aux(index)
+            .unwrap_or_else(|_| panic!("Failed to get output aux at index {index}"))
     }
 }
 
