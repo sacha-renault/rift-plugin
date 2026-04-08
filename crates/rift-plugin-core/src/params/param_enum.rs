@@ -4,7 +4,7 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
-use crate::params::NamedParam;
+use crate::params::{NamedParam, Persistent};
 
 use super::param_int::IntParam;
 use super::ptr::ParamPtr;
@@ -139,7 +139,7 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
     }
 }
 
-impl<E: EnumValues> super::Persistent for EnumParam<E> {
+impl<E: EnumValues> Persistent for EnumParam<E> {
     fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
         self.inner.deserialize(reader)
     }
@@ -152,5 +152,128 @@ impl<E: EnumValues> super::Persistent for EnumParam<E> {
 impl<E: EnumValues> __ParamInitializer for EnumParam<E> {
     fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
         self.inner.__initialize(name, id, module);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Cursor;
+
+    #[derive(Default, Debug, Clone, Copy, PartialEq)]
+    enum TestEnum {
+        #[default]
+        A,
+        B,
+        C,
+    }
+
+    impl std::fmt::Display for TestEnum {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            match self {
+                Self::A => write!(f, "A"),
+                Self::B => write!(f, "B"),
+                Self::C => write!(f, "C"),
+            }
+        }
+    }
+
+    impl EnumValues for TestEnum {
+        fn to_index(self) -> u32 {
+            self as u32
+        }
+
+        fn from_index(index: u32) -> Option<Self> {
+            match index {
+                0 => Some(Self::A),
+                1 => Some(Self::B),
+                2 => Some(Self::C),
+                _ => None,
+            }
+        }
+
+        fn count() -> u32 {
+            3
+        }
+    }
+
+    #[test]
+    fn default_value() {
+        let param = EnumParam::new(TestEnum::B);
+        assert_eq!(param.value(), TestEnum::B);
+        assert_eq!(param.default_raw(), 1.0);
+    }
+
+    #[test]
+    fn set_value_typed() {
+        let param = EnumParam::new(TestEnum::A);
+        param.set_value(TestEnum::C);
+        assert_eq!(param.value(), TestEnum::C);
+    }
+
+    #[test]
+    fn set_raw_rounds_to_variant() {
+        let param = EnumParam::new(TestEnum::A);
+        param.set_raw(1.6);
+        assert_eq!(param.value(), TestEnum::B);
+    }
+
+    #[test]
+    fn min_max_values() {
+        let param = EnumParam::new(TestEnum::A);
+        assert_eq!(param.min_value(), 0.0);
+        assert_eq!(param.max_value(), 2.0);
+    }
+
+    #[test]
+    fn with_flags() {
+        let param = EnumParam::new(TestEnum::A).with_flags(ParamInfoFlags::IS_AUTOMATABLE);
+
+        assert!(param.flags().contains(ParamInfoFlags::IS_AUTOMATABLE));
+    }
+
+    #[test]
+    fn value_to_text() {
+        let param = EnumParam::new(TestEnum::A);
+        let mut buf = String::new();
+        param.value_to_text(2.0, &mut buf).unwrap();
+        assert_eq!(buf, "C");
+    }
+
+    #[test]
+    fn serialize_roundtrip() {
+        let param = EnumParam::new(TestEnum::A);
+        param.set_value(TestEnum::C);
+
+        let mut buf = Vec::new();
+        param.serialize(&mut buf).unwrap();
+
+        let param2 = EnumParam::new(TestEnum::A);
+        let mut reader = Cursor::new(&buf);
+        param2.deserialize(&mut reader).unwrap();
+
+        assert_eq!(param2.value(), TestEnum::C);
+    }
+
+    #[test]
+    fn initializer() {
+        let mut param = EnumParam::new(TestEnum::A);
+        param.__initialize(
+            "Mode".to_string(),
+            ClapId::new(7),
+            Some("filter".to_string()),
+        );
+
+        assert_eq!(param.name(), "Mode");
+        assert_eq!(param.id(), ClapId::new(7));
+        assert_eq!(param.module(), Some("filter"));
+    }
+
+    #[test]
+    fn ptr_change_param() {
+        let param = EnumParam::new(TestEnum::A);
+        let ptr = param.as_ptr();
+        ptr.set_normalized(1.0);
+        assert_eq!(param.value(), TestEnum::C);
     }
 }

@@ -144,3 +144,151 @@ impl __ParamInitializer for IntParam {
         self.module = module;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use crate::assert_approx_eq;
+
+    use super::*;
+
+    #[test]
+    fn builder_create_correct_param() {
+        let param = IntParam::builder()
+            .unit("st")
+            .default(0)
+            .min_value(-12)
+            .max_value(12)
+            .flags(ParamInfoFlags::IS_AUTOMATABLE)
+            .build();
+
+        assert_eq!(param.unit(), "st");
+        assert_eq!(param.default_raw(), 0.0);
+        assert_approx_eq!(param.normalized(), 0.5);
+        assert_eq!(param.min_value(), -12.0);
+        assert_eq!(param.max_value(), 12.0);
+        assert_eq!(param.id(), ClapId::new(0));
+        assert_eq!(param.name(), "");
+        assert_eq!(param.module(), None);
+        assert!(param.flags().contains(ParamInfoFlags::IS_AUTOMATABLE));
+    }
+
+    #[test]
+    fn set_value_typed() {
+        let param = IntParam::builder()
+            .default(0)
+            .min_value(-10)
+            .max_value(10)
+            .build();
+
+        param.set_value(7);
+        assert_eq!(param.value(), 7);
+    }
+
+    #[test]
+    fn set_raw_clamps() {
+        let param = IntParam::builder()
+            .default(0)
+            .min_value(0)
+            .max_value(5)
+            .build();
+
+        param.set_raw(10.0);
+        assert_eq!(param.value(), 5);
+
+        param.set_raw(-3.0);
+        assert_eq!(param.value(), 0);
+    }
+
+    #[test]
+    fn set_raw_truncates_float() {
+        let param = IntParam::builder()
+            .default(0)
+            .min_value(0)
+            .max_value(10)
+            .build();
+
+        param.set_raw(3.9);
+        assert_eq!(param.value(), 3);
+    }
+
+    #[test]
+    fn normalize_denormalize_roundtrip() {
+        let param = IntParam::builder()
+            .default(0)
+            .min_value(-12)
+            .max_value(12)
+            .build();
+
+        assert_approx_eq!(param.normalize(0.0), 0.5);
+        assert_approx_eq!(param.normalize(-12.0), 0.0);
+        assert_approx_eq!(param.normalize(12.0), 1.0);
+
+        assert_approx_eq!(param.denormalize(0.0), -12.0);
+        assert_approx_eq!(param.denormalize(0.5), 0.0);
+        assert_approx_eq!(param.denormalize(1.0), 12.0);
+    }
+
+    #[test]
+    fn ptr_change_param() {
+        let param = IntParam::builder()
+            .default(0)
+            .min_value(0)
+            .max_value(10)
+            .build();
+
+        let ptr = param.as_ptr();
+        ptr.set_normalized(1.0);
+        assert_eq!(param.value(), 10);
+
+        ptr.set_normalized(0.0);
+        assert_eq!(param.value(), 0);
+    }
+
+    #[test]
+    fn serialize_roundtrip() {
+        let param = IntParam::builder()
+            .default(0)
+            .min_value(-100)
+            .max_value(100)
+            .build();
+
+        param.set_value(42);
+
+        let mut buf = Vec::new();
+        param.serialize(&mut buf).unwrap();
+
+        let param2 = IntParam::builder()
+            .default(0)
+            .min_value(-100)
+            .max_value(100)
+            .build();
+
+        let mut reader = Cursor::new(&buf);
+        param2.deserialize(&mut reader).unwrap();
+
+        assert_eq!(param2.value(), 42);
+    }
+
+    #[test]
+    fn deserialize_invalid_data() {
+        let param = IntParam::builder().default(0).build();
+        let mut reader = Cursor::new(b"not a number");
+        assert!(param.deserialize(&mut reader).is_err());
+    }
+
+    #[test]
+    fn initializer() {
+        let mut param = IntParam::builder().default(0).build();
+        param.__initialize(
+            "Semitones".to_string(),
+            ClapId::new(13),
+            Some("pitch".to_string()),
+        );
+
+        assert_eq!(param.name, "Semitones");
+        assert_eq!(param.id, ClapId::new(13));
+        assert_eq!(param.module.as_deref(), Some("pitch"));
+    }
+}
