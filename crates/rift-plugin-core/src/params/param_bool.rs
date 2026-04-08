@@ -38,13 +38,13 @@ pub struct BoolParam {
 }
 
 impl TypedParam for BoolParam {
-    type ValueType = bool;
+    type Type = bool;
 
-    fn value(&self) -> Self::ValueType {
+    fn value(&self) -> Self::Type {
         self.value.load(Ordering::SeqCst)
     }
 
-    fn set_value(&self, value: Self::ValueType) {
+    fn set_value(&self, value: Self::Type) {
         self.value.store(value, Ordering::SeqCst);
     }
 }

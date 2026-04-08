@@ -134,11 +134,11 @@ pub trait ClapParam: NamedParam {
 /// without casting, allowing for strongly-typed parameter sets in the UI layer.
 pub trait TypedParam {
     /// The concrete type of the value held by this parameter.
-    type ValueType;
+    type Type;
 
-    fn value(&self) -> Self::ValueType;
+    fn value(&self) -> Self::Type;
 
-    fn set_value(&self, value: Self::ValueType);
+    fn set_value(&self, value: Self::Type);
 }
 
 /// Trait for plugin state persistence (preset save/load).

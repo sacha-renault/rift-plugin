@@ -46,13 +46,13 @@ impl<E: EnumValues> EnumParam<E> {
 }
 
 impl<E: EnumValues> TypedParam for EnumParam<E> {
-    type ValueType = E;
+    type Type = E;
 
-    fn set_value(&self, value: Self::ValueType) {
+    fn set_value(&self, value: Self::Type) {
         self.set_raw(value.to_index() as f32);
     }
 
-    fn value(&self) -> Self::ValueType {
+    fn value(&self) -> Self::Type {
         let enum_idx = self.get_raw().round() as u32;
         if let Some(v) = E::from_index(enum_idx) {
             v

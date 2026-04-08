@@ -48,13 +48,13 @@ pub struct FloatParam {
 }
 
 impl TypedParam for FloatParam {
-    type ValueType = f32;
+    type Type = f32;
 
-    fn value(&self) -> Self::ValueType {
+    fn value(&self) -> Self::Type {
         self.value.load(Ordering::SeqCst)
     }
 
-    fn set_value(&self, value: Self::ValueType) {
+    fn set_value(&self, value: Self::Type) {
         self.value.store(value, Ordering::SeqCst);
     }
 }
