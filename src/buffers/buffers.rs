@@ -144,6 +144,7 @@ impl<'a> Buffers<'a> {
     }
 
     /// Like [`Buffers::try_input_aux`], but panics on failure.
+    #[inline(always)]
     pub fn input_aux(&mut self, index: usize) -> Buffer<'_> {
         self.try_input_aux(index)
             .unwrap_or_else(|_| panic!("Failed to get input aux at index {index}"))
@@ -167,6 +168,7 @@ impl<'a> Buffers<'a> {
     }
 
     /// Like [`Buffers::try_output_aux`], but panics on failure.
+    #[inline(always)]
     pub fn output_aux(&mut self, index: usize) -> Buffer<'_> {
         self.try_output_aux(index)
             .unwrap_or_else(|_| panic!("Failed to get output aux at index {index}"))
