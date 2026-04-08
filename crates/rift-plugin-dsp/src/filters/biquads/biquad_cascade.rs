@@ -84,3 +84,64 @@ impl BiquadCascade {
         xn
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rift_plugin_core::utils::spaces::Linspace;
+
+    use super::*;
+
+    const SAMPLERATE: f32 = 48000.;
+
+    fn make_saw_wave() -> Vec<f32> {
+        let mut wave = Vec::with_capacity(SAMPLERATE as usize);
+
+        // This will be a 40Hz saw wave at 48kHz
+        for x in Linspace::new(0., 40., SAMPLERATE as usize) {
+            let y = (x.rem_euclid(1.) - 0.5) * 2.;
+            wave.push(y);
+        }
+
+        wave
+    }
+
+    #[test]
+    fn activate() {
+        let mut cascade = BiquadCascade::new(SAMPLERATE);
+        let wave = make_saw_wave();
+
+        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Four);
+        let y0 = cascade.process(wave[0]);
+        let y1 = cascade.process(wave[1]);
+        let y2 = cascade.process(wave[2]);
+
+        assert_ne!(y0, wave[0]);
+        assert_ne!(y1, wave[1]);
+        assert_ne!(y2, wave[2]);
+    }
+
+    #[test]
+    fn reactivate_with_new_copy() {
+        let mut cascade = BiquadCascade::new(SAMPLERATE);
+
+        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Four);
+        let current_n_stage = cascade.stages.len();
+        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Six);
+
+        assert_ne!(current_n_stage, cascade.stages.len());
+    }
+
+    #[test]
+    fn reactivate_with_no_copy() {
+        let mut cascade = BiquadCascade::new(SAMPLERATE);
+
+        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Six);
+        let current_n_stage = cascade.stages.len();
+        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Four);
+
+        assert_eq!(current_n_stage, cascade.stages.len());
+    }
+
+    // todo!()
+    // more test ? But idk how to do.
+}

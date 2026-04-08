@@ -5,7 +5,7 @@ pub const CASCADE_MAX_DEPTH: usize = 10;
 
 /// Filter order for a [`super::BiquadCascade`], from 2nd to 20th order (even only).
 /// Each order adds one biquad stage, with Q values tuned for Butterworth response.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FilterOrder {
     Two,
     Four,
@@ -38,7 +38,7 @@ impl FilterOrder {
 }
 
 /// Filter topology for a [`super::BiquadCascade`].
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FilterMode {
     /// Cutoff frequency in Hz.
     LowPass { cutoff: f32 },
