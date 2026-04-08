@@ -57,6 +57,17 @@ pub enum FilterMode {
         gain: f32,
         q: f32,
     },
+
+    LowShelf {
+        frequency: f32,
+        gain: f32,
+        q: f32,
+    },
+    HighShelf {
+        frequency: f32,
+        gain: f32,
+        q: f32,
+    },
 }
 
 impl FilterMode {
@@ -67,7 +78,9 @@ impl FilterMode {
                 let num_stages = order.num_stages();
                 PASS_Q_ORDER[num_stages - 1][cascade_depth]
             }
-            FilterMode::Peaking { q, .. } => *q,
+            FilterMode::Peaking { q, .. }
+            | FilterMode::LowShelf { q, .. }
+            | FilterMode::HighShelf { q, .. } => *q,
         }
     }
 
@@ -76,7 +89,9 @@ impl FilterMode {
             FilterMode::LowPass { order, .. } | FilterMode::HighPass { order, .. } => {
                 order.num_stages()
             }
-            FilterMode::Peaking { .. } => 1,
+            FilterMode::Peaking { .. }
+            | FilterMode::LowShelf { .. }
+            | FilterMode::HighShelf { .. } => 1,
         }
     }
 }
