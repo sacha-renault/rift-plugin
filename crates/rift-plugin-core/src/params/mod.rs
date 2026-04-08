@@ -10,7 +10,7 @@ pub mod param_queue_impl;
 
 pub use param_bool::BoolParam;
 pub use param_enum::{EnumParam, EnumValues};
-pub use param_float::FloatParam;
+pub use param_float::{FloatParam, RangeMapping};
 pub use param_int::IntParam;
 pub use param_queue::{ParamQueue, ParamQueueType};
 pub use ptr::ParamPtr;

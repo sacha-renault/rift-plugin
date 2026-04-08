@@ -49,7 +49,7 @@ impl<E: EnumValues> TypedParam for EnumParam<E> {
     type ValueType = E;
 
     fn set_value(&self, value: Self::ValueType) {
-        self.set_raw(value.to_index() as f64);
+        self.set_raw(value.to_index() as f32);
     }
 
     fn value(&self) -> Self::ValueType {
@@ -89,15 +89,15 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.unit()
     }
 
-    fn get_raw(&self) -> f64 {
+    fn get_raw(&self) -> f32 {
         self.inner.get_raw()
     }
 
-    fn get_normalized(&self) -> f64 {
+    fn get_normalized(&self) -> f32 {
         self.inner.get_normalized()
     }
 
-    fn default_raw(&self) -> f64 {
+    fn default_raw(&self) -> f32 {
         self.inner.default_raw()
     }
 
@@ -105,27 +105,27 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.flags()
     }
 
-    fn normalize(&self, value: f64) -> f64 {
+    fn normalize(&self, value: f32) -> f32 {
         self.inner.normalize(value)
     }
 
-    fn denormalize(&self, normalized: f64) -> f64 {
+    fn denormalize(&self, normalized: f32) -> f32 {
         self.inner.denormalize(normalized)
     }
 
-    fn min_value(&self) -> f64 {
-        self.inner.min_value as f64
+    fn min_value(&self) -> f32 {
+        self.inner.min_value as f32
     }
 
-    fn max_value(&self) -> f64 {
-        self.inner.max_value as f64
+    fn max_value(&self) -> f32 {
+        self.inner.max_value as f32
     }
 
-    fn set_raw(&self, value: f64) {
+    fn set_raw(&self, value: f32) {
         self.inner.set_raw(value);
     }
 
-    fn set_normalized(&self, normalized: f64) {
+    fn set_normalized(&self, normalized: f32) {
         self.inner.set_normalized(normalized);
     }
 
@@ -133,7 +133,7 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.as_ptr()
     }
 
-    fn value_to_text(&self, value: f64, writer: &mut dyn std::fmt::Write) -> std::fmt::Result {
+    fn value_to_text(&self, value: f32, writer: &mut dyn std::fmt::Write) -> std::fmt::Result {
         let variant = E::from_index(value.round() as u32).unwrap_or_default();
         writer.write_str(&format!("{variant}"))
     }

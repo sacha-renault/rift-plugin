@@ -107,7 +107,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 }
             }
 
-            fn get_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId) -> Option<f64> {
+            fn get_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId) -> Option<f32> {
                 #(
                     if id == self.#param_fields_idents.id() {
                         return Some(self.#param_fields_idents.get_raw());
@@ -116,7 +116,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 None
             }
 
-            fn set_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f64) {
+            fn set_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f32) {
                 #(
                     if id == self.#param_fields_idents.id() {
                         self.#param_fields_idents.set_raw(value);
@@ -125,7 +125,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 )*
             }
 
-            fn set_value_normalized(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f64) {
+            fn set_value_normalized(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, value: f32) {
                 #(
                     if id == self.#param_fields_idents.id() {
                         self.#param_fields_idents.set_normalized(value);
@@ -134,7 +134,7 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
                 )*
             }
 
-            fn text_to_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, text: &std::ffi::CStr) -> Option<f64> {
+            fn text_to_value(&self, id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId, text: &std::ffi::CStr) -> Option<f32> {
                 #(
                     if id == self.#param_fields_idents.id() {
                         return self.#param_fields_idents.text_to_value(text);
@@ -146,12 +146,12 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
             fn value_to_text(
                 &self,
                 id: ::rift_plugin::prelude::clack_plugin::prelude::ClapId,
-                value: f64,
+                value: f32,
                 writer: &mut ::rift_plugin::prelude::clack_extensions::params::ParamDisplayWriter,
             ) -> std::fmt::Result {
                 #(
                     if id == self.#param_fields_idents.id() {
-                        return self.#param_fields_idents.value_to_text(value, writer);
+                        return self.#param_fields_idents.value_to_text(value as f32, writer);
                     }
                 )*
                 Err(std::fmt::Error)

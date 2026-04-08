@@ -32,10 +32,13 @@ pub struct FloatParam {
     pub(crate) unit: &'static str,
 
     #[builder(default = 0.0)]
-    pub(crate) min_value: f64,
+    pub(crate) min_value: f32,
 
     #[builder(default = 1.0)]
-    pub(crate) max_value: f64,
+    pub(crate) max_value: f32,
+
+    #[builder(default)]
+    pub(crate) mapping: RangeMapping,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
@@ -75,24 +78,24 @@ impl ClapParam for FloatParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f64) {
-        self.value.store(value as f32, Ordering::SeqCst);
+    fn set_raw(&self, value: f32) {
+        self.value.store(value, Ordering::SeqCst);
     }
 
-    fn get_raw(&self) -> f64 {
-        self.value.load(Ordering::SeqCst) as f64
+    fn get_raw(&self) -> f32 {
+        self.value.load(Ordering::SeqCst)
     }
 
-    fn default_raw(&self) -> f64 {
-        self.default as f64
+    fn default_raw(&self) -> f32 {
+        self.default
     }
 
-    fn get_normalized(&self) -> f64 {
+    fn get_normalized(&self) -> f32 {
         let value = self.get_raw();
         self.normalize(value)
     }
 
-    fn set_normalized(&self, normalized: f64) {
+    fn set_normalized(&self, normalized: f32) {
         self.set_raw(self.denormalize(normalized));
     }
 
@@ -100,26 +103,52 @@ impl ClapParam for FloatParam {
         self.flags
     }
 
-    fn min_value(&self) -> f64 {
+    fn min_value(&self) -> f32 {
         self.min_value
     }
 
-    fn max_value(&self) -> f64 {
+    fn max_value(&self) -> f32 {
         self.max_value
     }
 
-    fn normalize(&self, value: f64) -> f64 {
-        let range = self.max_value - self.min_value;
-        (value - self.min_value) / range
+    fn normalize(&self, value: f32) -> f32 {
+        self.mapping
+            .normalize(value, self.min_value, self.max_value)
     }
 
-    fn denormalize(&self, normalized: f64) -> f64 {
-        let range = self.max_value - self.min_value;
-        normalized * range + self.min_value
+    fn denormalize(&self, normalized: f32) -> f32 {
+        self.mapping
+            .denormalize(normalized, self.min_value, self.max_value)
     }
 
     fn as_ptr(&self) -> ParamPtr {
         ParamPtr::new(self as *const dyn ClapParam)
+    }
+}
+
+#[derive(Default, Clone, Copy)]
+pub enum RangeMapping {
+    #[default]
+    Linear,
+
+    /// Power curve: more resolution at bottom (skew > 1) or top (skew < 1)
+    Skew(f32),
+}
+
+impl RangeMapping {
+    pub fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32 {
+        let t = match self {
+            Self::Linear => normalized,
+            Self::Skew(s) => normalized.powf(*s),
+        };
+        min + t * (max - min)
+    }
+
+    pub fn normalize(&self, value: f32, min: f32, max: f32) -> f32 {
+        match self {
+            Self::Linear => (value - min) / (max - min),
+            Self::Skew(s) => ((value - min) / (max - min)).powf(1.0 / s),
+        }
     }
 }
 

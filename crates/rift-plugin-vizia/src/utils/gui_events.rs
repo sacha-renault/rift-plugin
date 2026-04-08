@@ -18,7 +18,7 @@ pub fn gesture_end(param_ptr: ParamPtr, cx: &mut EventContext) {
 ///
 /// # Note
 /// The value is not normalized; it must represent the parameter's native scale.
-pub fn set_value(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
+pub fn set_value(param_ptr: ParamPtr, cx: &mut EventContext, value: f32) {
     cx.emit(GuiParamEvent::value(param_ptr.id(), value));
 }
 
@@ -26,7 +26,7 @@ pub fn set_value(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
 ///
 /// # Note
 /// The `denormalize` method is automatically called internally to convert this to the parameter's native scale.
-pub fn set_value_normalized(param_ptr: ParamPtr, cx: &mut EventContext, value: f64) {
+pub fn set_value_normalized(param_ptr: ParamPtr, cx: &mut EventContext, value: f32) {
     let normalized = param_ptr.denormalize(value);
     cx.emit(GuiParamEvent::value(param_ptr.id(), normalized));
 }

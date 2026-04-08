@@ -54,7 +54,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     && let Some(id) = event.param_id()
                 {
                     let value = event.value();
-                    self.shared.params.set_value(id, value);
+                    self.shared.params.set_value(id, value as f32);
                     self.plugin.param_changed(id, EventSource::Host);
                 }
             } else if let Some(event) = event.as_event::<MidiEvent>() {

@@ -9,7 +9,7 @@ use clack_plugin::{
 #[derive(Debug, Clone, Copy)]
 pub enum GuiParamEventKind {
     /// A parameter value change event.
-    Value(f64),
+    Value(f32),
     /// Start of a mouse gesture interaction.
     GestureBegin,
     /// End of a mouse gesture interaction.
@@ -28,7 +28,7 @@ pub struct GuiParamEvent {
 
 impl GuiParamEvent {
     /// Creates an event for a parameter value change.
-    pub fn value(param_id: ClapId, value: f64) -> Self {
+    pub fn value(param_id: ClapId, value: f32) -> Self {
         Self {
             param_id,
             kind: GuiParamEventKind::Value(value),
@@ -68,7 +68,7 @@ impl GuiParamEvent {
                 0,
                 self.param_id,
                 Pckn::match_all(),
-                v,
+                v as f64,
                 Cookie::empty(),
             )),
             GuiParamEventKind::GestureBegin => {
