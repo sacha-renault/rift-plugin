@@ -41,20 +41,43 @@ impl FilterOrder {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FilterMode {
     /// Cutoff frequency in Hz.
-    LowPass { cutoff: f32 },
+    LowPass {
+        cutoff: f32,
+        order: FilterOrder,
+    },
 
     /// Cutoff frequency in Hz.
-    HighPass { cutoff: f32 },
+    HighPass {
+        cutoff: f32,
+        order: FilterOrder,
+    },
+
+    Peaking {
+        frequency: f32,
+        gain: f32,
+        q: f32,
+    },
 }
 
 impl FilterMode {
     /// Returns the Butterworth Q for the given stage index (0-based).
-    pub fn get_q(&self, order: FilterOrder, cascade_depth: usize) -> f32 {
-        let qs = match self {
-            FilterMode::LowPass { .. } | FilterMode::HighPass { .. } => PASS_Q_ORDER,
-        };
-        let num_stages = order.num_stages();
-        qs[num_stages - 1][cascade_depth]
+    pub fn get_q(&self, cascade_depth: usize) -> f32 {
+        match self {
+            FilterMode::LowPass { order, .. } | FilterMode::HighPass { order, .. } => {
+                let num_stages = order.num_stages();
+                PASS_Q_ORDER[num_stages - 1][cascade_depth]
+            }
+            FilterMode::Peaking { q, .. } => *q,
+        }
+    }
+
+    pub fn num_stages(&self) -> usize {
+        match self {
+            FilterMode::LowPass { order, .. } | FilterMode::HighPass { order, .. } => {
+                order.num_stages()
+            }
+            FilterMode::Peaking { .. } => 1,
+        }
     }
 }
 
@@ -65,16 +88,15 @@ impl FilterMode {
 /// represents, which determines the Butterworth Q value used.
 pub struct BiquadConfig {
     pub mode: FilterMode,
-    pub order: FilterOrder,
     pub depth: usize,
 }
 
 impl BiquadConfig {
-    pub fn new(mode: FilterMode, order: FilterOrder, depth: usize) -> Self {
-        Self { mode, order, depth }
+    pub fn new(mode: FilterMode, depth: usize) -> Self {
+        Self { mode, depth }
     }
 
     pub fn get_q(&self) -> f32 {
-        self.mode.get_q(self.order, self.depth)
+        self.mode.get_q(self.depth)
     }
 }

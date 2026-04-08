@@ -51,15 +51,14 @@ impl BiquadCascade {
 
     /// Sets the filter mode and order, activating the cascade.
     /// Coefficients are updated immediately, existing stage states are preserved.
-    pub fn set_mode(&mut self, mode: FilterMode, order: FilterOrder) {
+    pub fn set_mode(&mut self, mode: FilterMode) {
         self.mode = Some(mode);
-        self.order = Some(order);
 
-        let num_stages = order.num_stages();
+        let num_stages = mode.num_stages();
         for (idx, filter) in self.stages.iter_mut().enumerate() {
             if idx < num_stages {
                 filter.is_active = true;
-                let args = BiquadConfig::new(mode, order, idx);
+                let args = BiquadConfig::new(mode, idx);
                 filter.coefficients = BiquadCoefficient::new(self.samplerate, args);
             } else {
                 filter.is_active = false;
@@ -68,7 +67,7 @@ impl BiquadCascade {
 
         // only if there is more things to allocate
         for idx in self.stages.len()..num_stages {
-            let args = BiquadConfig::new(mode, order, idx);
+            let args = BiquadConfig::new(mode, idx);
             let filter = BiquadFilter::new(self.samplerate, args, true);
             self.stages.push(filter);
         }
@@ -110,7 +109,11 @@ mod tests {
         let mut cascade = BiquadCascade::new(SAMPLERATE);
         let wave = make_saw_wave();
 
-        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Four);
+        let mode = FilterMode::HighPass {
+            cutoff: 200.,
+            order: FilterOrder::Four,
+        };
+        cascade.set_mode(mode);
         let y0 = cascade.process(wave[0]);
         let y1 = cascade.process(wave[1]);
         let y2 = cascade.process(wave[2]);
@@ -124,9 +127,18 @@ mod tests {
     fn reactivate_with_new_copy() {
         let mut cascade = BiquadCascade::new(SAMPLERATE);
 
-        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Four);
+        let mode_order_4 = FilterMode::HighPass {
+            cutoff: 200.,
+            order: FilterOrder::Four,
+        };
+        let mode_order_6 = FilterMode::HighPass {
+            cutoff: 200.,
+            order: FilterOrder::Six,
+        };
+
+        cascade.set_mode(mode_order_4);
         let current_n_stage = cascade.stages.len();
-        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Six);
+        cascade.set_mode(mode_order_6);
 
         assert_ne!(current_n_stage, cascade.stages.len());
     }
@@ -135,9 +147,18 @@ mod tests {
     fn reactivate_with_no_copy() {
         let mut cascade = BiquadCascade::new(SAMPLERATE);
 
-        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Six);
+        let mode_order_4 = FilterMode::HighPass {
+            cutoff: 200.,
+            order: FilterOrder::Four,
+        };
+        let mode_order_6 = FilterMode::HighPass {
+            cutoff: 200.,
+            order: FilterOrder::Six,
+        };
+
+        cascade.set_mode(mode_order_6);
         let current_n_stage = cascade.stages.len();
-        cascade.set_mode(FilterMode::HighPass { cutoff: 200. }, FilterOrder::Four);
+        cascade.set_mode(mode_order_4);
 
         assert_eq!(current_n_stage, cascade.stages.len());
     }
