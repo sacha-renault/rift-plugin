@@ -39,7 +39,7 @@ impl Oscillator {
     /// by `phase_generator`.
     ///
     /// The note is clamped to the range 0..=126 before indexing.
-    pub fn trigger_with_phase<F>(&mut self, note: u8, phase_generator: F)
+    pub fn trigger<F>(&mut self, note: u8, phase_generator: F)
     where
         F: FnOnce() -> f32,
     {
@@ -71,16 +71,91 @@ impl Oscillator {
     /// `generator` receives a phase value in [0, 1) and should return the
     /// corresponding waveform amplitude (for example, a sine lookup or
     /// wavetable read).
-    pub fn get_next<F>(&mut self, generator: F) -> f32
+    pub fn get_next<F>(&mut self, mut generator: F) -> f32
     where
-        F: Fn(f32) -> f32,
+        F: FnMut(f32) -> f32,
     {
         let mut value = 0.;
 
         for &voice_idx in self.active_voices.iter() {
-            value += generator(self.voices[voice_idx].get_next());
+            value += generator(self.voices[voice_idx].get_next_phase());
         }
 
         value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SAMPLERATE: f32 = 48e3;
+
+    fn assert_num_voice_correct(osc: &Oscillator, active_voices: usize) {
+        assert_eq!(osc.active_voices.len(), active_voices);
+        assert_eq!(
+            osc.voices.iter().filter(|voice| voice.is_active()).count(),
+            active_voices
+        );
+
+        for (idx, voice) in osc.voices.iter().enumerate() {
+            if voice.is_active() {
+                assert!(osc.active_voices.contains(&idx))
+            } else {
+                assert!(!osc.active_voices.contains(&idx))
+            }
+        }
+    }
+
+    #[test]
+    fn inactive_returns_zero() {
+        let mut osc = Oscillator::new(SAMPLERATE);
+        let y = osc.get_next(|x| x);
+
+        assert_eq!(y, 0.);
+        assert_num_voice_correct(&osc, 0);
+    }
+
+    #[test]
+    fn single_voice() {
+        let mut osc = Oscillator::new(SAMPLERATE);
+        osc.trigger(60, || 0.);
+
+        let y = osc.get_next(|x| x.cos());
+
+        assert_num_voice_correct(&osc, 1);
+        assert_eq!(y, 1.); // cos(0) = 1
+    }
+
+    #[test]
+    fn activation_deactivation() {
+        let mut osc = Oscillator::new(SAMPLERATE);
+
+        assert!(!osc.is_active());
+        osc.trigger(60, || 0.);
+        assert_num_voice_correct(&osc, 1);
+
+        // trigger an other voice
+        osc.trigger(72, || 0.);
+        assert!(osc.is_active());
+        assert_num_voice_correct(&osc, 2);
+
+        // retrig same voice, so no extra activation, just phase reset
+        osc.trigger(72, || 0.);
+        assert_num_voice_correct(&osc, 2);
+
+        osc.deactivate(72);
+        assert_num_voice_correct(&osc, 1);
+
+        // trigger an other voice
+        osc.trigger(84, || 0.);
+        assert_num_voice_correct(&osc, 2);
+
+        osc.deactivate(84);
+        assert_num_voice_correct(&osc, 1);
+
+        osc.deactivate(60);
+        assert_num_voice_correct(&osc, 0);
+        assert!(!osc.is_active());
     }
 }
