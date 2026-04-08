@@ -85,7 +85,7 @@ where
 
             Slider::new(cx, value_lens)
                 .step(step)
-                .range((start as f32)..(end as f32))
+                .range(start..end)
                 .orientation(orientation)
                 .on_change(move |cx, v| {
                     set_value_normalized(param_ptr, cx, v);

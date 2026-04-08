@@ -69,11 +69,10 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
     #[inline]
     fn handle_gui_param_change(&mut self, event: GuiParamEvent, outputs: &mut OutputEvents) {
-        if let Some(raw_event) = event.maybe_to_raw() {
-            if let err @ Err(..) = outputs.try_push(raw_event) {
+        if let Some(raw_event) = event.maybe_to_raw()
+            && let err @ Err(..) = outputs.try_push(raw_event) {
                 log::error!("There was an error push event {err:?}")
             }
-        }
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),

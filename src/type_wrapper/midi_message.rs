@@ -56,11 +56,11 @@ impl From<MidiEvent> for MidiMessage {
     }
 }
 
-impl Into<MidiEvent> for MidiMessage {
-    fn into(self) -> MidiEvent {
-        let channel = self.channel;
+impl From<MidiMessage> for MidiEvent {
+    fn from(val: MidiMessage) -> Self {
+        let channel = val.channel;
 
-        let data = match self.kind {
+        let data = match val.kind {
             MidiMessageKind::Unknown {
                 data1,
                 data2,
@@ -79,7 +79,7 @@ impl Into<MidiEvent> for MidiMessage {
             }
         };
 
-        MidiEvent::new(self.time, self.port_index, data)
+        MidiEvent::new(val.time, val.port_index, data)
     }
 }
 

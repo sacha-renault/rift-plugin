@@ -31,7 +31,7 @@ impl Oscillator {
 
     /// Returns `true` if at least one voice is currently active.
     pub fn is_active(&self) -> bool {
-        self.active_voices.len() != 0
+        !self.active_voices.is_empty()
     }
 
     /// Triggers the voice for `note`, converting it to a frequency via
