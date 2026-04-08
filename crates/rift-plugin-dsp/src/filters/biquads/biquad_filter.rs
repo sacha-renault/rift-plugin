@@ -26,25 +26,32 @@ pub struct BiquadCoefficient {
 }
 
 impl BiquadCoefficient {
-    pub fn new(samplerate: f32, args: BiquadConfig) -> Self {
-        use FilterMode::*;
-
-        match args.mode {
-            LowPass { cutoff, .. } => Self::lowpass(cutoff, args.get_q(), samplerate),
-            HighPass { cutoff, .. } => Self::highpass(cutoff, args.get_q(), samplerate),
-            Peaking {
-                frequency, gain, ..
-            } => Self::peaking(frequency, args.get_q(), samplerate, gain),
-        }
-    }
-
-    pub fn from_coeff(a0: f32, a1: f32, a2: f32, b0: f32, b1: f32, b2: f32) -> Self {
+    pub fn precompute_coeffs(a0: f32, a1: f32, a2: f32, b0: f32, b1: f32, b2: f32) -> Self {
         Self {
             b0_a0: b0 / a0,
             b1_a0: b1 / a0,
             b2_a0: b2 / a0,
             a1_a0: a1 / a0,
             a2_a0: a2 / a0,
+        }
+    }
+    
+    #[rustfmt::skip]
+    pub fn new(samplerate: f32, args: BiquadConfig) -> Self {
+        use FilterMode::*;
+
+        match args.mode {
+            LowPass { cutoff, .. } => Self::lowpass(cutoff, args.get_q(), samplerate),
+            HighPass { cutoff, .. } => Self::highpass(cutoff, args.get_q(), samplerate),
+            Peaking { frequency, gain, ..} => {
+                Self::peaking(frequency, args.get_q(), samplerate, gain)
+            }
+            LowShelf { frequency, gain, .. } => {
+                Self::low_shelf(frequency, args.get_q(), samplerate, gain)
+            }
+            HighShelf { frequency, gain, ..} => {
+                Self::high_shelf(frequency, args.get_q(), samplerate, gain)
+            }
         }
     }
 
@@ -58,7 +65,7 @@ impl BiquadCoefficient {
         let a0 = 1. + alpha;
         let a1 = -2. * w0.cos();
         let a2 = 1. - alpha;
-        Self::from_coeff(a0, a1, a2, b0, b1, b2)
+        Self::precompute_coeffs(a0, a1, a2, b0, b1, b2)
     }
 
     pub fn highpass(cutoff: f32, q: f32, samplerate: f32) -> Self {
@@ -71,7 +78,7 @@ impl BiquadCoefficient {
         let a0 = 1. + alpha;
         let a1 = -2. * w0.cos();
         let a2 = 1. - alpha;
-        Self::from_coeff(a0, a1, a2, b0, b1, b2)
+        Self::precompute_coeffs(a0, a1, a2, b0, b1, b2)
     }
 
     pub fn peaking(frequency: f32, q: f32, samplerate: f32, gain: f32) -> Self {
@@ -86,7 +93,39 @@ impl BiquadCoefficient {
         let a1 = -2. * w0.cos();
         let a2 = 1. - alpha / a;
 
-        Self::from_coeff(a0, a1, a2, b0, b1, b2)
+        Self::precompute_coeffs(a0, a1, a2, b0, b1, b2)
+    }
+
+    pub fn low_shelf(frequency: f32, q: f32, samplerate: f32, gain: f32) -> Self {
+        let a = 10f32.powf(gain / 40.0);
+        let w0 = compute_w0(frequency, samplerate);
+        let alpha = compute_alpha(w0, q);
+        let two_sqrt_a_alpha = 2.0 * a.sqrt() * alpha;
+
+        let b0 = a * ((a + 1.0) - (a - 1.0) * w0.cos() + two_sqrt_a_alpha);
+        let b1 = 2.0 * a * ((a - 1.0) - (a + 1.0) * w0.cos());
+        let b2 = a * ((a + 1.0) - (a - 1.0) * w0.cos() - two_sqrt_a_alpha);
+        let a0 = (a + 1.0) + (a - 1.0) * w0.cos() + two_sqrt_a_alpha;
+        let a1 = -2.0 * ((a - 1.0) + (a + 1.0) * w0.cos());
+        let a2 = (a + 1.0) + (a - 1.0) * w0.cos() - two_sqrt_a_alpha;
+
+        Self::precompute_coeffs(a0, a1, a2, b0, b1, b2)
+    }
+
+    pub fn high_shelf(frequency: f32, q: f32, samplerate: f32, gain: f32) -> Self {
+        let a = 10f32.powf(gain / 40.0);
+        let w0 = compute_w0(frequency, samplerate);
+        let alpha = compute_alpha(w0, q);
+        let two_sqrt_a_alpha = 2.0 * a.sqrt() * alpha;
+
+        let b0 = a * ((a + 1.0) + (a - 1.0) * w0.cos() + two_sqrt_a_alpha);
+        let b1 = -2.0 * a * ((a - 1.0) + (a + 1.0) * w0.cos());
+        let b2 = a * ((a + 1.0) + (a - 1.0) * w0.cos() - two_sqrt_a_alpha);
+        let a0 = (a + 1.0) - (a - 1.0) * w0.cos() + two_sqrt_a_alpha;
+        let a1 = 2.0 * ((a - 1.0) - (a + 1.0) * w0.cos());
+        let a2 = (a + 1.0) - (a - 1.0) * w0.cos() - two_sqrt_a_alpha;
+
+        Self::precompute_coeffs(a0, a1, a2, b0, b1, b2)
     }
 }
 
