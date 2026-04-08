@@ -87,7 +87,7 @@ impl ClapParam for IntParam {
         self.default as f32
     }
 
-    fn get_normalized(&self) -> f32 {
+    fn normalized(&self) -> f32 {
         let value = self.get_raw();
         self.normalize(value)
     }

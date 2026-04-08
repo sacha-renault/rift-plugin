@@ -93,8 +93,8 @@ impl<E: EnumValues> ClapParam for EnumParam<E> {
         self.inner.get_raw()
     }
 
-    fn get_normalized(&self) -> f32 {
-        self.inner.get_normalized()
+    fn normalized(&self) -> f32 {
+        self.inner.normalized()
     }
 
     fn default_raw(&self) -> f32 {

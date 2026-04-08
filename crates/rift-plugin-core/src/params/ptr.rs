@@ -63,8 +63,8 @@ impl ClapParam for ParamPtr {
     }
 
     #[inline]
-    fn get_normalized(&self) -> f32 {
-        unsafe { (*self.ptr).get_normalized() }
+    fn normalized(&self) -> f32 {
+        unsafe { (*self.ptr).normalized() }
     }
 
     #[inline]
@@ -155,7 +155,7 @@ mod tests {
         fn default_raw(&self) -> f32 {
             0.5
         }
-        fn get_normalized(&self) -> f32 {
+        fn normalized(&self) -> f32 {
             self.normalize(self.value.get())
         }
         fn set_normalized(&self, normalized: f32) {
@@ -215,7 +215,7 @@ mod tests {
     fn test_normalized_get_set() {
         let mock = MockParam::new(50.0);
         let ptr = make_ptr(&mock);
-        assert_eq!(ptr.get_normalized(), 0.5);
+        assert_eq!(ptr.normalized(), 0.5);
         ptr.set_normalized(1.0);
         assert_eq!(ptr.get_raw(), 100.0);
     }

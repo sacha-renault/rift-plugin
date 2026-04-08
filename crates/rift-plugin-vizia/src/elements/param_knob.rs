@@ -79,7 +79,7 @@ where
         let offset = sweep / 2.0;
 
         let param_ptr = lens.map(move |ps| accessor(ps).as_ptr()).get(cx);
-        let value_lens = make_lens(lens, accessor, move |p| p.get_normalized());
+        let value_lens = make_lens(lens, accessor, move |p| p.normalized());
 
         let text_lens = make_lens(lens, accessor, move |p| {
             if let Some(f) = value_text_formater {

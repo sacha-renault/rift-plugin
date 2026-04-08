@@ -57,7 +57,7 @@ pub trait ClapParam: NamedParam {
     ///
     /// # Behavior
     /// * Values outside `[min_value(), max_value()]` are clamped or undefined depending on implementation.
-    fn get_normalized(&self) -> f32;
+    fn normalized(&self) -> f32;
 
     /// Set the normalized value [0.0, 1.0].
     ///

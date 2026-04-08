@@ -84,7 +84,7 @@ impl ClapParam for BoolParam {
         if self.default { 1.0 } else { 0.0 }
     }
 
-    fn get_normalized(&self) -> f32 {
+    fn normalized(&self) -> f32 {
         self.get_raw()
     }
 
