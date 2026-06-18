@@ -27,7 +27,10 @@ members = [
   "crates/rift-plugin-core", 
   "crates/rift-plugin-vizia", 
   "crates/rift-plugin-dsp",
-  "examples/buffer-iter-benchmark", 
+
+  "examples/buffer-iter-benchmark",
+  "examples/simple_effect_example",
+  "examples/simple_instrument_test"
 ]
 
 [workspace.dependencies]
