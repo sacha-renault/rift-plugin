@@ -34,8 +34,6 @@ impl ClapPlugin for Plugin {
         config: PluginAudioConfiguration,
         mut context: InitContext,
     ) -> Self {
-        crate::logging::setup_logging_once();
-
         let samplerate = config.sample_rate as f32;
         context.set_latency(0);
         let lfo1 = Lfo::new(

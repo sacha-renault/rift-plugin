@@ -51,7 +51,7 @@ pub const THEMES_VAR: &[(&str, &str)] = &[
 pub struct AppData {
     params: Arc<PluginParams>,
     shared: Arc<Shared>,
-    is_playing: Arc<AtomicBool>,
+    _is_playing: Arc<AtomicBool>,
 }
 
 impl Model for AppData {}
@@ -87,7 +87,7 @@ pub fn create_gui(params: Arc<PluginParams>, shared: Arc<Shared>) -> Box<dyn Gui
         AppData {
             params,
             shared,
-            is_playing: ctx.is_playing(),
+            _is_playing: ctx.is_playing(),
         }
         .build(cx);
         AudioConsumers {
@@ -103,12 +103,6 @@ pub fn create_gui(params: Arc<PluginParams>, shared: Arc<Shared>) -> Box<dyn Gui
 
         VStack::new(cx, |cx| {
             HStack::new(cx, |cx| {
-                // width="501" height="174"
-                let height = 75.;
-                Svg::new(cx, include_str!("../../ARC.svg"))
-                    .height(Pixels(height))
-                    .width(Pixels(501. * height / 174.));
-
                 ZStack::new(cx, |cx| {
                     PlotGrid::new(cx, GridScale::logarithmic(20., 20. * 1e3, 2., 0))
                         .color(Color::gray())

@@ -7,7 +7,7 @@ edition = "2024"
 crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-rift-plugin = { workspace = true }
+rift-plugin = { path = "../../" }
 rift-plugin-core = { workspace = true }
 rift-plugin-resolver = { workspace = true }
 rift-plugin-accumulator = { workspace = true }
@@ -15,5 +15,4 @@ rift-plugin-vizia = { workspace = true }
 rift-plugin-dsp = { workspace = true }
 
 log = { workspace = true }
-simplelog = { workspace = true }
 parking_lot = "0.12.5"

@@ -1,5 +1,4 @@
 mod gui;
-mod logging;
 mod params;
 mod plugin;
 mod shared;
