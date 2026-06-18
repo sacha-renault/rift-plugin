@@ -1,0 +1,21 @@
+[package]
+name = "simple_effect_example"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[profile.release]
+panic = "abort"
+
+[dependencies]
+rift-plugin = { workspace = true }
+rift-plugin-vizia = { workspace = true }
+rift-plugin-core = { workspace = true }
+rift-plugin-resolver = { workspace = true }
+rift-plugin-accumulator = { workspace = true }
+rift-plugin-dsp = { workspace = true }
+log = { workspace = true }
+simplelog = { workspace = true }
+parking_lot = "0.12.5"
