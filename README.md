@@ -1,7 +1,17 @@
+> **⚠️ Status: Archived / discontinued.**
+> This was a library for building CLAP audio plugins in Rust.
+> Development got pretty far and I was happy with it. but I've since found
+> [**truce**](https://github.com/truce-audio/truce).
+>
+> The code below is left up as-is for reference. It is **not maintained** and
+> the TODO list will not be completed.
+
+---
+
 ### TODO 
 - [ ] Might have to many things in base lib, look into featuring some stuf.
-- [-] Add tons of debug assert
-- [-] doc is too small. There are things that should be documented better
+- [ ] Add tons of debug assert
+- [ ] doc is too small. There are things that should be documented better
 - [x] in audio consumer crate, it's easy to fuck up with All. Think of adding MonoConsumer
 - [ ] BoundedVec capacity is weird to save, capacity should always be defined by what's written in the plugin, not in the saved state.
 - [ ] Shared has a different meaning in clack and rift, yet the same name. Should change that because that's confusing asf.
