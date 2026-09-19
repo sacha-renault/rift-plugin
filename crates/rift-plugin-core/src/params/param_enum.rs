@@ -4,11 +4,11 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
-use crate::params::{NamedParam, Persistent};
+use crate::params::Persistent;
 
-use super::param_int::IntParam;
+use super::param_int::{IntParam, IntParamConfig};
 use super::ptr::ParamPtr;
-use super::traits::{__ParamInitializer, ClapParam, TypedParam};
+use super::traits::{Param, TypedParam};
 
 pub trait EnumValues: std::fmt::Display + Default + Sized + Copy + 'static {
     fn to_index(self) -> u32;
@@ -39,10 +39,44 @@ impl<E: EnumValues> EnumParam<E> {
         }
     }
 
+    pub fn create(
+        id: ClapId,
+        name: String,
+        module: Option<String>,
+        config: EnumParamConfig<E>,
+    ) -> Self {
+        let total = E::count() as i32;
+        let default = config.default.to_index() as i32;
+
+        let mut inner = IntParam::create(
+            id,
+            name,
+            module,
+            IntParamConfig {
+                default,
+                min: 0,
+                max: total - 1,
+            },
+        );
+        // Enum param flags are intentionally empty; they are unioned explicitly
+        // through `with_flags`.
+        inner.flags = ParamInfoFlags::empty();
+
+        Self {
+            inner,
+            _p: PhantomData,
+        }
+    }
+
     pub fn with_flags(mut self, param_flags: ParamInfoFlags) -> Self {
         self.inner.flags = self.inner.flags.union(param_flags);
         self
     }
+}
+
+#[derive(Debug, Default)]
+pub struct EnumParamConfig<E> {
+    pub default: E,
 }
 
 impl<E: EnumValues> TypedParam for EnumParam<E> {
@@ -70,7 +104,7 @@ impl<E: EnumValues> TypedParam for EnumParam<E> {
     }
 }
 
-impl<E: EnumValues> NamedParam for EnumParam<E> {
+impl<E: EnumValues> Param for EnumParam<E> {
     fn name(&self) -> &str {
         self.inner.name()
     }
@@ -82,9 +116,7 @@ impl<E: EnumValues> NamedParam for EnumParam<E> {
     fn id(&self) -> ClapId {
         self.inner.id()
     }
-}
 
-impl<E: EnumValues> ClapParam for EnumParam<E> {
     fn unit(&self) -> &str {
         self.inner.unit()
     }
@@ -146,12 +178,6 @@ impl<E: EnumValues> Persistent for EnumParam<E> {
 
     fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
         self.inner.serialize(writer)
-    }
-}
-
-impl<E: EnumValues> __ParamInitializer for EnumParam<E> {
-    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
-        self.inner.__initialize(name, id, module);
     }
 }
 
@@ -253,20 +279,6 @@ mod tests {
         param2.deserialize(&mut reader).unwrap();
 
         assert_eq!(param2.value(), TestEnum::C);
-    }
-
-    #[test]
-    fn initializer() {
-        let mut param = EnumParam::new(TestEnum::A);
-        param.__initialize(
-            "Mode".to_string(),
-            ClapId::new(7),
-            Some("filter".to_string()),
-        );
-
-        assert_eq!(param.name(), "Mode");
-        assert_eq!(param.id(), ClapId::new(7));
-        assert_eq!(param.module(), Some("filter"));
     }
 
     #[test]

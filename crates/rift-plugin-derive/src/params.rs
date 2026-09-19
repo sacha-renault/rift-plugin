@@ -1,7 +1,9 @@
 use proc_macro::TokenStream;
+use proc_macro2::TokenStream as TokenStream2;
+use std::collections::HashSet;
 use syn::{
     Expr, ExprPath, GenericArgument, Ident, PathArguments, Result, Token, Type, braced,
-    parse::{Parse, ParseStream},
+    parse::{Parse, ParseBuffer, ParseStream},
     token::Brace,
 };
 
@@ -203,60 +205,160 @@ fn to_pascal_case(s: &str) -> String {
         .collect()
 }
 
+impl Params {
+    /// Expand every collected struct into its definition plus its constructors.
+    ///
+    /// Ids are handed out through a shared `cursor` so that nested groups and
+    /// every element of an `Array<N, T>` get distinct ids, without the macro
+    /// having to know how many params a struct holds.
+    pub fn expand(self) -> TokenStream2 {
+        let structs = self.collect().into_iter().map(expand_struct);
+        quote::quote! { #( #structs )* }
+    }
+}
+
+fn expand_struct(s: Struct) -> TokenStream2 {
+    let name = &s.name;
+    let field_names: Vec<_> = s.fields.iter().map(|f| &f.name).collect();
+    let field_types: Vec<_> = s.fields.iter().map(field_type).collect();
+    let field_inits: Vec<_> = s.fields.iter().map(field_init).collect();
+
+    quote::quote! {
+        #[allow(dead_code)]
+        struct #name {
+            #( #field_names: #field_types, )*
+        }
+
+        #[allow(dead_code, unused_variables)]
+        impl #name {
+            fn create() -> Self {
+                let mut cursor = 0u32;
+                Self::create_from(&mut cursor)
+            }
+
+            fn create_from(cursor: &mut u32) -> Self {
+                Self {
+                    #( #field_names: #field_inits, )*
+                }
+            }
+        }
+    }
+}
+
+/// The Rust type of a generated struct field.
+fn field_type(field: &Field) -> TokenStream2 {
+    match &field.value {
+        FieldValue::Param(Param { ty, .. }) => quote::quote! { #ty },
+        FieldValue::Reference(ty) => quote::quote! { #ty },
+        FieldValue::Array(ArrayField {
+            len,
+            element: ArrayElement::Named(ty),
+        }) => quote::quote! { [#ty; #len] },
+        FieldValue::Array(ArrayField {
+            element: ArrayElement::Inline(_),
+            ..
+        }) => unreachable!("anonymous `Array` element is hoisted during collect"),
+        FieldValue::Inline(_) => unreachable!("anonymous group is hoisted during collect"),
+    }
+}
+
+/// The expression used to build a generated struct field in `create_from`.
+fn field_init(field: &Field) -> TokenStream2 {
+    match &field.value {
+        FieldValue::Param(Param { ty, entries }) => {
+            let param = type_path_expr(ty);
+            let config = type_path_expr(&config_type(ty));
+            let name = syn::LitStr::new(&field.name.to_string(), field.name.span());
+            let keys: Vec<_> = entries.iter().map(|e| &e.key).collect();
+            let values: Vec<_> = entries.iter().map(|e| &e.value).collect();
+
+            quote::quote! {
+                {
+                    let id = ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(*cursor);
+                    *cursor += 1u32;
+                    #param::create(id, #name.to_string(), None, #config {
+                        #( #keys: #values, )*
+                        ..Default::default()
+                    })
+                }
+            }
+        }
+        FieldValue::Reference(ty) => {
+            let param = type_path_expr(ty);
+            quote::quote! { #param::create_from(cursor) }
+        }
+        FieldValue::Array(ArrayField {
+            element: ArrayElement::Named(ty),
+            ..
+        }) => {
+            let param = type_path_expr(ty);
+            quote::quote! { ::core::array::from_fn(|_| #param::create_from(cursor)) }
+        }
+        FieldValue::Array(ArrayField {
+            element: ArrayElement::Inline(_),
+            ..
+        }) => unreachable!("anonymous `Array` element is hoisted during collect"),
+        FieldValue::Inline(_) => unreachable!("anonymous group is hoisted during collect"),
+    }
+}
+
+/// Build the `...Config` type for a leaf param type.
+///
+/// `FloatParam` -> `FloatParamConfig`,
+/// `EnumParam<WaveType>` -> `EnumParamConfig<WaveType>`.
+fn config_type(ty: &Type) -> Type {
+    let Type::Path(type_path) = ty else {
+        return ty.clone();
+    };
+
+    let mut type_path = type_path.clone();
+    if let Some(segment) = type_path.path.segments.last_mut() {
+        let ident = &segment.ident;
+        segment.ident = Ident::new(&format!("{ident}Config"), ident.span());
+    }
+    Type::Path(type_path)
+}
+
+/// Render a type path as an expression path, adding turbofish `::` on generic
+/// arguments so it can be used in value position (`Foo::<Bar>::create()`).
+fn type_path_expr(ty: &Type) -> TokenStream2 {
+    let Type::Path(type_path) = ty else {
+        return quote::quote! { #ty };
+    };
+
+    let mut path = type_path.path.clone();
+    for segment in path.segments.iter_mut() {
+        if let PathArguments::AngleBracketed(args) = &mut segment.arguments {
+            args.colon2_token = Some(Default::default());
+        }
+    }
+    quote::quote! { #path }
+}
+
 pub fn proc_params(input: TokenStream) -> TokenStream {
     let params = match syn::parse::<Params>(input) {
         Ok(params) => params,
         Err(e) => return e.into_compile_error().into(),
     };
 
-    for s in params.collect() {
-        println!("struct {}", s.name);
-
-        for field in s.fields {
-            match field.value {
-                FieldValue::Param(param) => {
-                    let ty = &param.ty;
-                    println!("  {}: {}", field.name, quote::quote!(#ty));
-                    for entry in param.entries {
-                        let value = &entry.value;
-                        println!("    {} = {}", entry.key, quote::quote!(#value));
-                    }
-                }
-                FieldValue::Reference(ty) => {
-                    println!("  {}: {}", field.name, quote::quote!(#ty))
-                }
-                FieldValue::Array(array) => {
-                    let len = &array.len;
-                    match &array.element {
-                        ArrayElement::Named(ty) => println!(
-                            "  {}: Array<{}, {}>",
-                            field.name,
-                            quote::quote!(#len),
-                            quote::quote!(#ty)
-                        ),
-                        ArrayElement::Inline(fields) => println!(
-                            "  {}: Array<{}> ({} fields)",
-                            field.name,
-                            quote::quote!(#len),
-                            fields.len()
-                        ),
-                    }
-                }
-                // Inline structs are always hoisted away by `collect`.
-                FieldValue::Inline(_) => unreachable!("inline structs are hoisted during collect"),
-            }
-        }
-    }
-
-    quote::quote! {}.into()
+    params.expand().into()
 }
 
 impl Parse for Params {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut structs = Vec::new();
+
         while !input.is_empty() {
+            if !input.peek(Token![struct]) {
+                return Err(input.error(
+                    "expected a `struct` definition, e.g. \
+                     `struct MyParams { gain: FloatParam { default: 0.5, range: 0.0..1.0 } }`",
+                ));
+            }
             structs.push(input.parse()?);
         }
+
+        ensure_unique_struct_names(&structs)?;
         Ok(Self { structs })
     }
 }
@@ -264,21 +366,28 @@ impl Parse for Params {
 impl Parse for Struct {
     fn parse(input: ParseStream) -> Result<Self> {
         input.parse::<Token![struct]>()?;
-        let name = input.parse()?;
 
-        let content;
-        braced!(content in input);
+        let name = parse_ident(input, "a struct name (e.g. `MyParams`) after `struct`")?;
+
+        let content = braced_content(input, "to open the struct body")?;
         let fields = parse_fields(&content)?;
 
+        ensure_unique_field_names(&name, &fields)?;
         Ok(Self { name, fields })
     }
 }
 
 impl Parse for Field {
     fn parse(input: ParseStream) -> Result<Self> {
-        let name = input.parse()?;
+        let name = parse_ident(input, "a field name")?;
+
+        if !input.peek(Token![:]) {
+            return Err(input.error(format!("expected `:` after field `{name}`")));
+        }
         input.parse::<Token![:]>()?;
+
         let value = parse_field_value(input)?;
+        ensure_non_empty_group(&name, &value)?;
         Ok(Self { name, value })
     }
 }
@@ -286,12 +395,23 @@ impl Parse for Field {
 fn parse_field_value(input: ParseStream) -> Result<FieldValue> {
     // Anonymous params has no type before the braces.
     if input.peek(Brace) {
-        let content;
-        braced!(content in input);
+        let content = braced_content(input, "to open the anonymous group")?;
         return Ok(FieldValue::Inline(parse_fields(&content)?));
     }
 
-    let ty: Type = input.parse()?;
+    if input.is_empty() {
+        return Err(input.error(
+            "expected a field value: a param type (`FloatParam { .. }`), an anonymous \
+             group (`{ .. }`), a struct reference (`OtherStruct`), or `Array<N[, Type]>`",
+        ));
+    }
+
+    let ty: Type = input.parse().map_err(|_| {
+        input.error(
+            "expected a field value: a param type (`FloatParam`), an anonymous group \
+             (`{ .. }`), a struct reference (`OtherStruct`), or `Array<N[, Type]>`",
+        )
+    })?;
 
     // `Array<N, Type>` and `Array<N> { .. }` handling.
     if let Some((len, element)) = split_array_type(&ty) {
@@ -301,8 +421,7 @@ fn parse_field_value(input: ParseStream) -> Result<FieldValue> {
             // `Array<N> { .. }`: the element type is anonymous, so a body
             // listing the fields is required.
             None => {
-                let content;
-                braced!(content in input);
+                let content = braced_content(input, "to open the anonymous `Array` element body")?;
                 ArrayElement::Inline(parse_fields(&content)?)
             }
         };
@@ -312,13 +431,33 @@ fn parse_field_value(input: ParseStream) -> Result<FieldValue> {
     // `frequency: FloatParam { .. }` is a leaf, `left: ChannelParam` is a
     // reference to another named struct.
     if input.peek(Brace) {
-        let content;
-        braced!(content in input);
+        let content = braced_content(input, "to open the parameter configuration")?;
         let entries = parse_param_entries(&content)?;
         Ok(FieldValue::Param(Param { ty, entries }))
     } else {
         Ok(FieldValue::Reference(ty))
     }
+}
+
+/// An anonymous group with no fields expands to nothing, which is almost always
+/// a typo. Reject it with a clear error instead of silently dropping it.
+fn ensure_non_empty_group(name: &Ident, value: &FieldValue) -> Result<()> {
+    let fields = match value {
+        FieldValue::Inline(fields) => fields,
+        FieldValue::Array(ArrayField {
+            element: ArrayElement::Inline(fields),
+            ..
+        }) => fields,
+        _ => return Ok(()),
+    };
+
+    if fields.is_empty() {
+        return Err(syn::Error::new(
+            name.span(),
+            format!("`{name}` is an empty param group; add at least one field"),
+        ));
+    }
+    Ok(())
 }
 
 /// Recognise the special `Array<N>` / `Array<N, Element>` type.
@@ -380,9 +519,11 @@ fn parse_fields(input: ParseStream) -> Result<Vec<Field>> {
     let mut fields = Vec::new();
     while !input.is_empty() {
         fields.push(input.parse()?);
-        // Trailing comma is optional.
+        // Trailing comma is optional, but fields must be comma separated.
         if input.peek(Token![,]) {
             input.parse::<Token![,]>()?;
+        } else if !input.is_empty() {
+            return Err(input.error("expected `,` between fields"));
         }
     }
     Ok(fields)
@@ -391,16 +532,72 @@ fn parse_fields(input: ParseStream) -> Result<Vec<Field>> {
 fn parse_param_entries(input: ParseStream) -> Result<Vec<ParamEntry>> {
     let mut entries = Vec::new();
     while !input.is_empty() {
-        let key = input.parse()?;
+        let key = parse_ident(input, "a config key (e.g. `default`, `range`)")?;
+
+        if !input.peek(Token![:]) {
+            return Err(input.error(format!("expected `:` after config key `{key}`")));
+        }
         input.parse::<Token![:]>()?;
-        let value = input.parse()?;
+
+        let value: Expr = input
+            .parse()
+            .map_err(|_| input.error(format!("expected an expression after `{key}:`")))?;
         entries.push(ParamEntry { key, value });
 
         if input.peek(Token![,]) {
             input.parse::<Token![,]>()?;
+        } else if !input.is_empty() {
+            return Err(input.error("expected `,` between parameter entries"));
         }
     }
     Ok(entries)
+}
+
+/// Parse an identifier, reporting `expected` when the next token is not one.
+fn parse_ident(input: ParseStream, expected: &str) -> Result<Ident> {
+    if input.peek(Ident) {
+        input.parse()
+    } else {
+        Err(input.error(format!("expected {expected}")))
+    }
+}
+
+/// Open a braced group, reporting `context` when the brace is missing.
+fn braced_content<'a>(input: ParseStream<'a>, context: &str) -> Result<ParseBuffer<'a>> {
+    if !input.peek(Brace) {
+        return Err(input.error(format!("expected `{{` {context}")));
+    }
+    let content;
+    braced!(content in input);
+    Ok(content)
+}
+
+fn ensure_unique_struct_names(structs: &[Struct]) -> Result<()> {
+    let mut seen = HashSet::new();
+    for s in structs {
+        let name = s.name.to_string();
+        if !seen.insert(name.clone()) {
+            return Err(syn::Error::new(
+                s.name.span(),
+                format!("struct `{name}` is defined more than once"),
+            ));
+        }
+    }
+    Ok(())
+}
+
+fn ensure_unique_field_names(struct_name: &Ident, fields: &[Field]) -> Result<()> {
+    let mut seen = HashSet::new();
+    for field in fields {
+        let name = field.name.to_string();
+        if !seen.insert(name.clone()) {
+            return Err(syn::Error::new(
+                field.name.span(),
+                format!("field `{name}` is defined more than once in struct `{struct_name}`"),
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -596,5 +793,176 @@ mod tests {
         assert_eq!(to_pascal_case("nested_params"), "NestedParams");
         assert_eq!(to_pascal_case("gain"), "Gain");
         assert_eq!(to_pascal_case("a_b_c"), "ABC");
+    }
+
+    fn parse_err(input: &str) -> String {
+        syn::parse_str::<Params>(input)
+            .expect_err("should fail to parse")
+            .to_string()
+    }
+
+    #[test]
+    fn reports_missing_struct_keyword() {
+        let msg = parse_err("Foo { a: FloatParam }");
+        assert!(msg.contains("expected a `struct` definition"), "{msg}");
+    }
+
+    #[test]
+    fn reports_missing_struct_brace() {
+        let msg = parse_err("struct Foo;");
+        assert!(
+            msg.contains("expected `{` to open the struct body"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn reports_missing_field_value() {
+        let msg = parse_err("struct Foo { gain: }");
+        assert!(msg.contains("expected a field value"), "{msg}");
+    }
+
+    #[test]
+    fn reports_missing_colon() {
+        let msg = parse_err("struct Foo { gain FloatParam }");
+        assert!(msg.contains("expected `:` after field `gain`"), "{msg}");
+    }
+
+    #[test]
+    fn reports_missing_comma_between_fields() {
+        let msg = parse_err("struct Foo { a: FloatParam b: FloatParam }");
+        assert!(msg.contains("expected `,` between fields"), "{msg}");
+    }
+
+    #[test]
+    fn reports_missing_array_body() {
+        let msg = parse_err("struct Foo { stages: Array<3> }");
+        assert!(
+            msg.contains("expected `{` to open the anonymous `Array` element body"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn reports_duplicate_struct() {
+        let msg = parse_err("struct Foo {} struct Foo {}");
+        assert!(
+            msg.contains("struct `Foo` is defined more than once"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn reports_duplicate_field() {
+        let msg = parse_err("struct Foo { a: FloatParam, a: FloatParam }");
+        assert!(
+            msg.contains("field `a` is defined more than once in struct `Foo`"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn reports_empty_anonymous_group() {
+        let msg = parse_err("struct Foo { empty_param: {} }");
+        assert!(
+            msg.contains("`empty_param` is an empty param group"),
+            "{msg}"
+        );
+    }
+
+    #[test]
+    fn reports_empty_array_element_group() {
+        let msg = parse_err("struct Foo { stages: Array<3> {} }");
+        assert!(msg.contains("`stages` is an empty param group"), "{msg}");
+    }
+
+    /// Collapse all whitespace so token-stream assertions are stable.
+    fn normalized(tokens: &str) -> String {
+        tokens.chars().filter(|c| !c.is_whitespace()).collect()
+    }
+
+    #[test]
+    fn expands_structs_with_create() {
+        let params = parse(
+            r#"
+            struct Child {
+                gain: FloatParam { default: 1f32 },
+            }
+
+            struct Parent {
+                freq: FloatParam { default: 20f32, range: 10f32..20000f32 },
+                child: Child,
+                voices: Array<2, Child>,
+            }
+        "#,
+        );
+
+        let out = normalized(&params.expand().to_string());
+
+        assert!(
+            out.contains("structParent{freq:FloatParam,child:Child,voices:[Child;2],}"),
+            "{out}"
+        );
+        assert!(
+            out.contains("fncreate()->Self{letmutcursor=0u32;Self::create_from(&mutcursor)}"),
+            "{out}"
+        );
+        assert!(out.contains("fncreate_from(cursor:&mutu32)->Self"), "{out}");
+        assert!(
+            out.contains(
+                "FloatParam::create(id,\"freq\".to_string(),None,FloatParamConfig{default:20f32,range:10f32..20000f32,..Default::default()})"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("ClapId::new(*cursor)"), "{out}");
+        assert!(out.contains("*cursor+=1u32"), "{out}");
+        assert!(out.contains("Child::create_from(cursor)"), "{out}");
+        assert!(
+            out.contains("::core::array::from_fn(|_|Child::create_from(cursor))"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn expands_hoisted_groups() {
+        let params = parse(
+            r#"
+            struct Envelope {
+                stages: Array<3> {
+                    level: FloatParam { default: 1f32 },
+                },
+            }
+        "#,
+        );
+
+        let out = normalized(&params.expand().to_string());
+
+        assert!(
+            out.contains("structEnvelopeStages{level:FloatParam,}"),
+            "{out}"
+        );
+        assert!(
+            out.contains("structEnvelopeStages{level:FloatParam,}"),
+            "{out}"
+        );
+        assert!(out.contains("stages:[EnvelopeStages;3],"), "{out}");
+        assert!(
+            out.contains("::core::array::from_fn(|_|EnvelopeStages::create_from(cursor))"),
+            "{out}"
+        );
+    }
+
+    #[test]
+    fn expands_generic_param_with_turbofish() {
+        let params =
+            parse("struct Foo { wave: EnumParam<WaveType> { default: WaveType::Square } }");
+        let out = normalized(&params.expand().to_string());
+
+        assert!(
+            out.contains(
+                "EnumParam::<WaveType>::create(id,\"wave\".to_string(),None,EnumParamConfig::<WaveType>{default:WaveType::Square,..Default::default()})"
+            ),
+            "{out}"
+        );
     }
 }

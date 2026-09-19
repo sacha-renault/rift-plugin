@@ -22,15 +22,15 @@ parking_lot = { workspace = true }
 resolver = "2"
 members = [
   "crates/rift-plugin-accumulator",
-  "crates/rift-plugin-derive", 
-  "crates/rift-plugin-resolver", 
-  "crates/rift-plugin-core", 
-  "crates/rift-plugin-vizia", 
+  "crates/rift-plugin-derive",
+  "crates/rift-plugin-core",
   "crates/rift-plugin-dsp",
 
   "examples/buffer-iter-benchmark",
-  "examples/simple_effect_example",
-  "examples/simple_instrument_test"
+]
+
+examples = [
+
 ]
 
 [workspace.dependencies]
@@ -40,11 +40,6 @@ rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-core = { path = "crates/rift-plugin-core" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 rift-plugin-dsp = { path = "crates/rift-plugin-dsp" }
-
-vizia = { git = "https://github.com/sacha-renault/vizia", branch = "rift-vizia", default-features = false, features = [
- "baseview", 
-#  "rayon" 
-]}
 
 clack-plugin = { git = "https://github.com/prokopyl/clack" }
 clack-extensions = { git = "https://github.com/prokopyl/clack", features = [

@@ -1,8 +1,6 @@
 use clack_extensions::params::ParamInfoFlags;
 
-use crate::params::NamedParam;
-
-use super::traits::ClapParam;
+use super::traits::Param;
 
 /// A zero-cost wrapper around a raw pointer to a [`ClapParam`].
 /// The underlying parameter lives in the host and outlives this wrapper.
@@ -12,11 +10,11 @@ pub struct ParamPtr {
     /// than the program and is handled by the host.
     /// We can safely deref those params and make it much easier for
     /// gui to use any params
-    ptr: *const dyn ClapParam,
+    ptr: *const dyn Param,
 }
 
 impl ParamPtr {
-    pub fn new(ptr: *const dyn ClapParam) -> Self {
+    pub fn new(ptr: *const dyn Param) -> Self {
         Self { ptr }
     }
 }
@@ -24,7 +22,7 @@ impl ParamPtr {
 unsafe impl Send for ParamPtr {}
 unsafe impl Sync for ParamPtr {}
 
-impl NamedParam for ParamPtr {
+impl Param for ParamPtr {
     #[inline]
     fn id(&self) -> clack_plugin::prelude::ClapId {
         unsafe { (*self.ptr).id() }
@@ -39,9 +37,7 @@ impl NamedParam for ParamPtr {
     fn module(&self) -> Option<&str> {
         unsafe { (*self.ptr).module() }
     }
-}
 
-impl ClapParam for ParamPtr {
     #[inline]
     fn unit(&self) -> &str {
         unsafe { (*self.ptr).unit() }
@@ -130,7 +126,7 @@ mod tests {
         }
     }
 
-    impl NamedParam for MockParam {
+    impl Param for MockParam {
         fn id(&self) -> ClapId {
             ClapId::from(1u32)
         }
@@ -140,9 +136,7 @@ mod tests {
         fn module(&self) -> Option<&str> {
             Some("test/module")
         }
-    }
 
-    impl ClapParam for MockParam {
         fn unit(&self) -> &str {
             "dB"
         }
@@ -177,12 +171,12 @@ mod tests {
             ParamInfoFlags::empty()
         }
         fn as_ptr(&self) -> ParamPtr {
-            ParamPtr::new(self as *const dyn ClapParam)
+            ParamPtr::new(self as *const dyn Param)
         }
     }
 
     fn make_ptr(mock: &MockParam) -> ParamPtr {
-        ParamPtr::new(mock as *const dyn ClapParam)
+        ParamPtr::new(mock as *const dyn Param)
     }
 
     #[test]

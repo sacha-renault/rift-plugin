@@ -75,7 +75,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
         log::debug!("Create new MainThread<'a>");
-        let into_gui = P::gui(shared.params.clone(), shared.other.clone());
+        let into_gui = P::gui(shared.params.clone());
         let context = Arc::new(GuiContextImpl {
             states: shared.states.clone(),
             params: shared.params.clone(),

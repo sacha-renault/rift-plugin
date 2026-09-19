@@ -8,12 +8,11 @@ use clack_plugin::process::Process;
 use rift_plugin_core::transport::{BlockIndex, BlockInfo};
 
 use crate::prelude::MidiMessage;
-use crate::wrapper::{ClapPlugin, shared_states::SharedQueues};
+use crate::wrapper::shared_states::SharedQueues;
 
-pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
+pub struct ProcessContext<'a, 'e> {
     pub(crate) host: &'a HostAudioProcessorHandle<'a>,
     pub(crate) states: Arc<SharedQueues>,
-    pub(crate) shared: Arc<P::SharedType>,
     pub(crate) process: Process<'a>,
     pub(crate) samplerate: f64,
     pub(crate) block_index: BlockIndex,
@@ -24,11 +23,7 @@ pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) outputs_events: &'e mut OutputEvents<'e>,
 }
 
-impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
-    pub fn shared(&self) -> Arc<P::SharedType> {
-        Arc::clone(&self.shared)
-    }
-
+impl<'a, 'e> ProcessContext<'a, 'e> {
     /// Returns playback progress info (seconds/beats) if currently playing, otherwise None.
     pub fn block_info(&self) -> Option<BlockInfo> {
         if let Some(transport) = self.process.transport {
@@ -55,7 +50,7 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
     }
 }
 
-impl<'a, 'e, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, 'e, P> {
+impl<'a, 'e> super::HostStatesGetter for ProcessContext<'a, 'e> {
     #[inline]
     fn increment_event_count(&mut self) {
         self.num_events += 1;
@@ -67,7 +62,7 @@ impl<'a, 'e, P: ClapPlugin> super::HostStatesGetter for ProcessContext<'a, 'e, P
     }
 }
 
-impl<'a, 'e, P: ClapPlugin> Drop for ProcessContext<'a, 'e, P> {
+impl<'a, 'e> Drop for ProcessContext<'a, 'e> {
     fn drop(&mut self) {
         if self.num_events > 0 {
             // Drains the event count buffer by requesting a final callback on drop.

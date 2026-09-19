@@ -5,7 +5,6 @@ pub use clack_plugin::prelude::*;
 use rift_plugin_core::gui::GuiFactory;
 use rift_plugin_core::params::Params;
 
-use crate::_sealed::__ParamsInitializer;
 use crate::prelude::*;
 
 pub mod factory;
@@ -17,11 +16,7 @@ pub mod shared_states;
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
     /// These are automatically synchronized between the GUI and Audio threads.
-    type ParamType: Params + __ParamsInitializer + Default + Send + Sync + 'static;
-
-    /// Shared state accessible by the GUI (=Main), and Audio threads.
-    /// Use this for non-parameter state like preset data or analysis results.
-    type SharedType: Send + Sync + Default + 'static;
+    type ParamType: Params + Default + Send + Sync + 'static;
 
     /// If `true`, the wrapper automatically updates `ParamType` and calls [`Self::param_changed`]
     /// for every parameter event before [`Self::process`] is called.
@@ -54,7 +49,6 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// You may allocate memory during this call.
     fn create(
         params: Arc<Self::ParamType>,
-        shared: Arc<Self::SharedType>,
         config: PluginAudioConfiguration,
         context: InitContext,
     ) -> Self;
@@ -68,7 +62,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     fn process(
         &mut self,
         buffers: Buffers,
-        context: ProcessContext<Self>,
+        context: ProcessContext,
         input_events: &InputEvents,
     ) -> Result<ProcessStatus, PluginError>;
 
@@ -88,7 +82,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// Since the GUI runs on a separate thread (or even a separate process),
     /// communication with the processor must happen via `params` or `shared`.
-    fn gui(params: Arc<Self::ParamType>, shared: Arc<Self::SharedType>) -> Box<dyn GuiFactory>;
+    fn gui(params: Arc<Self::ParamType>) -> Box<dyn GuiFactory>;
 
     // ... Later more methods :)
     const ID: &str;

@@ -4,10 +4,10 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
-use crate::params::{NamedParam, Persistent};
+use crate::params::Persistent;
 
 use super::ptr::ParamPtr;
-use super::traits::{__ParamInitializer, ClapParam, TypedParam};
+use super::traits::{Param, TypedParam};
 
 #[derive(bon::Builder)]
 pub struct IntParam {
@@ -43,6 +43,34 @@ pub struct IntParam {
     pub(crate) id: ClapId,
 }
 
+impl IntParam {
+    pub fn create(
+        id: ClapId,
+        name: String,
+        module: Option<String>,
+        config: IntParamConfig,
+    ) -> Self {
+        Self {
+            default: config.default,
+            value: AtomicI32::new(config.default),
+            name,
+            module,
+            unit: "",
+            min_value: config.min,
+            max_value: config.max,
+            flags: ParamInfoFlags::IS_AUTOMATABLE,
+            id,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct IntParamConfig {
+    pub default: i32,
+    pub min: i32,
+    pub max: i32,
+}
+
 impl TypedParam for IntParam {
     type Type = i32;
 
@@ -55,7 +83,7 @@ impl TypedParam for IntParam {
     }
 }
 
-impl NamedParam for IntParam {
+impl Param for IntParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -67,9 +95,7 @@ impl NamedParam for IntParam {
     fn id(&self) -> ClapId {
         self.id
     }
-}
 
-impl ClapParam for IntParam {
     fn unit(&self) -> &str {
         self.unit
     }
@@ -119,7 +145,7 @@ impl ClapParam for IntParam {
     }
 
     fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn ClapParam)
+        ParamPtr::new(self as *const dyn Param)
     }
 }
 
@@ -134,14 +160,6 @@ impl Persistent for IntParam {
     fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
         serde_json::to_writer(writer, &self.value())
             .map_err(|_| PluginError::Message("serialize error"))
-    }
-}
-
-impl __ParamInitializer for IntParam {
-    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
-        self.name = name;
-        self.id = id;
-        self.module = module;
     }
 }
 
@@ -276,19 +294,5 @@ mod tests {
         let param = IntParam::builder().default(0).build();
         let mut reader = Cursor::new(b"not a number");
         assert!(param.deserialize(&mut reader).is_err());
-    }
-
-    #[test]
-    fn initializer() {
-        let mut param = IntParam::builder().default(0).build();
-        param.__initialize(
-            "Semitones".to_string(),
-            ClapId::new(13),
-            Some("pitch".to_string()),
-        );
-
-        assert_eq!(param.name, "Semitones");
-        assert_eq!(param.id, ClapId::new(13));
-        assert_eq!(param.module.as_deref(), Some("pitch"));
     }
 }

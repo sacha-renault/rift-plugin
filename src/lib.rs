@@ -50,15 +50,6 @@ pub mod prelude {
 
 #[doc(hidden)]
 pub mod _sealed {
-    //! todo!()
-    //!
-    //! I didn't find an other way yet to initialize params id, name and module
-    //! in a nice way. I will come back later on this. This needs to be public
-    //! otherwise it can't be implemented by client side but that should NEVER be used
-    //! for ant Plugin that uses Rift. Meant only for internal stuff.
-    #[doc(hidden)]
-    pub use rift_plugin_core::params::{__ParamInitializer, __ParamsInitializer};
-
     // reexport of serde_json needed for derive
     #[doc(hidden)]
     pub use serde_json;

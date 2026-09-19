@@ -4,10 +4,10 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
-use crate::params::{NamedParam, Persistent};
+use crate::params::Persistent;
 
 use super::ptr::ParamPtr;
-use super::traits::{__ParamInitializer, ClapParam, TypedParam};
+use super::traits::{Param, TypedParam};
 
 #[derive(bon::Builder)]
 pub struct BoolParam {
@@ -37,6 +37,30 @@ pub struct BoolParam {
     id: ClapId,
 }
 
+impl BoolParam {
+    pub fn create(
+        id: ClapId,
+        name: String,
+        module: Option<String>,
+        config: BoolParamConfig,
+    ) -> Self {
+        Self {
+            default: config.default,
+            value: AtomicBool::new(config.default),
+            name,
+            module,
+            unit: "",
+            flags: ParamInfoFlags::IS_AUTOMATABLE,
+            id,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct BoolParamConfig {
+    pub default: bool,
+}
+
 impl TypedParam for BoolParam {
     type Type = bool;
 
@@ -49,7 +73,7 @@ impl TypedParam for BoolParam {
     }
 }
 
-impl NamedParam for BoolParam {
+impl Param for BoolParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -61,9 +85,7 @@ impl NamedParam for BoolParam {
     fn id(&self) -> ClapId {
         self.id
     }
-}
 
-impl ClapParam for BoolParam {
     fn unit(&self) -> &str {
         self.unit
     }
@@ -119,7 +141,7 @@ impl ClapParam for BoolParam {
     }
 
     fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn ClapParam)
+        ParamPtr::new(self as *const dyn Param)
     }
 }
 
@@ -134,14 +156,6 @@ impl Persistent for BoolParam {
     fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
         serde_json::to_writer(writer, &self.value())
             .map_err(|_| PluginError::Message("serialize error"))
-    }
-}
-
-impl __ParamInitializer for BoolParam {
-    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
-        self.name = name;
-        self.id = id;
-        self.module = module;
     }
 }
 
@@ -251,19 +265,5 @@ mod tests {
         let param = BoolParam::builder().default(false).build();
         let mut reader = Cursor::new(b"not a bool");
         assert!(param.deserialize(&mut reader).is_err());
-    }
-
-    #[test]
-    fn initializer() {
-        let mut param = BoolParam::builder().default(false).build();
-        param.__initialize(
-            "Bypass".to_string(),
-            ClapId::new(99),
-            Some("fx".to_string()),
-        );
-
-        assert_eq!(param.name, "Bypass");
-        assert_eq!(param.id, ClapId::new(99));
-        assert_eq!(param.module.as_deref(), Some("fx"));
     }
 }

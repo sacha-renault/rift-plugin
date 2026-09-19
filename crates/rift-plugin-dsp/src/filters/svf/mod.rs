@@ -23,6 +23,7 @@ pub struct SVFCoeffs {
     a2: f32,
     a3: f32,
     k: f32,
+    #[allow(unused)]
     g: f32, // Keep G to be able to recalculate coeffs
 }
 

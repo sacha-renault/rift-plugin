@@ -5,13 +5,10 @@ use clack_plugin::{prelude::*, utils::Cookie};
 
 use super::ptr::ParamPtr;
 
-/// Identity information shared by all named parameters (both regular and persistent-only).
+/// Core abstraction for audio plugin parameters.
 ///
-/// # Safety & Contracts
-///
-/// * **Name Uniqueness**: `name()` must return a unique identifier string across all parameters in the plugin instance. Violation causes crashes.
-/// * **ID Uniqueness**: `id()` returns the internal CLAP handle (`ClapId`) which is used by the host to address this parameter. It must be stable for the lifetime of the plugin.
-pub trait NamedParam {
+/// Represents a single control within a plugin (e.g., volume, cutoff).
+pub trait Param {
     /// Get the display name of the parameter (e.g., "Cutoff").
     ///
     /// # Panics
@@ -25,12 +22,7 @@ pub trait NamedParam {
     ///
     /// Unlike `name()`, the `ClapId` is an opaque handle used directly by CLAP internals and must be consistent.
     fn id(&self) -> ClapId;
-}
 
-/// Core abstraction for audio plugin parameters.
-///
-/// Represents a single control within a plugin (e.g., volume, cutoff).
-pub trait ClapParam: NamedParam {
     /// Get the unit symbol (e.g., "Hz", "dB", ""). If not applicable, return "".
     ///
     /// The string will be appended automatically to formatted text outputs.
@@ -186,26 +178,6 @@ pub trait Params: Sync + Send + 'static {
     fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
 
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
-}
-
-#[doc(hidden)]
-pub trait __ParamInitializer {
-    /// This function isn't meant to be called from client side
-    /// it's public but is called once at param creation and then NEVER
-    /// Any way, no mutable reference of Params is ever shared since it's wrapped
-    /// in Arc. Don't try to do weird thing to mutate this.
-    #[doc(hidden)]
-    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>);
-}
-
-#[doc(hidden)]
-pub trait __ParamsInitializer {
-    #[doc(hidden)]
-    fn __initialize(&mut self);
-}
-
-impl __ParamsInitializer for () {
-    fn __initialize(&mut self) {}
 }
 
 impl Params for () {

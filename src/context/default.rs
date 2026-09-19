@@ -1,7 +1,4 @@
-use crate::{
-    context::{MainThreadTask, main_thread_context_traits::HostStatesGetter},
-    wrapper::ClapPlugin,
-};
+use crate::context::{MainThreadTask, main_thread_context_traits::HostStatesGetter};
 
 #[allow(private_bounds)]
 pub trait RequestRestartImpl: HostStatesGetter {
@@ -16,4 +13,4 @@ pub trait RequestRestartImpl: HostStatesGetter {
 }
 
 impl<'a> RequestRestartImpl for super::InitContext<'a> {}
-impl<'a, 'e, P: ClapPlugin> RequestRestartImpl for super::ProcessContext<'a, 'e, P> {}
+impl<'a, 'e> RequestRestartImpl for super::ProcessContext<'a, 'e> {}

@@ -70,9 +70,10 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     #[inline]
     fn handle_gui_param_change(&mut self, event: GuiParamEvent, outputs: &mut OutputEvents) {
         if let Some(raw_event) = event.maybe_to_raw()
-            && let err @ Err(..) = outputs.try_push(raw_event) {
-                log::error!("There was an error push event {err:?}")
-            }
+            && let err @ Err(..) = outputs.try_push(raw_event)
+        {
+            log::error!("There was an error push event {err:?}")
+        }
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
@@ -104,12 +105,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<Self, PluginError> {
         // Create the plugin instance & activate right away
         let init_context = InitContext::new(&main_thread.host, shared.states.clone());
-        let plugin = P::create(
-            shared.params.clone(),
-            shared.other.clone(),
-            audio_config,
-            init_context,
-        );
+        let plugin = P::create(shared.params.clone(), audio_config, init_context);
 
         // Allocate a scratch buffer ONCE
         Ok(Self {
@@ -140,7 +136,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         let context = ProcessContext {
             host: &self.host,
             states: self.shared.states.clone(),
-            shared: self.shared.other.clone(),
             process,
             samplerate: self.samplerate,
             num_events: 0,

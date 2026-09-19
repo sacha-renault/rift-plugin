@@ -5,14 +5,13 @@ use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
 use super::ptr::ParamPtr;
-use super::traits::{__ParamInitializer, ClapParam, TypedParam};
+use super::traits::{Param, TypedParam};
 
-use crate::params::{NamedParam, Persistent};
+use crate::params::Persistent;
 use crate::utils::atomic_f32::AtomicF32;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
-    /// Default value for the param
     #[allow(unused)]
     pub(crate) default: f32,
 
@@ -47,6 +46,24 @@ pub struct FloatParam {
     pub(crate) id: ClapId,
 }
 
+impl FloatParam {
+    pub fn create(
+        id: ClapId,
+        name: String,
+        module: Option<String>,
+        config: FloatParamConfig,
+    ) -> Self {
+        todo!()
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct FloatParamConfig {
+    pub default: f32,
+    pub min: f32,
+    pub max: f32,
+}
+
 impl TypedParam for FloatParam {
     type Type = f32;
 
@@ -62,7 +79,7 @@ impl TypedParam for FloatParam {
     }
 }
 
-impl NamedParam for FloatParam {
+impl Param for FloatParam {
     fn name(&self) -> &str {
         &self.name
     }
@@ -74,9 +91,7 @@ impl NamedParam for FloatParam {
     fn id(&self) -> ClapId {
         self.id
     }
-}
 
-impl ClapParam for FloatParam {
     fn unit(&self) -> &str {
         self.unit
     }
@@ -125,7 +140,7 @@ impl ClapParam for FloatParam {
     }
 
     fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn ClapParam)
+        ParamPtr::new(self as *const dyn Param)
     }
 }
 
@@ -166,15 +181,6 @@ impl Persistent for FloatParam {
     fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
         serde_json::to_writer(writer, &self.value())
             .map_err(|_| PluginError::Message("serialize error"))
-    }
-}
-
-impl __ParamInitializer for FloatParam {
-    #[doc(hidden)]
-    fn __initialize(&mut self, name: String, id: ClapId, module: Option<String>) {
-        self.name = name;
-        self.id = id;
-        self.module = module;
     }
 }
 
@@ -282,20 +288,6 @@ mod tests {
 
         let mut reader = Cursor::new(b"not a number");
         assert!(param.deserialize(&mut reader).is_err());
-    }
-
-    #[test]
-    fn test_initializer() {
-        let mut param = FloatParam::builder().default(0.0).build();
-        param.__initialize(
-            "Gain".to_string(),
-            ClapId::new(42),
-            Some("mixer".to_string()),
-        );
-
-        assert_eq!(param.name, "Gain");
-        assert_eq!(param.id, ClapId::new(42));
-        assert_eq!(param.module.as_deref(), Some("mixer"));
     }
 
     #[test]
