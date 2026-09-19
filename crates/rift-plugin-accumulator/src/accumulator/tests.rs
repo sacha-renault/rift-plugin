@@ -1,7 +1,5 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rift_plugin_core::prelude::*;
-
 use super::*;
 
 struct ConsumerMock {

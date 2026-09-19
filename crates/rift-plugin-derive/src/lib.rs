@@ -5,6 +5,9 @@ mod derive_param;
 mod enum_param;
 mod param_builder;
 
+#[allow(unused)]
+mod params;
+
 /// Generate boiler plate code for the builder > destructure > build view pattern.
 ///
 /// This is meant to be used with `DestructThenBuildView` trait.
@@ -16,7 +19,7 @@ mod param_builder;
 ///     // this value must be passed to contructor (no need for default)
 ///     #[builder(new)]
 ///     value1: f32
-///     
+///
 ///     // Can be added with builder pattern (needs to impl Default or have a default specified)
 ///     #[builder(default = 10.)]
 ///     value2: f32
@@ -46,4 +49,9 @@ pub fn derive_params(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(HandleExtension, attributes(extension))]
 pub fn derive_extensions(input: TokenStream) -> TokenStream {
     derive_extensions::derive_extensions(input)
+}
+
+#[proc_macro]
+pub fn params(input: TokenStream) -> TokenStream {
+    params::proc_params(input)
 }
