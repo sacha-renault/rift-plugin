@@ -49,16 +49,28 @@ impl BoolParam {
             value: AtomicBool::new(config.default),
             name,
             module,
-            unit: "",
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
+            unit: config.unit,
+            flags: config.flags,
             id,
         }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct BoolParamConfig {
     pub default: bool,
+    pub unit: &'static str,
+    pub flags: ParamInfoFlags,
+}
+
+impl Default for BoolParamConfig {
+    fn default() -> Self {
+        Self {
+            default: false,
+            unit: "",
+            flags: ParamInfoFlags::IS_AUTOMATABLE,
+        }
+    }
 }
 
 impl TypedParam for BoolParam {

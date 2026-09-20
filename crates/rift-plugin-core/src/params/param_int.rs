@@ -55,20 +55,34 @@ impl IntParam {
             value: AtomicI32::new(config.default),
             name,
             module,
-            unit: "",
+            unit: config.unit,
             min_value: config.min,
             max_value: config.max,
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
+            flags: config.flags,
             id,
         }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct IntParamConfig {
     pub default: i32,
+    pub unit: &'static str,
     pub min: i32,
     pub max: i32,
+    pub flags: ParamInfoFlags,
+}
+
+impl Default for IntParamConfig {
+    fn default() -> Self {
+        Self {
+            default: 0,
+            unit: "",
+            min: 0,
+            max: 1,
+            flags: ParamInfoFlags::IS_AUTOMATABLE,
+        }
+    }
 }
 
 impl TypedParam for IntParam {

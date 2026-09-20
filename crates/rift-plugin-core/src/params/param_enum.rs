@@ -48,19 +48,18 @@ impl<E: EnumValues> EnumParam<E> {
         let total = E::count() as i32;
         let default = config.default.to_index() as i32;
 
-        let mut inner = IntParam::create(
+        let inner = IntParam::create(
             id,
             name,
             module,
             IntParamConfig {
                 default,
+                unit: config.unit,
                 min: 0,
                 max: total - 1,
+                flags: config.flags,
             },
         );
-        // Enum param flags are intentionally empty; they are unioned explicitly
-        // through `with_flags`.
-        inner.flags = ParamInfoFlags::empty();
 
         Self {
             inner,
@@ -74,9 +73,22 @@ impl<E: EnumValues> EnumParam<E> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct EnumParamConfig<E> {
     pub default: E,
+    pub unit: &'static str,
+    pub flags: ParamInfoFlags,
+}
+
+impl<E: EnumValues> Default for EnumParamConfig<E> {
+    fn default() -> Self {
+        Self {
+            default: E::default(),
+            unit: "",
+            // Enum flags default to empty; `with_flags` unions on top.
+            flags: ParamInfoFlags::empty(),
+        }
+    }
 }
 
 impl<E: EnumValues> TypedParam for EnumParam<E> {

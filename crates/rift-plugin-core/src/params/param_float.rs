@@ -53,28 +53,51 @@ impl FloatParam {
         module: Option<String>,
         config: FloatParamConfig,
     ) -> Self {
-        let FloatParamConfig { default, min, max } = config;
+        let FloatParamConfig {
+            default,
+            unit,
+            min,
+            max,
+            mapping,
+            flags,
+        } = config;
 
         Self {
             default,
             value: AtomicF32::new(default),
             name,
             module,
-            unit: "",
+            unit,
             min_value: min,
             max_value: max,
-            mapping: RangeMapping::Linear,
-            flags: ParamInfoFlags::empty(),
+            mapping,
+            flags,
             id,
         }
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct FloatParamConfig {
     pub default: f32,
+    pub unit: &'static str,
     pub min: f32,
     pub max: f32,
+    pub mapping: RangeMapping,
+    pub flags: ParamInfoFlags,
+}
+
+impl Default for FloatParamConfig {
+    fn default() -> Self {
+        Self {
+            default: 0.0,
+            unit: "",
+            min: 0.0,
+            max: 1.0,
+            mapping: RangeMapping::Linear,
+            flags: ParamInfoFlags::IS_AUTOMATABLE,
+        }
+    }
 }
 
 impl TypedParam for FloatParam {
@@ -157,7 +180,7 @@ impl Param for FloatParam {
     }
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum RangeMapping {
     #[default]
     Linear,
