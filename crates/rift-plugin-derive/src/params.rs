@@ -14,11 +14,11 @@ use syn::{
 /// ```ignore
 /// params! {
 ///     struct Name {
-///         field: ParamType { key: value, .. },
-///         group: { field: ParamType { .. } },
-///         other: OtherStructName,
-///         many: Array<8, OtherStructName>,
-///         anon: Array<8> { field: ParamType { .. } },
+///         param field: ParamType { key: value, .. },  // leaf (kind keyword)
+///         group: { param field: ParamType { .. } },     // anonymous group
+///         other: OtherStructName,                      // reference
+///         many: Array<8, OtherStructName>,             // array of a named struct
+///         anon: Array<8> { param field: ParamType },   // array of an anonymous struct
 ///     }
 /// }
 /// ```
@@ -45,10 +45,10 @@ pub struct Field {
 /// The value of a field, which tells us whether we hit a leaf or a group.
 #[derive(Debug)]
 pub enum FieldValue {
-    /// A leaf parameter: a type followed by its inline configuration.
+    /// A leaf introduced by a kind keyword, e.g. `param gain: FloatParam { .. }`.
     ///
-    /// `frequency: FloatParam { default: 20f32, range: 10f32..20000f32 }`
-    Param(Param),
+    /// Other kinds (`meter`, ...) will be added here later.
+    Leaf(Leaf),
 
     /// A reference to another named struct: `left: ChannelParam`.
     Reference(Type),
@@ -85,11 +85,19 @@ pub enum ArrayElement {
     Inline(Vec<Field>),
 }
 
-/// A leaf parameter definition: its type plus the raw `key: value` pairs.
+/// A leaf field, e.g. `param gain: FloatParam { default: 1f32 }`.
 #[derive(Debug)]
-pub struct Param {
+pub struct Leaf {
+    pub kind: LeafKind,
     pub ty: Type,
     pub entries: Vec<ParamEntry>,
+}
+
+/// The kind keyword that introduced a leaf.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LeafKind {
+    /// `param <name>: <Type> { .. }`
+    Param,
 }
 
 /// A `key: value` entry inside a leaf parameter configuration.
@@ -206,11 +214,10 @@ fn to_pascal_case(s: &str) -> String {
 }
 
 impl Params {
-    /// Expand every collected struct into its definition plus its constructors.
+    /// Expand every collected struct into its (path-agnostic) type definition.
     ///
-    /// Ids are handed out through a shared `cursor` so that nested groups and
-    /// every element of an `Array<N, T>` get distinct ids, without the macro
-    /// having to know how many params a struct holds.
+    /// Only the root `params { .. }` block knows the full tree, so it is the
+    /// sole owner of `create()`, the ids and the module paths.
     pub fn expand(self) -> TokenStream2 {
         let structs = self.collect().into_iter().map(expand_struct);
         quote::quote! { #( #structs )* }
@@ -221,26 +228,11 @@ fn expand_struct(s: Struct) -> TokenStream2 {
     let name = &s.name;
     let field_names: Vec<_> = s.fields.iter().map(|f| &f.name).collect();
     let field_types: Vec<_> = s.fields.iter().map(field_type).collect();
-    let field_inits: Vec<_> = s.fields.iter().map(field_init).collect();
 
     quote::quote! {
         #[allow(dead_code)]
         struct #name {
             #( #field_names: #field_types, )*
-        }
-
-        #[allow(dead_code, unused_variables)]
-        impl #name {
-            fn create() -> Self {
-                let mut cursor = 0u32;
-                Self::create_from(&mut cursor)
-            }
-
-            fn create_from(cursor: &mut u32) -> Self {
-                Self {
-                    #( #field_names: #field_inits, )*
-                }
-            }
         }
     }
 }
@@ -248,7 +240,9 @@ fn expand_struct(s: Struct) -> TokenStream2 {
 /// The Rust type of a generated struct field.
 fn field_type(field: &Field) -> TokenStream2 {
     match &field.value {
-        FieldValue::Param(Param { ty, .. }) => quote::quote! { #ty },
+        FieldValue::Leaf(Leaf { kind, ty, .. }) => match kind {
+            LeafKind::Param => quote::quote! { #ty },
+        },
         FieldValue::Reference(ty) => quote::quote! { #ty },
         FieldValue::Array(ArrayField {
             len,
@@ -260,79 +254,6 @@ fn field_type(field: &Field) -> TokenStream2 {
         }) => unreachable!("anonymous `Array` element is hoisted during collect"),
         FieldValue::Inline(_) => unreachable!("anonymous group is hoisted during collect"),
     }
-}
-
-/// The expression used to build a generated struct field in `create_from`.
-fn field_init(field: &Field) -> TokenStream2 {
-    match &field.value {
-        FieldValue::Param(Param { ty, entries }) => {
-            let param = type_path_expr(ty);
-            let config = type_path_expr(&config_type(ty));
-            let name = syn::LitStr::new(&field.name.to_string(), field.name.span());
-            let keys: Vec<_> = entries.iter().map(|e| &e.key).collect();
-            let values: Vec<_> = entries.iter().map(|e| &e.value).collect();
-
-            quote::quote! {
-                {
-                    let id = ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(*cursor);
-                    *cursor += 1u32;
-                    #param::create(id, #name.to_string(), None, #config {
-                        #( #keys: #values, )*
-                        ..Default::default()
-                    })
-                }
-            }
-        }
-        FieldValue::Reference(ty) => {
-            let param = type_path_expr(ty);
-            quote::quote! { #param::create_from(cursor) }
-        }
-        FieldValue::Array(ArrayField {
-            element: ArrayElement::Named(ty),
-            ..
-        }) => {
-            let param = type_path_expr(ty);
-            quote::quote! { ::core::array::from_fn(|_| #param::create_from(cursor)) }
-        }
-        FieldValue::Array(ArrayField {
-            element: ArrayElement::Inline(_),
-            ..
-        }) => unreachable!("anonymous `Array` element is hoisted during collect"),
-        FieldValue::Inline(_) => unreachable!("anonymous group is hoisted during collect"),
-    }
-}
-
-/// Build the `...Config` type for a leaf param type.
-///
-/// `FloatParam` -> `FloatParamConfig`,
-/// `EnumParam<WaveType>` -> `EnumParamConfig<WaveType>`.
-fn config_type(ty: &Type) -> Type {
-    let Type::Path(type_path) = ty else {
-        return ty.clone();
-    };
-
-    let mut type_path = type_path.clone();
-    if let Some(segment) = type_path.path.segments.last_mut() {
-        let ident = &segment.ident;
-        segment.ident = Ident::new(&format!("{ident}Config"), ident.span());
-    }
-    Type::Path(type_path)
-}
-
-/// Render a type path as an expression path, adding turbofish `::` on generic
-/// arguments so it can be used in value position (`Foo::<Bar>::create()`).
-fn type_path_expr(ty: &Type) -> TokenStream2 {
-    let Type::Path(type_path) = ty else {
-        return quote::quote! { #ty };
-    };
-
-    let mut path = type_path.path.clone();
-    for segment in path.segments.iter_mut() {
-        if let PathArguments::AngleBracketed(args) = &mut segment.arguments {
-            args.colon2_token = Some(Default::default());
-        }
-    }
-    quote::quote! { #path }
 }
 
 pub fn proc_params(input: TokenStream) -> TokenStream {
@@ -352,7 +273,7 @@ impl Parse for Params {
             if !input.peek(Token![struct]) {
                 return Err(input.error(
                     "expected a `struct` definition, e.g. \
-                     `struct MyParams { gain: FloatParam { default: 0.5, range: 0.0..1.0 } }`",
+                     `struct MyParams { param gain: FloatParam { default: 0.5 } }`",
                 ));
             }
             structs.push(input.parse()?);
@@ -379,21 +300,52 @@ impl Parse for Struct {
 
 impl Parse for Field {
     fn parse(input: ParseStream) -> Result<Self> {
-        let name = parse_ident(input, "a field name")?;
+        let first = parse_ident(input, "a field name")?;
 
-        if !input.peek(Token![:]) {
-            return Err(input.error(format!("expected `:` after field `{name}`")));
+        // `param <name>: <Type> { .. }` (and future leaf kinds).
+        if first == "param" {
+            let name = parse_ident(input, "a field name after `param`")?;
+            expect_colon(input, &name)?;
+
+            let leaf = parse_leaf(input, LeafKind::Param)?;
+            return Ok(Self {
+                name,
+                value: FieldValue::Leaf(leaf),
+            });
         }
-        input.parse::<Token![:]>()?;
 
-        let value = parse_field_value(input)?;
-        ensure_non_empty_group(&name, &value)?;
-        Ok(Self { name, value })
+        expect_colon(input, &first)?;
+        let value = parse_structural_value(input)?;
+        ensure_non_empty_group(&first, &value)?;
+        Ok(Self { name: first, value })
     }
 }
 
-fn parse_field_value(input: ParseStream) -> Result<FieldValue> {
-    // Anonymous params has no type before the braces.
+/// Parse `param <name>: <Type> { key: value, .. }`, where the config block is
+/// optional (`param name: FloatParam` is valid and uses defaults).
+fn parse_leaf(input: ParseStream, kind: LeafKind) -> Result<Leaf> {
+    if input.is_empty() {
+        return Err(input.error("expected a parameter type (e.g. `FloatParam`)"));
+    }
+
+    let ty: Type = input
+        .parse()
+        .map_err(|_| input.error("expected a parameter type (e.g. `FloatParam`)"))?;
+
+    let entries = if input.peek(Brace) {
+        let content = braced_content(input, "to open the parameter configuration")?;
+        parse_param_entries(&content)?
+    } else {
+        Vec::new()
+    };
+
+    Ok(Leaf { kind, ty, entries })
+}
+
+/// Parse a structural field value: an anonymous group, a struct reference, or
+/// an array.
+fn parse_structural_value(input: ParseStream) -> Result<FieldValue> {
+    // Anonymous groups have no type before the braces.
     if input.peek(Brace) {
         let content = braced_content(input, "to open the anonymous group")?;
         return Ok(FieldValue::Inline(parse_fields(&content)?));
@@ -401,15 +353,15 @@ fn parse_field_value(input: ParseStream) -> Result<FieldValue> {
 
     if input.is_empty() {
         return Err(input.error(
-            "expected a field value: a param type (`FloatParam { .. }`), an anonymous \
-             group (`{ .. }`), a struct reference (`OtherStruct`), or `Array<N[, Type]>`",
+            "expected a field value: an anonymous group (`{ .. }`), a struct \
+             reference (`OtherStruct`), or `Array<N[, Type]>`",
         ));
     }
 
     let ty: Type = input.parse().map_err(|_| {
         input.error(
-            "expected a field value: a param type (`FloatParam`), an anonymous group \
-             (`{ .. }`), a struct reference (`OtherStruct`), or `Array<N[, Type]>`",
+            "expected a field value: an anonymous group (`{ .. }`), a struct \
+             reference (`OtherStruct`), or `Array<N[, Type]>`",
         )
     })?;
 
@@ -428,15 +380,23 @@ fn parse_field_value(input: ParseStream) -> Result<FieldValue> {
         return Ok(FieldValue::Array(ArrayField { len, element }));
     }
 
-    // `frequency: FloatParam { .. }` is a leaf, `left: ChannelParam` is a
-    // reference to another named struct.
+    // A bare `Type { .. }` used to be a leaf; it now needs a kind keyword.
     if input.peek(Brace) {
-        let content = braced_content(input, "to open the parameter configuration")?;
-        let entries = parse_param_entries(&content)?;
-        Ok(FieldValue::Param(Param { ty, entries }))
-    } else {
-        Ok(FieldValue::Reference(ty))
+        return Err(input.error(
+            "expected a field kind before a parameter definition, e.g. \
+             `param gain: FloatParam { .. }`",
+        ));
     }
+
+    Ok(FieldValue::Reference(ty))
+}
+
+fn expect_colon(input: ParseStream, name: &Ident) -> Result<()> {
+    if !input.peek(Token![:]) {
+        return Err(input.error(format!("expected `:` after field `{name}`")));
+    }
+    input.parse::<Token![:]>()?;
+    Ok(())
 }
 
 /// An anonymous group with no fields expands to nothing, which is almost always
@@ -606,19 +566,19 @@ mod tests {
 
     const DEV_INPUT: &str = r#"
         struct OscillatorParam {
-            frequency: FloatParam {
+            param frequency: FloatParam {
                 default: 20f32,
                 range: 10f32..20000f32,
             },
-            wave: EnumParam<WaveType> {
+            param wave: EnumParam<WaveType> {
                 default: WaveType::Square,
             },
             nested_params: {
-                gain: FloatParam {
+                param gain: FloatParam {
                     default: 1f32,
                     range: 0f32..2f32,
                 },
-                pan: FloatParam {
+                param pan: FloatParam {
                     default: 0f32,
                     range: -1f32..1f32,
                 },
@@ -626,7 +586,7 @@ mod tests {
         }
 
         struct ChannelParam {
-            gain: FloatParam {
+            param gain: FloatParam {
                 default: 1f32,
                 range: 0f32..2f32,
             },
@@ -654,7 +614,7 @@ mod tests {
         let params = parse(DEV_INPUT);
         let osc = &params.structs[0];
 
-        let FieldValue::Param(frequency) = &osc.fields[0].value else {
+        let FieldValue::Leaf(frequency) = &osc.fields[0].value else {
             panic!("frequency should be a leaf param");
         };
         assert_eq!(ts(&frequency.ty), "FloatParam");
@@ -665,7 +625,7 @@ mod tests {
             .collect();
         assert_eq!(keys, ["default", "range"]);
 
-        let FieldValue::Param(wave) = &osc.fields[1].value else {
+        let FieldValue::Leaf(wave) = &osc.fields[1].value else {
             panic!("wave should be a leaf param");
         };
         assert_eq!(ts(&wave.ty), "EnumParam < WaveType >");
@@ -757,9 +717,9 @@ mod tests {
         let collected = parse(
             r#"
             struct EnvelopeParam {
-                attack: FloatParam { default: 0.1f32 },
+                param attack: FloatParam { default: 0.1f32 },
                 stages: Array<3> {
-                    level: FloatParam { default: 1f32 },
+                    param level: FloatParam { default: 1f32 },
                 },
             }
         "#,
@@ -786,6 +746,26 @@ mod tests {
             .map(|f| f.name.to_string())
             .collect();
         assert_eq!(fields, ["level"]);
+    }
+
+    #[test]
+    fn parses_leaf_without_config() {
+        let params = parse("struct Foo { param gain: FloatParam }");
+        let FieldValue::Leaf(leaf) = &params.structs[0].fields[0].value else {
+            panic!("gain should be a leaf");
+        };
+        assert_eq!(leaf.kind, LeafKind::Param);
+        assert_eq!(ts(&leaf.ty), "FloatParam");
+        assert!(leaf.entries.is_empty());
+    }
+
+    #[test]
+    fn reports_missing_kind_for_leaf() {
+        let msg = parse_err("struct Foo { gain: FloatParam { default: 1f32 } }");
+        assert!(
+            msg.contains("expected a field kind before a parameter definition"),
+            "{msg}"
+        );
     }
 
     #[test]
@@ -882,15 +862,15 @@ mod tests {
     }
 
     #[test]
-    fn expands_structs_with_create() {
+    fn expands_struct_definitions() {
         let params = parse(
             r#"
             struct Child {
-                gain: FloatParam { default: 1f32 },
+                param gain: FloatParam { default: 1f32 },
             }
 
             struct Parent {
-                freq: FloatParam { default: 20f32, range: 10f32..20000f32 },
+                param freq: FloatParam { default: 20f32, range: 10f32..20000f32 },
                 child: Child,
                 voices: Array<2, Child>,
             }
@@ -899,37 +879,23 @@ mod tests {
 
         let out = normalized(&params.expand().to_string());
 
+        assert!(out.contains("structChild{gain:FloatParam,}"), "{out}");
         assert!(
             out.contains("structParent{freq:FloatParam,child:Child,voices:[Child;2],}"),
             "{out}"
         );
-        assert!(
-            out.contains("fncreate()->Self{letmutcursor=0u32;Self::create_from(&mutcursor)}"),
-            "{out}"
-        );
-        assert!(out.contains("fncreate_from(cursor:&mutu32)->Self"), "{out}");
-        assert!(
-            out.contains(
-                "FloatParam::create(id,\"freq\".to_string(),None,FloatParamConfig{default:20f32,range:10f32..20000f32,..Default::default()})"
-            ),
-            "{out}"
-        );
-        assert!(out.contains("ClapId::new(*cursor)"), "{out}");
-        assert!(out.contains("*cursor+=1u32"), "{out}");
-        assert!(out.contains("Child::create_from(cursor)"), "{out}");
-        assert!(
-            out.contains("::core::array::from_fn(|_|Child::create_from(cursor))"),
-            "{out}"
-        );
+        // Structs stay path-agnostic: no constructors, ids or modules here.
+        assert!(!out.contains("fncreate"), "{out}");
+        assert!(!out.contains("ClapId"), "{out}");
     }
 
     #[test]
-    fn expands_hoisted_groups() {
+    fn expands_hoisted_group_definitions() {
         let params = parse(
             r#"
             struct Envelope {
                 stages: Array<3> {
-                    level: FloatParam { default: 1f32 },
+                    param level: FloatParam { default: 1f32 },
                 },
             }
         "#,
@@ -938,30 +904,23 @@ mod tests {
         let out = normalized(&params.expand().to_string());
 
         assert!(
-            out.contains("structEnvelopeStages{level:FloatParam,}"),
+            out.contains("structEnvelope{stages:[EnvelopeStages;3],}"),
             "{out}"
         );
         assert!(
             out.contains("structEnvelopeStages{level:FloatParam,}"),
-            "{out}"
-        );
-        assert!(out.contains("stages:[EnvelopeStages;3],"), "{out}");
-        assert!(
-            out.contains("::core::array::from_fn(|_|EnvelopeStages::create_from(cursor))"),
             "{out}"
         );
     }
 
     #[test]
-    fn expands_generic_param_with_turbofish() {
+    fn expands_generic_field_type() {
         let params =
-            parse("struct Foo { wave: EnumParam<WaveType> { default: WaveType::Square } }");
+            parse("struct Foo { param wave: EnumParam<WaveType> { default: WaveType::Square } }");
         let out = normalized(&params.expand().to_string());
 
         assert!(
-            out.contains(
-                "EnumParam::<WaveType>::create(id,\"wave\".to_string(),None,EnumParamConfig::<WaveType>{default:WaveType::Square,..Default::default()})"
-            ),
+            out.contains("structFoo{wave:EnumParam<WaveType>,}"),
             "{out}"
         );
     }

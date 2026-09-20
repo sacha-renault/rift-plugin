@@ -9,21 +9,21 @@ enum WaveType {
 
 params! {
     struct OscillatorParam {
-        frequency: FloatParam {
+        param frequency: FloatParam {
             default: 20f32,
             min: 0f32,
             max: 1f32,
         },
-        wave: EnumParam<WaveType> {
+        param wave: EnumParam<WaveType> {
             default: WaveType::Square,
         },
         nested_params: {
-            gain: FloatParam {
+            param gain: FloatParam {
                 default: 1f32,
                 min: 0f32,
                 max: 2f32
             },
-            pan: FloatParam {
+            param pan: FloatParam {
                 default: 0f32,
                 min: -1f32,
                 max: 1f32,
@@ -32,7 +32,7 @@ params! {
     }
 
     struct ChannelParam {
-        gain: FloatParam {
+        param gain: FloatParam {
             default: 1f32,
             min: 0f32,
             max: 1f32,
@@ -40,7 +40,7 @@ params! {
     }
 
     struct EnvelopeParam {
-        attack: FloatParam {
+        param attack: FloatParam {
             default: 0.1f32,
             min: 0f32,
             max: 1f32,
@@ -48,7 +48,7 @@ params! {
         // `Array<N>` uses an anonymous element type, hoisted to
         // `EnvelopeParamStages`.
         stages: Array<3> {
-            level: FloatParam {
+            param level: FloatParam {
                 default: 1f32,
                 min: 0f32,
                 max: 1f32,
