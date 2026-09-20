@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 rift-plugin-derive = { workspace = true }
 rift-plugin-core = { workspace = true }
+rift-plugin-params = { workspace = true }
 rift-plugin-accumulator = { workspace = true }
 rift-plugin-dsp = { workspace = true }
 
@@ -24,6 +25,7 @@ members = [
   "crates/rift-plugin-accumulator",
   "crates/rift-plugin-derive",
   "crates/rift-plugin-core",
+  "crates/rift-plugin-params",
   "crates/rift-plugin-dsp",
 
   "examples/buffer-iter-benchmark",
@@ -38,6 +40,7 @@ rift-plugin-derive  = { path = "crates/rift-plugin-derive" }
 rift-plugin-resolver = { path = "crates/rift-plugin-resolver" }
 rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-core = { path = "crates/rift-plugin-core" }
+rift-plugin-params = { path = "crates/rift-plugin-params" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 rift-plugin-dsp = { path = "crates/rift-plugin-dsp" }
 

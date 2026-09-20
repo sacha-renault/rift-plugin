@@ -407,6 +407,7 @@ dependencies = [
  "rift-plugin-core",
  "rift-plugin-derive",
  "rift-plugin-dsp",
+ "rift-plugin-params",
  "serde_json",
 ]
 
@@ -423,13 +424,12 @@ dependencies = [
 name = "rift-plugin-core"
 version = "0.1.0"
 dependencies = [
- "bon",
  "clack-extensions",
  "clack-plugin",
  "crossbeam-queue",
  "log",
+ "rift-plugin-params",
  "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -447,6 +447,17 @@ name = "rift-plugin-dsp"
 version = "0.1.0"
 dependencies = [
  "rift-plugin-core",
+]
+
+[[package]]
+name = "rift-plugin-params"
+version = "0.1.0"
+dependencies = [
+ "bon",
+ "clack-extensions",
+ "clack-plugin",
+ "log",
+ "serde_json",
 ]
 
 [[package]]

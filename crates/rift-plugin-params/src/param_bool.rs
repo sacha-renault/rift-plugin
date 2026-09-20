@@ -4,7 +4,7 @@ use clack_extensions::params::*;
 use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
-use crate::params::Persistent;
+use crate::Persistent;
 
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};

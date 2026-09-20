@@ -7,7 +7,7 @@ use clack_plugin::events::event_types::{
 use clack_plugin::prelude::*;
 
 use rift_plugin_core::gui::{GuiParamEvent, GuiParamEventKind};
-use rift_plugin_core::params::Params;
+use rift_plugin_params::Params;
 use rift_plugin_core::transport::BlockIndex;
 
 use crate::context::{AudioThreadTask, InitContext, ProcessContext};

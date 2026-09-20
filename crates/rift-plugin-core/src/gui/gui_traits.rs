@@ -4,7 +4,7 @@ use std::sync::atomic::AtomicBool;
 use clack_extensions::gui::*;
 use clack_plugin::{plugin::PluginError, utils::ClapId};
 
-use crate::params::Params;
+use rift_plugin_params::Params;
 
 use super::events::GuiParamEvent;
 

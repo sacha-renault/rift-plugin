@@ -1,5 +1,4 @@
 pub mod gui;
-pub mod params;
 pub mod transport;
 pub mod utils;
 
@@ -10,8 +9,6 @@ pub mod prelude {
     /// Type alias of [`Rc<RefCell<T>>`]
     pub type ConsumerCell<T> = Rc<RefCell<T>>;
     pub use transport::{BlockInfo, BlockTime, ChannelsInfo};
-
-    pub use utils::atomic_f32::AtomicF32;
 
     pub use utils::multi_channel::MultiChannel;
 }

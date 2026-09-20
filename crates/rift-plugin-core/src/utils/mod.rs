@@ -1,4 +1,3 @@
-pub mod atomic_f32;
 pub mod bounded_vec;
 pub mod conversion;
 pub mod dequeue_buffer;
