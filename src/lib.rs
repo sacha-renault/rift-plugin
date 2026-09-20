@@ -27,11 +27,12 @@ pub mod prelude {
     // Reexport the rift-plugin crates
     pub use rift_plugin_buffers::*;
     pub use rift_plugin_context::*;
-    pub use rift_plugin_core::gui::{ClapGui, GuiFactory};
-    pub use rift_plugin_core::prelude::*;
-    pub use rift_plugin_core::utils;
+    pub use rift_plugin_gui::{ClapGui, GuiFactory};
     pub use rift_plugin_params::*;
+    pub use rift_plugin_types::transport::*;
     pub use rift_plugin_types::*;
+    pub use rift_plugin_utils as utils;
+    pub use rift_plugin_utils::{ConsumerCell, MultiChannel};
     pub use rift_plugin_wrapper::*;
 
     pub use rift_plugin_derive::params;

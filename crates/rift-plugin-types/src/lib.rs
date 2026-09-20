@@ -5,6 +5,7 @@ mod audio_ports;
 mod event_source;
 mod midi_message;
 mod midi_port;
+pub mod transport;
 
 pub use audio_ports::{AudioPort, MainAudioPort, PAIR_PORT_ID};
 pub use event_source::EventSource;

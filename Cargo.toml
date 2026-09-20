@@ -5,7 +5,8 @@ edition = "2024"
 
 [dependencies]
 rift-plugin-derive = { workspace = true }
-rift-plugin-core = { workspace = true }
+rift-plugin-utils = { workspace = true }
+rift-plugin-gui = { workspace = true }
 rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-buffers = { workspace = true }
@@ -22,9 +23,10 @@ resolver = "2"
 members = [
   "crates/rift-plugin-accumulator",
   "crates/rift-plugin-derive",
-  "crates/rift-plugin-core",
-  "crates/rift-plugin-params",
+  "crates/rift-plugin-utils",
   "crates/rift-plugin-types",
+  "crates/rift-plugin-params",
+  "crates/rift-plugin-gui",
   "crates/rift-plugin-buffers",
   "crates/rift-plugin-context",
   "crates/rift-plugin-wrapper",
@@ -41,7 +43,8 @@ examples = [
 rift-plugin-derive  = { path = "crates/rift-plugin-derive" }
 rift-plugin-resolver = { path = "crates/rift-plugin-resolver" }
 rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
-rift-plugin-core = { path = "crates/rift-plugin-core" }
+rift-plugin-utils = { path = "crates/rift-plugin-utils" }
+rift-plugin-gui = { path = "crates/rift-plugin-gui" }
 rift-plugin-params = { path = "crates/rift-plugin-params" }
 rift-plugin-types = { path = "crates/rift-plugin-types" }
 rift-plugin-buffers = { path = "crates/rift-plugin-buffers" }

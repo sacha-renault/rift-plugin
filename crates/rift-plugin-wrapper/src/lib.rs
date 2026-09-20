@@ -7,7 +7,7 @@ pub use clack_plugin::prelude::*;
 
 use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{InitContext, ProcessContext};
-use rift_plugin_core::gui::GuiFactory;
+use rift_plugin_gui::GuiFactory;
 use rift_plugin_params::Params;
 use rift_plugin_types::{AudioPort, EventSource, MainAudioPort, MidiMessage, MidiPort};
 

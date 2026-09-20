@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use rift_plugin_core::gui::{GuiContext, GuiParamEvent};
+use rift_plugin_gui::{GuiContext, GuiParamEvent};
 
-use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use crate::SharedQueues;
+use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use rift_plugin_params::Params;
 
 pub struct GuiContextImpl {

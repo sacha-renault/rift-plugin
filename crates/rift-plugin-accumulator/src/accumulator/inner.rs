@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use rift_plugin_core::prelude::*;
-use rift_plugin_core::utils::bounded_vec::BoundedVec;
+use rift_plugin_types::transport::*;
+use rift_plugin_utils::bounded_vec::BoundedVec;
 
 use super::channel::ChannelProducer;
 use crate::prelude::*;

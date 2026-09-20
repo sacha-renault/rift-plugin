@@ -6,8 +6,8 @@ use clack_plugin::events::event_types::{
 };
 use clack_plugin::prelude::*;
 
-use rift_plugin_core::gui::{GuiParamEvent, GuiParamEventKind};
-use rift_plugin_core::transport::BlockIndex;
+use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind};
+use rift_plugin_types::transport::BlockIndex;
 use rift_plugin_params::Params;
 
 use crate::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};

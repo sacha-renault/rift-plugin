@@ -5,7 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
-use rift_plugin_core::transport::{BlockIndex, BlockInfo};
+use rift_plugin_types::transport::{BlockIndex, BlockInfo};
 
 use rift_plugin_types::MidiMessage;
 use crate::SharedQueues;

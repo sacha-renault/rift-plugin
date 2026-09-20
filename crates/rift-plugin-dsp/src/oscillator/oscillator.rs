@@ -1,4 +1,4 @@
-use rift_plugin_core::utils::{bounded_vec::BoundedVec, notes::midi_to_frequency};
+use rift_plugin_utils::{bounded_vec::BoundedVec, notes::midi_to_frequency};
 
 use super::OscillatorPosition;
 

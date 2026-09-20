@@ -1,4 +1,4 @@
-use rift_plugin_core::transport::BlockTime;
+use rift_plugin_types::transport::BlockTime;
 
 pub use super::bucket::Bucket;
 use crate::prelude::MonoConsumer;
@@ -117,7 +117,7 @@ impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_core::transport::BlockTime;
+    use rift_plugin_types::transport::BlockTime;
 
     use crate::consumers::windowed_peaks::peaks::PeakBucket;
 

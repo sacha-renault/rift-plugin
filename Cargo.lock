@@ -348,10 +348,11 @@ dependencies = [
  "clack-plugin",
  "rift-plugin-buffers",
  "rift-plugin-context",
- "rift-plugin-core",
  "rift-plugin-derive",
+ "rift-plugin-gui",
  "rift-plugin-params",
  "rift-plugin-types",
+ "rift-plugin-utils",
  "rift-plugin-wrapper",
  "serde_json",
 ]
@@ -361,7 +362,8 @@ name = "rift-plugin-accumulator"
 version = "0.1.0"
 dependencies = [
  "crossbeam-queue",
- "rift-plugin-core",
+ "rift-plugin-types",
+ "rift-plugin-utils",
  "rustfft",
 ]
 
@@ -381,23 +383,9 @@ dependencies = [
  "clack-plugin",
  "crossbeam-queue",
  "log",
- "rift-plugin-core",
+ "rift-plugin-gui",
  "rift-plugin-params",
  "rift-plugin-types",
-]
-
-[[package]]
-name = "rift-plugin-core"
-version = "0.1.0"
-dependencies = [
- "bon",
- "clack-extensions",
- "clack-plugin",
- "crossbeam-queue",
- "log",
- "rift-plugin-params",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -414,7 +402,16 @@ dependencies = [
 name = "rift-plugin-dsp"
 version = "0.1.0"
 dependencies = [
- "rift-plugin-core",
+ "rift-plugin-utils",
+]
+
+[[package]]
+name = "rift-plugin-gui"
+version = "0.1.0"
+dependencies = [
+ "clack-extensions",
+ "clack-plugin",
+ "rift-plugin-params",
 ]
 
 [[package]]
@@ -434,6 +431,15 @@ version = "0.1.0"
 dependencies = [
  "clack-extensions",
  "clack-plugin",
+ "serde",
+]
+
+[[package]]
+name = "rift-plugin-utils"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -445,7 +451,7 @@ dependencies = [
  "log",
  "rift-plugin-buffers",
  "rift-plugin-context",
- "rift-plugin-core",
+ "rift-plugin-gui",
  "rift-plugin-params",
  "rift-plugin-types",
  "serde_json",

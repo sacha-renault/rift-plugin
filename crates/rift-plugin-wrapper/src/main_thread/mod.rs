@@ -4,7 +4,7 @@ use clack_extensions::context_menu::{ContextMenuTarget, HostContextMenu};
 use clack_extensions::latency::HostLatency;
 use clack_plugin::prelude::*;
 
-use rift_plugin_core::gui::ClapGui;
+use rift_plugin_gui::ClapGui;
 
 use crate::{ClapPlugin, shared::WrapperShared};
 use rift_plugin_context::{MainThreadTask, ParamContextMenu, SharedQueues};

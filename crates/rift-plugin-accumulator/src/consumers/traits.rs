@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
-use rift_plugin_core::prelude::{BlockTime, ChannelsInfo, ConsumerCell, MultiChannel};
+use rift_plugin_types::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_utils::{ConsumerCell, MultiChannel};
 
 /// A consumer that receives a single-channel audio block.
 ///
