@@ -4,8 +4,6 @@ mod derive_extensions;
 mod derive_param;
 mod enum_param;
 mod param_builder;
-
-#[allow(unused)]
 mod params;
 
 /// Generate boiler plate code for the builder > destructure > build view pattern.
