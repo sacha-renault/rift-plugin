@@ -424,12 +424,14 @@ dependencies = [
 name = "rift-plugin-core"
 version = "0.1.0"
 dependencies = [
+ "bon",
  "clack-extensions",
  "clack-plugin",
  "crossbeam-queue",
  "log",
  "rift-plugin-params",
  "serde",
+ "serde_json",
 ]
 
 [[package]]

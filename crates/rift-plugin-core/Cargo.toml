@@ -4,9 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+rift-plugin-params = { workspace =  true }
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace = true }
 crossbeam-queue = { workspace = true }
-rift-plugin-params = { workspace = true }
+bon = { workspace = true }
 log = { workspace = true }
+serde_json = { workspace = true }
 serde = { version = "1", features = ["derive"] }
