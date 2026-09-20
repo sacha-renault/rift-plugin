@@ -58,11 +58,14 @@ params! {
         channels: Array<2, ChannelParam>,
     }
 
-    // params {
-    //     left: ChannelParam,
-    //     right: ChannelParam,
-    //     oscillator: Array<10, OscillatorParam>,
-    // }
+    params {
+        left: ChannelParam,
+        right: ChannelParam,
+        oscillator: Array<10, OscillatorParam>,
+    }
 }
 
-fn main() {}
+fn main() {
+    let params = Parameters::create();
+    println!("{:?}", params.right.gain.path())
+}

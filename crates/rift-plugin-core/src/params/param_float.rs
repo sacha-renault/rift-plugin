@@ -53,7 +53,20 @@ impl FloatParam {
         module: Option<String>,
         config: FloatParamConfig,
     ) -> Self {
-        todo!()
+        let FloatParamConfig { default, min, max } = config;
+
+        Self {
+            default,
+            value: AtomicF32::new(default),
+            name,
+            module,
+            unit: "",
+            min_value: min,
+            max_value: max,
+            mapping: RangeMapping::Linear,
+            flags: ParamInfoFlags::empty(),
+            id,
+        }
     }
 }
 

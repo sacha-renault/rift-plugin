@@ -23,6 +23,15 @@ pub trait Param {
     /// Unlike `name()`, the `ClapId` is an opaque handle used directly by CLAP internals and must be consistent.
     fn id(&self) -> ClapId;
 
+    /// Get the full path of the param as `"module.name"`, or just `"name"` if no module is set.
+    fn path(&self) -> String {
+        if let Some(module) = self.module() {
+            format!("{}.{}", module, self.name())
+        } else {
+            self.name().to_string()
+        }
+    }
+
     /// Get the unit symbol (e.g., "Hz", "dB", ""). If not applicable, return "".
     ///
     /// The string will be appended automatically to formatted text outputs.
