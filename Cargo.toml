@@ -7,17 +7,15 @@ edition = "2024"
 rift-plugin-derive = { workspace = true }
 rift-plugin-core = { workspace = true }
 rift-plugin-params = { workspace = true }
-rift-plugin-accumulator = { workspace = true }
-rift-plugin-dsp = { workspace = true }
+rift-plugin-types = { workspace = true }
+rift-plugin-buffers = { workspace = true }
+rift-plugin-context = { workspace = true }
+rift-plugin-wrapper = { workspace = true }
 
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace =  true }
 
-bon = { workspace = true }
-log = { workspace = true }
 serde_json = { workspace = true }
-crossbeam-queue = {workspace = true}
-parking_lot = { workspace = true }
 
 [workspace]
 resolver = "2"
@@ -26,6 +24,10 @@ members = [
   "crates/rift-plugin-derive",
   "crates/rift-plugin-core",
   "crates/rift-plugin-params",
+  "crates/rift-plugin-types",
+  "crates/rift-plugin-buffers",
+  "crates/rift-plugin-context",
+  "crates/rift-plugin-wrapper",
   "crates/rift-plugin-dsp",
 
   "examples/buffer-iter-benchmark",
@@ -41,6 +43,10 @@ rift-plugin-resolver = { path = "crates/rift-plugin-resolver" }
 rift-plugin-accumulator = { path = "crates/rift-plugin-accumulator" }
 rift-plugin-core = { path = "crates/rift-plugin-core" }
 rift-plugin-params = { path = "crates/rift-plugin-params" }
+rift-plugin-types = { path = "crates/rift-plugin-types" }
+rift-plugin-buffers = { path = "crates/rift-plugin-buffers" }
+rift-plugin-context = { path = "crates/rift-plugin-context" }
+rift-plugin-wrapper = { path = "crates/rift-plugin-wrapper" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 rift-plugin-dsp = { path = "crates/rift-plugin-dsp" }
 

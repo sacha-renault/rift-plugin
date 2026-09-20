@@ -1,8 +1,8 @@
-mod buffers;
-mod context;
-mod ty;
-mod type_wrapper;
-mod wrapper;
+//! Rift: a thin facade over the `rift-plugin-*` crates.
+//!
+//! Everything of substance lives in a dedicated crate; this crate only
+//! re-exports them through [`prelude`] and exposes the [`export_clap_plugin!`]
+//! helper.
 
 #[macro_export]
 macro_rules! export_clap_plugin {
@@ -17,8 +17,6 @@ macro_rules! export_clap_plugin {
 }
 
 pub mod prelude {
-    use super::*;
-
     // Reexport
     pub use clack_extensions;
     pub use clack_plugin;
@@ -26,26 +24,21 @@ pub mod prelude {
     pub use clack_extensions::audio_ports::{AudioPortFlags, AudioPortType};
     pub use clack_plugin::prelude::PluginError;
 
-    // reexport inner
+    // Reexport the rift-plugin crates
+    pub use rift_plugin_buffers::*;
+    pub use rift_plugin_context::*;
     pub use rift_plugin_core::gui::{ClapGui, GuiFactory};
     pub use rift_plugin_core::prelude::*;
     pub use rift_plugin_core::utils;
+    pub use rift_plugin_params::*;
+    pub use rift_plugin_types::*;
+    pub use rift_plugin_wrapper::*;
+
     pub use rift_plugin_derive::params;
     pub use rift_plugin_derive::{DeriveEnumValues, DeriveParams};
     pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
-    pub use rift_plugin_params::*;
 
     pub use super::export_clap_plugin;
-
-    pub use super::wrapper::factory::PluginWrapper;
-    pub use wrapper::ClapPlugin;
-
-    pub use type_wrapper::*;
-
-    pub use buffers::*;
-    pub use context::*;
-
-    pub use ty::*;
 }
 
 #[doc(hidden)]
