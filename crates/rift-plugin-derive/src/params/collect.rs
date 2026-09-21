@@ -1,17 +1,26 @@
-//! Parsing of the `params!` token stream into an AST, plus the collection pass
-//! that flattens it into named structs.
+//! Parsing of the `params!` token stream and its lowering into the resolved IR
+//! that [`crate::params::expand`] renders.
+//!
+//! Lowering happens in a single pass: [`Params::resolve`] walks the parse tree,
+//! names every anonymous group, and emits the type definitions, the construction
+//! tree and the parameter ids together.
 
 use proc_macro2::Span;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use syn::{
     Expr, ExprPath, GenericArgument, Ident, PathArguments, Result, Token, Type, braced,
     parse::{Parse, ParseBuffer, ParseStream},
     token::Brace,
 };
 
+// ---------------------------------------------------------------------------
+// Syntax tree
+// ---------------------------------------------------------------------------
+
 /// Parsed content of `params! { ... }`.
 ///
-/// The grammar is a list of struct definitions:
+/// The grammar is a list of struct definitions followed by an optional `params`
+/// root:
 ///
 /// ```ignore
 /// params! {
@@ -33,17 +42,9 @@ use syn::{
 pub struct Params {
     /// All the top level `struct` definitions, in source order.
     pub structs: Vec<Struct>,
-    /// The optional `params { .. }` block defining the root `Parameters` struct.
-    pub root: Option<Root>,
-}
-
-/// The `params { left: ChannelParam, .. }` root block.
-///
-/// This is the only place that knows the full tree, so it is the sole owner of
-/// `Parameters::create()`, the ids and the module paths.
-#[derive(Debug)]
-pub struct Root {
-    pub fields: Vec<Field>,
+    /// The fields of the optional `params { .. }` block, which becomes the root
+    /// `Parameters` group.
+    pub root: Option<Vec<Field>>,
 }
 
 /// A named struct definition, e.g. `struct OscillatorParam { .. }`.
@@ -54,14 +55,14 @@ pub struct Struct {
 }
 
 /// A single field of a struct.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Field {
     pub name: Ident,
     pub value: FieldValue,
 }
 
 /// The value of a field, which tells us whether we hit a leaf or a group.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FieldValue {
     /// A leaf introduced by a kind keyword, e.g. `param gain: FloatParam { .. }`.
     ///
@@ -71,10 +72,8 @@ pub enum FieldValue {
     /// A reference to another named struct: `left: ChannelParam`.
     Reference(Type),
 
-    /// An anonymous inline struct: `nested_params: { .. }`.
-    ///
-    /// It has no type of its own yet; [`Params::collect`] hoists it into a
-    /// named top level struct derived from its parent and field name.
+    /// An anonymous inline group: `nested: { .. }`, named during lowering from
+    /// its parent struct and field name.
     Inline(Vec<Field>),
 
     /// An array of structs: `Array<N, OtherStruct>` or `Array<N> { .. }`.
@@ -82,7 +81,7 @@ pub enum FieldValue {
 }
 
 /// An `Array<N>` / `Array<N, Type>` field.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ArrayField {
     /// The number of elements `N`, as a const expression.
     pub len: Expr,
@@ -91,21 +90,21 @@ pub struct ArrayField {
 }
 
 /// The element of an [`ArrayField`].
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ArrayElement {
     /// `Array<N, Type>`: elements are an explicitly named struct.
     Named(Type),
 
-    /// `Array<N> { .. }`: elements are an anonymous inline struct.
-    ///
-    /// Like [`FieldValue::Inline`], it gets hoisted into a named struct by
-    /// [`Params::collect`].
+    /// `Array<N> { .. }`: elements are an anonymous group, named during lowering.
     Inline(Vec<Field>),
 }
 
 /// A leaf field, e.g. `param gain: FloatParam { default: 1f32 }`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Leaf {
+    /// The kind keyword that introduced this leaf. Only `param` exists today;
+    /// upcoming kinds (`meter`, ...) will read it while lowering.
+    #[allow(dead_code)]
     pub kind: LeafKind,
     pub ty: Type,
     pub entries: Vec<ParamEntry>,
@@ -119,129 +118,15 @@ pub enum LeafKind {
 }
 
 /// A `key: value` entry inside a leaf parameter configuration.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParamEntry {
     pub key: Ident,
     pub value: Expr,
 }
 
-impl Params {
-    /// Flatten every struct — including the root `params { .. }` block — into a
-    /// list of named structs, hoisting every anonymous group.
-    pub(crate) fn collect(self) -> Vec<Struct> {
-        let Params { structs, root } = self;
-
-        let mut collected = Vec::new();
-        for s in structs {
-            collect_struct(s, &mut collected);
-        }
-
-        if let Some(root) = root {
-            collect_struct(
-                Struct {
-                    name: parameters_ident(),
-                    fields: root.fields,
-                },
-                &mut collected,
-            );
-        }
-
-        collected
-    }
-}
-
-/// Name of the struct produced by the `params { .. }` root block.
-pub(crate) fn parameters_ident() -> Ident {
-    Ident::new("Parameters", Span::call_site())
-}
-
-/// Collect `s`, then all the structs hoisted out of its inline fields.
-fn collect_struct(s: Struct, collected: &mut Vec<Struct>) {
-    let Struct { name, fields } = s;
-    let mut fields_out = Vec::with_capacity(fields.len());
-    let mut hoisted = Vec::new();
-
-    for field in fields {
-        let Field {
-            name: field_name,
-            value,
-        } = field;
-        match value {
-            FieldValue::Inline(inner_fields) => {
-                let ty = hoist_inline(&name, &field_name, inner_fields, &mut hoisted);
-                fields_out.push(Field {
-                    name: field_name,
-                    value: FieldValue::Reference(ty),
-                });
-            }
-            FieldValue::Array(ArrayField {
-                len,
-                element: ArrayElement::Inline(inner_fields),
-            }) => {
-                let ty = hoist_inline(&name, &field_name, inner_fields, &mut hoisted);
-                fields_out.push(Field {
-                    name: field_name,
-                    value: FieldValue::Array(ArrayField {
-                        len,
-                        element: ArrayElement::Named(ty),
-                    }),
-                });
-            }
-            other => fields_out.push(Field {
-                name: field_name,
-                value: other,
-            }),
-        }
-    }
-
-    collected.push(Struct {
-        name,
-        fields: fields_out,
-    });
-    collected.extend(hoisted);
-}
-
-/// Hoist an anonymous inline struct into a generated top level struct and
-/// return the type that now refers to it.
-fn hoist_inline(
-    parent: &Ident,
-    field_name: &Ident,
-    inner_fields: Vec<Field>,
-    hoisted: &mut Vec<Struct>,
-) -> Type {
-    let group_name = inline_struct_name(parent, field_name);
-    let group = Struct {
-        name: group_name.clone(),
-        fields: inner_fields,
-    };
-
-    // Recursively hoist, so deeper inline structs get named from `group_name`.
-    let mut group_out = Vec::new();
-    collect_struct(group, &mut group_out);
-    hoisted.extend(group_out);
-
-    syn::parse_quote!(#group_name)
-}
-
-/// Build the name of a hoisted inline struct: `OscillatorParam` + `nested_params`
-/// becomes `OscillatorParamNestedParams`.
-fn inline_struct_name(parent: &Ident, field: &Ident) -> Ident {
-    let name = format!("{}{}", parent, to_pascal_case(&field.to_string()));
-    Ident::new(&name, field.span())
-}
-
-pub(crate) fn to_pascal_case(s: &str) -> String {
-    s.split('_')
-        .filter(|part| !part.is_empty())
-        .map(|part| {
-            let mut chars = part.chars();
-            match chars.next() {
-                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
-                None => String::new(),
-            }
-        })
-        .collect()
-}
+// ---------------------------------------------------------------------------
+// Parsing
+// ---------------------------------------------------------------------------
 
 impl Parse for Params {
     fn parse(input: ParseStream) -> Result<Self> {
@@ -255,7 +140,7 @@ impl Parse for Params {
                 if root.is_some() {
                     return Err(input.error("only one `params { .. }` block is allowed"));
                 }
-                root = Some(input.parse()?);
+                root = Some(parse_root(input)?);
             } else {
                 return Err(input.error(
                     "expected a `struct` definition or a `params { .. }` block, e.g. \
@@ -269,15 +154,13 @@ impl Parse for Params {
     }
 }
 
-impl Parse for Root {
-    fn parse(input: ParseStream) -> Result<Self> {
-        let keyword = parse_ident(input, "`params`")?;
-        let content = braced_content(input, "to open the `params` body")?;
-        let fields = parse_fields(&content)?;
+fn parse_root(input: ParseStream) -> Result<Vec<Field>> {
+    let keyword = parse_ident(input, "`params`")?;
+    let content = braced_content(input, "to open the `params` body")?;
+    let fields = parse_fields(&content)?;
 
-        ensure_unique_field_names(&keyword, &fields)?;
-        Ok(Self { fields })
-    }
+    ensure_unique_field_names(&keyword, &fields)?;
+    Ok(fields)
 }
 
 impl Parse for Struct {
@@ -559,4 +442,497 @@ fn ensure_unique_field_names(struct_name: &Ident, fields: &[Field]) -> Result<()
         }
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Names
+// ---------------------------------------------------------------------------
+
+/// Name of the struct produced by the `params { .. }` root block.
+fn parameters_ident() -> Ident {
+    Ident::new("Parameters", Span::call_site())
+}
+
+/// Build the name of a group: `OscillatorParam` + `nested_params` becomes
+/// `OscillatorParamNestedParams`.
+fn inline_struct_name(parent: &Ident, field: &Ident) -> Ident {
+    let name = format!("{}{}", parent, to_pascal_case(&field.to_string()));
+    Ident::new(&name, field.span())
+}
+
+pub(crate) fn to_pascal_case(s: &str) -> String {
+    s.split('_')
+        .filter(|part| !part.is_empty())
+        .map(|part| {
+            let mut chars = part.chars();
+            match chars.next() {
+                Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
+                None => String::new(),
+            }
+        })
+        .collect()
+}
+
+/// Join a group path with a field name: `oscillator.nested`.
+pub(crate) fn join_path(prefix: &str, field: &str) -> String {
+    if prefix.is_empty() {
+        field.to_string()
+    } else {
+        format!("{prefix}.{field}")
+    }
+}
+
+/// The module path of an array element: `field[index]`, where `index` is a
+/// literal for an unrolled array or `{}` for a runtime one.
+fn indexed_path(parent: &str, field: &Ident, index: &str) -> String {
+    format!("{}[{}]", join_path(parent, &field.to_string()), index)
+}
+
+/// Join accumulated group names into a single identifier: `nested_pan`.
+fn join_name(prefix: &str, field: &str) -> String {
+    if prefix.is_empty() {
+        field.to_string()
+    } else {
+        format!("{prefix}_{field}")
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Resolved IR
+// ---------------------------------------------------------------------------
+
+/// A fully resolved block: the type definitions, the construction tree and
+/// every compile-time id. Rendering it needs no further lookup or walk.
+#[derive(Debug)]
+pub(crate) struct Resolved {
+    /// The path-agnostic type definitions, in source order.
+    pub structs: Vec<StructDef>,
+    /// The construction tree for `Parameters::create()` (present when a root
+    /// `params { .. }` block exists).
+    pub root: Option<Construct>,
+    /// The `param_ids` module tree: one entry per reachable parameter.
+    pub ids: Vec<IdEntry>,
+}
+
+/// `struct Name { field: Type, .. }`.
+#[derive(Debug)]
+pub(crate) struct StructDef {
+    pub name: Ident,
+    pub fields: Vec<DefField>,
+}
+
+/// A field of a [`StructDef`].
+#[derive(Debug)]
+pub(crate) struct DefField {
+    pub name: Ident,
+    pub ty: Type,
+}
+
+/// A resolved struct construction, e.g. `ChannelParam { gain: .. }`.
+#[derive(Debug, Clone)]
+pub(crate) struct Construct {
+    pub name: Ident,
+    pub fields: Vec<Init>,
+}
+
+/// One field of a [`Construct`].
+#[derive(Debug, Clone)]
+pub(crate) struct Init {
+    pub name: Ident,
+    pub value: InitValue,
+}
+
+/// What a field is initialised with.
+#[derive(Debug, Clone)]
+pub(crate) enum InitValue {
+    Leaf(LeafInit),
+    Group(Construct),
+    Array(ArrayInit),
+}
+
+/// A leaf parameter and its inline configuration.
+#[derive(Debug, Clone)]
+pub(crate) struct LeafInit {
+    pub ty: Type,
+    pub entries: Vec<ParamEntry>,
+}
+
+/// `Array<N, T>`: the construction of a single element, replicated by
+/// `core::array::from_fn`.
+#[derive(Debug, Clone)]
+pub(crate) struct ArrayInit {
+    /// The element construction; the field type already carries `N`.
+    pub element: Construct,
+    /// The declared length `N`. A literal length lets `param_ids` unroll one
+    /// module per element; otherwise the index stays a runtime parameter.
+    pub len: Expr,
+}
+
+/// A node of the `param_ids` module tree, mirroring the parameter groups.
+#[derive(Debug)]
+pub(crate) enum IdEntry {
+    /// A module grouping entries, e.g. `oscillator` or `i1`.
+    Module { name: Ident, entries: Vec<IdEntry> },
+    /// A single parameter's id.
+    Leaf(IdLeaf),
+}
+
+/// One parameter's id inside the `param_ids` tree.
+#[derive(Debug)]
+pub(crate) struct IdLeaf {
+    /// `LEFT_GAIN` for a static path, `nested_gain` for an indexed one.
+    pub name: Ident,
+    /// The `module` handed to `param_id`. For an indexed leaf it is a `format!`
+    /// template holding one `{}` per entry in [`IdLeaf::indices`].
+    pub module: String,
+    /// The parameter's own name.
+    pub param: String,
+    /// Runtime index parameters, in template order. Empty means the id is a
+    /// `const`; otherwise it is a `fn` taking those indices.
+    pub indices: Vec<Ident>,
+}
+
+// ---------------------------------------------------------------------------
+// Lowering
+// ---------------------------------------------------------------------------
+
+impl Params {
+    /// Lower the parse tree into the IR consumed by [`crate::params::expand`].
+    pub(crate) fn resolve(self) -> Result<Resolved> {
+        let Params { structs, root } = self;
+
+        let mut lower = Lowerer::new(structs);
+        // Defining every top-level struct gives unreferenced ones a type too,
+        // naming their anonymous groups along the way.
+        lower.define_all()?;
+
+        let root = match root {
+            Some(fields) => Some(lower.construct(parameters_ident(), &fields)?),
+            None => None,
+        };
+
+        let ids = match &root {
+            Some(root) => collect_ids(root),
+            None => Vec::new(),
+        };
+
+        Ok(Resolved {
+            structs: lower.definitions(),
+            root,
+            ids,
+        })
+    }
+}
+
+/// Builds the resolved IR, constructing each struct once and reusing it for
+/// every reference.
+struct Lowerer {
+    /// The top-level structs, addressed through `index`.
+    structs: Vec<Struct>,
+    index: HashMap<String, usize>,
+    /// Names of every constructed struct, in definition order.
+    order: Vec<String>,
+    cache: HashMap<String, Construct>,
+    /// Structs currently being constructed, to catch recursive groups.
+    visiting: Vec<String>,
+}
+
+impl Lowerer {
+    fn new(structs: Vec<Struct>) -> Self {
+        let index = structs
+            .iter()
+            .enumerate()
+            .map(|(i, s)| (s.name.to_string(), i))
+            .collect();
+
+        Self {
+            structs,
+            index,
+            order: Vec::new(),
+            cache: HashMap::new(),
+            visiting: Vec::new(),
+        }
+    }
+
+    /// Construct every top-level struct, so each one and its anonymous groups
+    /// get a definition even when nothing references it.
+    fn define_all(&mut self) -> Result<()> {
+        let top: Vec<(Ident, Vec<Field>)> = self
+            .structs
+            .iter()
+            .map(|s| (s.name.clone(), s.fields.clone()))
+            .collect();
+
+        for (name, fields) in top {
+            self.construct(name, &fields)?;
+        }
+        Ok(())
+    }
+
+    /// The type definitions, projected from the constructed structs.
+    fn definitions(&self) -> Vec<StructDef> {
+        self.order
+            .iter()
+            .map(|name| struct_def(&self.cache[name]))
+            .collect()
+    }
+
+    /// Construct the struct `name`, or return the cached one.
+    fn construct(&mut self, name: Ident, fields: &[Field]) -> Result<Construct> {
+        let key = name.to_string();
+        if let Some(construct) = self.cache.get(&key) {
+            return Ok(construct.clone());
+        }
+        if self.visiting.iter().any(|visiting| visiting == &key) {
+            return Err(syn::Error::new(
+                name.span(),
+                format!("`{key}` contains itself; a param group cannot be recursive"),
+            ));
+        }
+
+        self.visiting.push(key.clone());
+        self.order.push(key.clone());
+
+        let fields = fields
+            .iter()
+            .map(|field| self.init(&name, field))
+            .collect::<Result<Vec<_>>>()?;
+
+        self.visiting.pop();
+
+        let construct = Construct { name, fields };
+        self.cache.insert(key, construct.clone());
+        Ok(construct)
+    }
+
+    fn init(&mut self, parent: &Ident, field: &Field) -> Result<Init> {
+        let value = match &field.value {
+            FieldValue::Leaf(leaf) => InitValue::Leaf(LeafInit {
+                ty: leaf.ty.clone(),
+                entries: leaf.entries.clone(),
+            }),
+
+            FieldValue::Reference(ty) => InitValue::Group(self.reference(ty)?),
+
+            FieldValue::Inline(fields) => {
+                InitValue::Group(self.construct(inline_struct_name(parent, &field.name), fields)?)
+            }
+
+            FieldValue::Array(ArrayField { len, element }) => {
+                let element = match element {
+                    ArrayElement::Named(ty) => self.reference(ty)?,
+                    ArrayElement::Inline(fields) => {
+                        self.construct(inline_struct_name(parent, &field.name), fields)?
+                    }
+                };
+                InitValue::Array(ArrayInit {
+                    element,
+                    len: len.clone(),
+                })
+            }
+        };
+
+        Ok(Init {
+            name: field.name.clone(),
+            value,
+        })
+    }
+
+    /// Resolve `ty` to the construction of the struct it names.
+    fn reference(&mut self, ty: &Type) -> Result<Construct> {
+        let name = struct_name(ty)?;
+        if let Some(construct) = self.cache.get(&name) {
+            return Ok(construct.clone());
+        }
+
+        let Some(&pos) = self.index.get(&name) else {
+            return Err(syn::Error::new_spanned(
+                ty,
+                format!("unknown struct `{name}`; it must be defined in this `params!` block"),
+            ));
+        };
+
+        let target = self.structs[pos].name.clone();
+        let fields = self.structs[pos].fields.clone();
+        self.construct(target, &fields)
+    }
+}
+
+/// `struct Name { field: Type, .. }`, derived from the construction.
+fn struct_def(construct: &Construct) -> StructDef {
+    StructDef {
+        name: construct.name.clone(),
+        fields: construct
+            .fields
+            .iter()
+            .map(|init| DefField {
+                name: init.name.clone(),
+                ty: init_type(&init.value),
+            })
+            .collect(),
+    }
+}
+
+/// The Rust type held by a constructed field.
+fn init_type(value: &InitValue) -> Type {
+    match value {
+        InitValue::Leaf(leaf) => leaf.ty.clone(),
+        InitValue::Group(group) => named_type(&group.name),
+        InitValue::Array(array) => {
+            let element = named_type(&array.element.name);
+            let len = &array.len;
+            syn::parse_quote!([#element; #len])
+        }
+    }
+}
+
+fn named_type(name: &Ident) -> Type {
+    syn::parse_quote!(#name)
+}
+
+/// The last path segment of a struct reference, e.g. `ChannelParam`.
+fn struct_name(ty: &Type) -> Result<String> {
+    let Type::Path(type_path) = ty else {
+        return Err(syn::Error::new_spanned(ty, "expected a struct type"));
+    };
+    type_path
+        .path
+        .segments
+        .last()
+        .map(|segment| segment.ident.to_string())
+        .ok_or_else(|| syn::Error::new_spanned(ty, "expected a struct type"))
+}
+
+// ---------------------------------------------------------------------------
+// Ids
+// ---------------------------------------------------------------------------
+
+/// Walk the construction tree to build the `param_ids` module tree.
+fn collect_ids(root: &Construct) -> Vec<IdEntry> {
+    let mut entries = Vec::new();
+    walk_ids(root, &IdPath::root(), &mut entries);
+    entries
+}
+
+fn walk_ids(construct: &Construct, path: &IdPath, out: &mut Vec<IdEntry>) {
+    for init in &construct.fields {
+        match &init.value {
+            InitValue::Leaf(_) => out.push(IdEntry::Leaf(path.leaf(&init.name))),
+
+            InitValue::Group(group) => walk_ids(group, &path.group(&init.name), out),
+
+            InitValue::Array(array) => {
+                let entries = match literal_len(&array.len) {
+                    Some(len) => (0..len)
+                        .map(|i| IdEntry::Module {
+                            name: index_module(i),
+                            entries: id_entries(&array.element, &path.element(&init.name, i)),
+                        })
+                        .collect(),
+                    None => id_entries(&array.element, &path.indexed_element(&init.name)),
+                };
+
+                out.push(IdEntry::Module {
+                    name: init.name.clone(),
+                    entries,
+                });
+            }
+        }
+    }
+}
+
+fn id_entries(construct: &Construct, path: &IdPath) -> Vec<IdEntry> {
+    let mut entries = Vec::new();
+    walk_ids(construct, path, &mut entries);
+    entries
+}
+
+/// Where the id walk currently sits in the tree.
+///
+/// A named group only extends the module path and the accumulated id name. An
+/// array starts a new module, because its elements are told apart by an index:
+/// unrolled when the length is a literal, otherwise passed at runtime.
+struct IdPath {
+    /// The module string, with one `{}` per runtime index.
+    module: String,
+    /// Group names gathered since the last array, joined with `_`.
+    prefix: String,
+    /// Runtime index parameters in scope.
+    indices: Vec<Ident>,
+}
+
+impl IdPath {
+    fn root() -> Self {
+        Self {
+            module: String::new(),
+            prefix: String::new(),
+            indices: Vec::new(),
+        }
+    }
+
+    /// Descend into a named group.
+    fn group(&self, field: &Ident) -> Self {
+        Self {
+            module: join_path(&self.module, &field.to_string()),
+            prefix: join_name(&self.prefix, &field.to_string()),
+            indices: self.indices.clone(),
+        }
+    }
+
+    /// Enter element `index` of an array whose length is a literal.
+    fn element(&self, field: &Ident, index: usize) -> Self {
+        Self {
+            module: indexed_path(&self.module, field, &index.to_string()),
+            prefix: String::new(),
+            indices: self.indices.clone(),
+        }
+    }
+
+    /// Enter an element of an array whose length is not a literal, turning the
+    /// index into a runtime parameter of every id below it.
+    fn indexed_element(&self, field: &Ident) -> Self {
+        let mut indices = self.indices.clone();
+        indices.push(index_var(self.indices.len()));
+
+        Self {
+            module: indexed_path(&self.module, field, "{}"),
+            prefix: String::new(),
+            indices,
+        }
+    }
+
+    /// The id of the leaf `field`.
+    fn leaf(&self, field: &Ident) -> IdLeaf {
+        let name = join_name(&self.prefix, &field.to_string());
+
+        IdLeaf {
+            name: if self.indices.is_empty() {
+                Ident::new(&name.to_ascii_uppercase(), field.span())
+            } else {
+                Ident::new(&name, field.span())
+            },
+            module: self.module.clone(),
+            param: field.to_string(),
+            indices: self.indices.clone(),
+        }
+    }
+}
+
+/// The value of an array length written as an integer literal.
+fn literal_len(len: &Expr) -> Option<usize> {
+    let Expr::Lit(expr) = len else { return None };
+    let syn::Lit::Int(int) = &expr.lit else {
+        return None;
+    };
+    int.base10_parse::<usize>().ok()
+}
+
+/// Module name of the element at `index` (`i0`, `i1`, ...).
+fn index_module(index: usize) -> Ident {
+    Ident::new(&format!("i{index}"), Span::call_site())
+}
+
+/// Parameter name of the `nth` runtime index (`index0`, `index1`, ...).
+fn index_var(nth: usize) -> Ident {
+    Ident::new(&format!("index{nth}"), Span::call_site())
 }

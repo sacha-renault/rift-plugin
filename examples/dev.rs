@@ -62,10 +62,10 @@ params! {
         left: ChannelParam,
         right: ChannelParam,
         oscillator: Array<10, OscillatorParam>,
+        some: {
+            param level: FloatParam
+        }
     }
 }
 
-fn main() {
-    let params = Parameters::create();
-    println!("{:?}", params.right.gain.path())
-}
+fn main() {}

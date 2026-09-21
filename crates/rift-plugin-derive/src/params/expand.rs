@@ -1,51 +1,126 @@
-//! Expansion of the collected structs into Rust code.
+//! Rendering of the resolved IR into Rust code.
 //!
-//! Every struct becomes a path-agnostic type definition. The root
-//! `params { .. }` block additionally gets a `create()` that inlines the whole
-//! tree, assigning ids through a shared cursor and building full module paths.
+//! This module is a pure code generator: [`expand`] takes the [`Resolved`] tree
+//! produced by [`super::collect`] and turns it into type definitions, the
+//! `Parameters::create()` tree and the `param_ids` module. It never looks up a
+//! struct by name and never computes ids, resolution already did both.
 
 use proc_macro2::{Span, TokenStream as TokenStream2};
-use std::collections::HashMap;
-use syn::{Ident, PathArguments, Result, Type};
+use syn::{Ident, PathArguments, Type};
 
 use super::collect::{
-    ArrayElement, ArrayField, Field, FieldValue, Leaf, LeafKind, Params, Struct, parameters_ident,
+    Construct, DefField, IdEntry, IdLeaf, Init, InitValue, LeafInit, Resolved, StructDef, join_path,
 };
 
-impl Params {
-    /// Expand every struct into its type definition, plus a `create()` on the
-    /// root `Parameters` struct (when a `params { .. }` block is present).
-    ///
-    /// Only the root knows the full tree, so it owns the ids and module paths.
-    pub(crate) fn expand(self) -> Result<TokenStream2> {
-        let has_root = self.root.is_some();
-        let collected = self.collect();
+/// Render a resolved block.
+pub(crate) fn expand(resolved: Resolved) -> TokenStream2 {
+    let Resolved { structs, root, ids } = resolved;
 
-        let registry: HashMap<String, &Struct> =
-            collected.iter().map(|s| (s.name.to_string(), s)).collect();
+    let structs = structs.iter().map(expand_struct_def);
+    let ids = expand_param_ids(&ids);
+    let create = root.as_ref().map(expand_create);
 
-        let definitions = collected.iter().map(expand_struct_def);
-        let create = if has_root {
-            let root = registry
-                .get(&parameters_ident().to_string())
-                .expect("the `params { .. }` block produces a `Parameters` struct");
-            Some(expand_create(root, &registry)?)
-        } else {
-            None
-        };
-
-        Ok(quote::quote! {
-            #( #definitions )*
-            #create
-        })
+    quote::quote! {
+        #( #structs )*
+        #ids
+        #create
     }
 }
 
-/// `struct Name { .. }` — a path-agnostic type definition.
-fn expand_struct_def(s: &Struct) -> TokenStream2 {
+/// How the current module path is referred to while emitting a struct value.
+///
+/// The path is a literal when no array index is involved. As soon as an array
+/// index enters it, the path can only be built at runtime, so it is either a
+/// `String` expression waiting to be bound ([`Module::Expr`]) or a local binding
+/// already in scope ([`Module::Local`]).
+enum Module {
+    Literal(String),
+    Expr(TokenStream2),
+    Local(Ident),
+}
+
+impl Module {
+    /// The new module path of a child field, optionally behind an array index.
+    fn child(&self, field: &Ident, index: Option<&Ident>) -> Module {
+        let field = field.to_string();
+
+        match (self, index) {
+            (Module::Literal(path), None) => Module::Literal(join_path(path, &field)),
+            (Module::Literal(path), Some(index)) => {
+                let prefix = syn::LitStr::new(&join_path(path, &field), Span::call_site());
+                Module::Expr(quote::quote! { format!("{}[{}]", #prefix, #index) })
+            }
+            (_, None) => {
+                let parent = self.render();
+                let field = syn::LitStr::new(&field, Span::call_site());
+                Module::Expr(quote::quote! { format!("{}.{}", #parent, #field) })
+            }
+            (_, Some(index)) => {
+                let parent = self.render();
+                let field = syn::LitStr::new(&field, Span::call_site());
+                Module::Expr(quote::quote! { format!("{}.{}[{}]", #parent, #field, #index) })
+            }
+        }
+    }
+
+    /// Bind an expression path to a local so it is built once per struct, then
+    /// used by every field.
+    fn bind(self, depth: usize) -> (TokenStream2, Module) {
+        match self {
+            Module::Expr(expr) => {
+                let var = module_var(depth);
+                (
+                    quote::quote! { let #var: String = #expr; },
+                    Module::Local(var),
+                )
+            }
+            other => (TokenStream2::new(), other),
+        }
+    }
+
+    /// The path as a `&str`, for hashing into an id.
+    fn as_str(&self) -> TokenStream2 {
+        match self {
+            Module::Literal(path) => {
+                let path = syn::LitStr::new(path, Span::call_site());
+                quote::quote! { #path }
+            }
+            Module::Expr(expr) => quote::quote! { (#expr).as_str() },
+            Module::Local(var) => quote::quote! { #var.as_str() },
+        }
+    }
+
+    /// The path as an `Option<String>`, for `Param::create`.
+    fn as_option(&self) -> TokenStream2 {
+        match self {
+            Module::Literal(path) if path.is_empty() => quote::quote! { None },
+            Module::Literal(path) => {
+                let path = syn::LitStr::new(path, Span::call_site());
+                quote::quote! { Some(#path.to_string()) }
+            }
+            Module::Expr(expr) => quote::quote! { Some(#expr) },
+            Module::Local(var) => quote::quote! { Some(#var.clone()) },
+        }
+    }
+
+    /// The path as an expression usable inside a `format!`.
+    fn render(&self) -> TokenStream2 {
+        match self {
+            Module::Literal(path) => {
+                let path = syn::LitStr::new(path, Span::call_site());
+                quote::quote! { #path }
+            }
+            Module::Expr(expr) => expr.clone(),
+            Module::Local(var) => quote::quote! { #var },
+        }
+    }
+}
+
+/// `#[allow(dead_code)] struct Name { field: Type, .. }`.
+fn expand_struct_def(s: &StructDef) -> TokenStream2 {
     let name = &s.name;
-    let field_names: Vec<_> = s.fields.iter().map(|f| &f.name).collect();
-    let field_types: Vec<_> = s.fields.iter().map(field_type).collect();
+    let field_names: Vec<_> = s.fields.iter().map(|DefField { name, .. }| name).collect();
+    let field_types: Vec<_> = s.fields.iter().map(|DefField { ty, .. }| ty).collect();
 
     quote::quote! {
         #[allow(dead_code)]
@@ -55,147 +130,156 @@ fn expand_struct_def(s: &Struct) -> TokenStream2 {
     }
 }
 
-/// `impl Parameters { fn create() -> Self { .. } }`, inlining the whole tree.
-fn expand_create(root: &Struct, registry: &HashMap<String, &Struct>) -> Result<TokenStream2> {
+/// `impl Parameters { fn create() -> Self { .. } }`.
+fn expand_create(root: &Construct) -> TokenStream2 {
     let name = &root.name;
-    let body = expand_struct_value(root, &None, registry, 0)?;
+    let body = expand_construct(root, Module::Literal(String::new()), 0);
 
-    Ok(quote::quote! {
+    quote::quote! {
         #[allow(dead_code)]
         impl #name {
             fn create() -> Self {
-                let mut cursor = 0u32;
                 #body
             }
         }
-    })
+    }
 }
 
-/// Inline-construct a struct value, threading `cursor` for ids and building the
-/// `module` path from the root.
-///
-/// `module` is `None` at the root, otherwise a `String` expression holding the
-/// group path (e.g. `oscillator[0].nested_params`). `depth` gives each array
-/// closure a unique index variable (`i0`, `i1`, ...).
-fn expand_struct_value(
-    s: &Struct,
-    module: &Option<TokenStream2>,
-    registry: &HashMap<String, &Struct>,
-    depth: usize,
-) -> Result<TokenStream2> {
-    let name = &s.name;
-    let field_names: Vec<_> = s.fields.iter().map(|f| &f.name).collect();
-    let field_values = s
+/// `pub mod param_ids { .. }`, mirroring the parameter groups.
+fn expand_param_ids(entries: &[IdEntry]) -> TokenStream2 {
+    if entries.is_empty() {
+        return TokenStream2::new();
+    }
+
+    let items = entries.iter().map(expand_id_entry);
+
+    quote::quote! {
+        #[allow(dead_code)]
+        pub mod param_ids {
+            #( #items )*
+        }
+    }
+}
+
+fn expand_id_entry(entry: &IdEntry) -> TokenStream2 {
+    match entry {
+        IdEntry::Module { name, entries } => {
+            let items = entries.iter().map(expand_id_entry);
+            quote::quote! {
+                pub mod #name {
+                    #( #items )*
+                }
+            }
+        }
+        IdEntry::Leaf(leaf) => expand_id_leaf(leaf),
+    }
+}
+
+/// `pub const LEFT_GAIN: ClapId = param_id("left", "gain");`, or a `fn` taking
+/// the runtime indices when the path crosses an array of unknown length.
+fn expand_id_leaf(leaf: &IdLeaf) -> TokenStream2 {
+    let name = &leaf.name;
+    let module = syn::LitStr::new(&leaf.module, leaf.name.span());
+    let param = syn::LitStr::new(&leaf.param, leaf.name.span());
+    let clap_id = quote::quote! { ::rift_plugin::prelude::clack_plugin::prelude::ClapId };
+
+    if leaf.indices.is_empty() {
+        quote::quote! {
+            pub const #name: #clap_id = ::rift_plugin::prelude::param_id(#module, #param);
+        }
+    } else {
+        let indices = &leaf.indices;
+        quote::quote! {
+            pub fn #name(#( #indices: usize, )*) -> #clap_id {
+                ::rift_plugin::prelude::param_id(&format!(#module, #( #indices ),*), #param)
+            }
+        }
+    }
+}
+
+/// `Name { field: value, .. }`, with the module path in scope for its fields.
+fn expand_construct(construct: &Construct, module: Module, depth: usize) -> TokenStream2 {
+    let (binding, module) = module.bind(depth);
+
+    let field_names: Vec<_> = construct
         .fields
         .iter()
-        .map(|field| expand_field(field, module, registry, depth))
-        .collect::<Result<Vec<_>>>()?;
+        .map(|Init { name, .. }| name)
+        .collect();
+    let field_values: Vec<_> = construct
+        .fields
+        .iter()
+        .map(|init| expand_init(init, &module, depth))
+        .collect();
 
-    Ok(quote::quote! {
+    let name = &construct.name;
+    let value = quote::quote! {
         #name {
             #( #field_names: #field_values, )*
         }
-    })
-}
+    };
 
-fn expand_field(
-    field: &Field,
-    module: &Option<TokenStream2>,
-    registry: &HashMap<String, &Struct>,
-    depth: usize,
-) -> Result<TokenStream2> {
-    match &field.value {
-        FieldValue::Leaf(leaf) => Ok(expand_leaf(field, leaf, module)),
-
-        FieldValue::Reference(ty) => {
-            let target = resolve_struct(ty, registry)?;
-            let child = compose_module(module, &field.name, None);
-            expand_struct_value(target, &Some(child), registry, depth)
-        }
-
-        FieldValue::Array(ArrayField {
-            element: ArrayElement::Named(ty),
-            ..
-        }) => {
-            let target = resolve_struct(ty, registry)?;
-            let index = array_index(depth);
-            let child = compose_module(module, &field.name, Some(&index));
-            let value = expand_struct_value(target, &Some(child), registry, depth + 1)?;
-            Ok(quote::quote! { ::core::array::from_fn(|#index| #value) })
-        }
-
-        FieldValue::Array(ArrayField {
-            element: ArrayElement::Inline(_),
-            ..
-        }) => unreachable!("anonymous `Array` element is hoisted during collect"),
-        FieldValue::Inline(_) => unreachable!("anonymous group is hoisted during collect"),
+    if binding.is_empty() {
+        value
+    } else {
+        quote::quote! { { #binding #value } }
     }
 }
 
-/// `ParamType::create(ClapId::new(cursor), "name", Some(module), Config { .. })`.
-fn expand_leaf(field: &Field, leaf: &Leaf, module: &Option<TokenStream2>) -> TokenStream2 {
-    let Leaf { ty, entries, .. } = leaf;
-    let param = type_path_expr(ty);
-    let config = type_path_expr(&config_type(ty));
-    let name = syn::LitStr::new(&field.name.to_string(), field.name.span());
-    let module = match module {
-        Some(path) => quote::quote! { Some(#path) },
-        None => quote::quote! { None },
-    };
-    let keys: Vec<_> = entries.iter().map(|e| &e.key).collect();
-    let values: Vec<_> = entries.iter().map(|e| &e.value).collect();
+/// The value of a single field.
+fn expand_init(init: &Init, module: &Module, depth: usize) -> TokenStream2 {
+    match &init.value {
+        // A leaf belongs to the module of the group that holds it.
+        InitValue::Leaf(leaf) => expand_leaf(&init.name, leaf, module),
+
+        InitValue::Group(group) => {
+            let child = module.child(&init.name, None);
+            expand_construct(group, child, depth)
+        }
+
+        InitValue::Array(array) => {
+            let index = array_index(depth);
+            let child = module.child(&init.name, Some(&index));
+            let element = expand_construct(&array.element, child, depth + 1);
+            quote::quote! { ::core::array::from_fn(|#index| #element) }
+        }
+    }
+}
+
+/// `ParamType::create(param_id(module, name), "name", module, Config { .. })`.
+fn expand_leaf(name: &Ident, leaf: &LeafInit, module: &Module) -> TokenStream2 {
+    let param = type_path_expr(&leaf.ty);
+    let config = type_path_expr(&config_type(&leaf.ty));
+    let name_str = syn::LitStr::new(&name.to_string(), name.span());
+    let module_str = module.as_str();
+    let module_arg = module.as_option();
+    let keys: Vec<_> = leaf.entries.iter().map(|entry| &entry.key).collect();
+    let values: Vec<_> = leaf.entries.iter().map(|entry| &entry.value).collect();
 
     quote::quote! {
-        {
-            let id = ::rift_plugin::prelude::clack_plugin::prelude::ClapId::new(cursor);
-            cursor += 1u32;
-            #param::create(id, #name.to_string(), #module, #config {
+        #param::create(
+            ::rift_plugin::prelude::param_id(#module_str, #name_str),
+            #name_str.to_string(),
+            #module_arg,
+            #config {
                 #( #keys: #values, )*
                 ..Default::default()
-            })
-        }
+            },
+        )
     }
 }
 
-/// Build the `module` string expression for a child of `parent`.
-fn compose_module(
-    parent: &Option<TokenStream2>,
-    field: &Ident,
-    index: Option<&Ident>,
-) -> TokenStream2 {
-    let field = syn::LitStr::new(&field.to_string(), field.span());
-    match (parent, index) {
-        (None, None) => quote::quote! { #field.to_string() },
-        (None, Some(index)) => quote::quote! { format!("{}[{}]", #field, #index) },
-        (Some(parent), None) => quote::quote! { format!("{}.{}", #parent, #field) },
-        (Some(parent), Some(index)) => {
-            quote::quote! { format!("{}.{}[{}]", #parent, #field, #index) }
-        }
-    }
+/// Local variable holding a runtime module path at `depth`.
+///
+/// Deeper structs shadow shallower ones, which is fine: a binding's initialiser
+/// still sees the outer variable of the same name.
+fn module_var(depth: usize) -> Ident {
+    Ident::new(&format!("__module{depth}"), Span::call_site())
 }
 
-/// Index variable name for the array nested at `depth` (`i0`, `i1`, ...).
+/// Index variable for the array at `depth` (`i0`, `i1`, ...).
 fn array_index(depth: usize) -> Ident {
     Ident::new(&format!("i{depth}"), Span::call_site())
-}
-
-fn resolve_struct<'a>(ty: &Type, registry: &'a HashMap<String, &'a Struct>) -> Result<&'a Struct> {
-    let Type::Path(type_path) = ty else {
-        return Err(syn::Error::new_spanned(ty, "expected a struct type"));
-    };
-    let segment = type_path
-        .path
-        .segments
-        .last()
-        .ok_or_else(|| syn::Error::new_spanned(ty, "expected a struct type"))?;
-    let key = segment.ident.to_string();
-
-    registry.get(&key).copied().ok_or_else(|| {
-        syn::Error::new_spanned(
-            ty,
-            format!("unknown struct `{key}`; it must be defined in this `params!` block"),
-        )
-    })
 }
 
 /// Build the `...Config` type for a leaf param type.
@@ -229,23 +313,4 @@ fn type_path_expr(ty: &Type) -> TokenStream2 {
         }
     }
     quote::quote! { #path }
-}
-
-/// The Rust type of a generated struct field.
-fn field_type(field: &Field) -> TokenStream2 {
-    match &field.value {
-        FieldValue::Leaf(Leaf { kind, ty, .. }) => match kind {
-            LeafKind::Param => quote::quote! { #ty },
-        },
-        FieldValue::Reference(ty) => quote::quote! { #ty },
-        FieldValue::Array(ArrayField {
-            len,
-            element: ArrayElement::Named(ty),
-        }) => quote::quote! { [#ty; #len] },
-        FieldValue::Array(ArrayField {
-            element: ArrayElement::Inline(_),
-            ..
-        }) => unreachable!("anonymous `Array` element is hoisted during collect"),
-        FieldValue::Inline(_) => unreachable!("anonymous group is hoisted during collect"),
-    }
 }

@@ -35,9 +35,7 @@ pub mod prelude {
     pub use rift_plugin_utils::{ConsumerCell, MultiChannel};
     pub use rift_plugin_wrapper::*;
 
-    pub use rift_plugin_derive::params;
-    pub use rift_plugin_derive::{DeriveEnumValues, DeriveParams};
-    pub use rift_plugin_derive::{HandleExtension, ParamViewBuilder};
+    pub use rift_plugin_derive::{DeriveEnumValues, params};
 
     pub use super::export_clap_plugin;
 }
