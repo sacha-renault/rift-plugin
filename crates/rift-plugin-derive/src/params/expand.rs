@@ -21,7 +21,7 @@ pub(crate) fn expand(resolved: Resolved) -> TokenStream2 {
     let new_impl = root.as_ref().map(expand_create);
     let default_impl = root.as_ref().map(expand_default);
     let params_impl = if let Some(root) = root.as_ref() {
-        Some(expand_params(root, &ids))
+        Some(expand_params(root))
     } else {
         None
     };
@@ -166,9 +166,182 @@ fn expand_default(root: &Construct) -> TokenStream2 {
     }
 }
 
-fn expand_params(root: &Construct, ids: &Vec<IdEntry>) -> TokenStream2 {
-    println!("{:#?}", ids);
-    TokenStream2::new()
+/// `impl Params for Name { .. }`.
+///
+/// Every method walks the leaf parameters in declaration order, descending into
+/// arrays with a `for` loop so literal and runtime lengths are handled the same
+/// way. Lookups compare against each param's own [`Param::id`], which `create()`
+/// already populated from the resolved `param_ids`, so the `ids` tree is not
+/// needed here.
+fn expand_params(root: &Construct) -> TokenStream2 {
+    let name = &root.name;
+
+    let params_trait = quote::quote! { ::rift_plugin::prelude::Params };
+    let param_trait = quote::quote! { ::rift_plugin::prelude::Param };
+    let clap_id = quote::quote! { ::rift_plugin::prelude::clack_plugin::prelude::ClapId };
+    let param_info = quote::quote! { ::rift_plugin::prelude::clack_extensions::params::ParamInfo };
+    let display_writer =
+        quote::quote! { ::rift_plugin::prelude::clack_extensions::params::ParamDisplayWriter };
+    let plugin_error = quote::quote! { ::rift_plugin::prelude::PluginError };
+
+    let mut count = |_leaf: &TokenStream2| quote::quote! { __count += 1; };
+
+    let mut info = |leaf: &TokenStream2| {
+        quote::quote! {
+            if __index == index {
+                return Some(#param_trait::param_info(#leaf));
+            }
+            __index += 1;
+        }
+    };
+
+    let mut get = |leaf: &TokenStream2| {
+        quote::quote! {
+            if #param_trait::id(#leaf) == id {
+                return Some(#param_trait::get_raw(#leaf));
+            }
+        }
+    };
+
+    let mut set = |leaf: &TokenStream2| {
+        quote::quote! {
+            if #param_trait::id(#leaf) == id {
+                #param_trait::set_raw(#leaf, value);
+                return;
+            }
+        }
+    };
+
+    let mut set_normalized = |leaf: &TokenStream2| {
+        quote::quote! {
+            if #param_trait::id(#leaf) == id {
+                #param_trait::set_normalized(#leaf, value);
+                return;
+            }
+        }
+    };
+
+    let mut text_to_value = |leaf: &TokenStream2| {
+        quote::quote! {
+            if #param_trait::id(#leaf) == id {
+                return #param_trait::text_to_value(#leaf, text);
+            }
+        }
+    };
+
+    let mut value_to_text = |leaf: &TokenStream2| {
+        quote::quote! {
+            if #param_trait::id(#leaf) == id {
+                return #param_trait::value_to_text(#leaf, value, writer);
+            }
+        }
+    };
+
+    let access = quote::quote! { (*self) };
+    let count = expand_leaves(root, &access, 0, &mut count);
+    let info = expand_leaves(root, &access, 0, &mut info);
+    let get = expand_leaves(root, &access, 0, &mut get);
+    let set = expand_leaves(root, &access, 0, &mut set);
+    let set_normalized = expand_leaves(root, &access, 0, &mut set_normalized);
+    let text_to_value = expand_leaves(root, &access, 0, &mut text_to_value);
+    let value_to_text = expand_leaves(root, &access, 0, &mut value_to_text);
+
+    quote::quote! {
+        impl #params_trait for #name {
+            fn count(&self) -> u32 {
+                let mut __count: u32 = 0;
+                #count
+                __count
+            }
+
+            fn get_param_info<'__a>(&'__a self, index: u32) -> Option<#param_info<'__a>> {
+                let mut __index: u32 = 0;
+                #info
+                None
+            }
+
+            fn get_value(&self, id: #clap_id) -> Option<f32> {
+                #get
+                None
+            }
+
+            fn set_value(&self, id: #clap_id, value: f32) {
+                #set
+            }
+
+            fn set_value_normalized(&self, id: #clap_id, value: f32) {
+                #set_normalized
+            }
+
+            fn text_to_value(&self, id: #clap_id, text: &::core::ffi::CStr) -> Option<f32> {
+                #text_to_value
+                None
+            }
+
+            fn value_to_text(
+                &self,
+                id: #clap_id,
+                value: f32,
+                writer: &mut #display_writer,
+            ) -> ::core::fmt::Result {
+                #value_to_text
+                Err(::core::fmt::Error)
+            }
+
+            fn serialize(&self, _writer: &mut dyn ::std::io::Write) -> Result<(), #plugin_error> {
+                todo!("Params::serialize is not implemented yet")
+            }
+
+            fn deserialize(&self, _reader: &mut dyn ::std::io::Read) -> Result<(), #plugin_error> {
+                todo!("Params::deserialize is not implemented yet")
+            }
+        }
+    }
+}
+
+/// Run `body` once per leaf parameter, passing the leaf's reference expression
+/// (already a `&ConcreteParam`, coerced to `&dyn Param` where needed).
+///
+/// `access` is a parenthesised place expression of the enclosing struct's type.
+/// Named groups extend it; arrays are traversed with a `for` loop, so a runtime
+/// length is no different from a literal one.
+fn expand_leaves(
+    construct: &Construct,
+    access: &TokenStream2,
+    depth: usize,
+    body: &mut dyn FnMut(&TokenStream2) -> TokenStream2,
+) -> TokenStream2 {
+    let mut statements = TokenStream2::new();
+
+    for init in &construct.fields {
+        let field = &init.name;
+
+        match &init.value {
+            InitValue::Leaf(_) => {
+                let leaf = quote::quote! { &#access.#field };
+                statements.extend(body(&leaf));
+            }
+
+            InitValue::Group(group) => {
+                let child = quote::quote! { (#access.#field) };
+                statements.extend(expand_leaves(group, &child, depth, body));
+            }
+
+            InitValue::Array(array) => {
+                let item = Ident::new(&format!("__item{depth}"), Span::call_site());
+                let element = quote::quote! { (*#item) };
+                let inner = expand_leaves(&array.element, &element, depth + 1, body);
+
+                statements.extend(quote::quote! {
+                    for #item in #access.#field.iter() {
+                        #inner
+                    }
+                });
+            }
+        }
+    }
+
+    statements
 }
 
 /// `pub mod param_ids { .. }`, mirroring the parameter groups.

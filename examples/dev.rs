@@ -1,3 +1,4 @@
+use clack_extensions::params::ParamInfoFlags;
 use rift_plugin::prelude::*;
 
 #[derive(Default, DeriveEnumValues)]
@@ -63,9 +64,15 @@ params! {
         right: ChannelParam,
         oscillator: Array<10, OscillatorParam>,
         some: {
-            param level: FloatParam
+            param level: FloatParam,
+            param gain: FloatParam {
+                flags: ParamInfoFlags::IS_AUTOMATABLE
+            }
         }
     }
 }
 
-fn main() {}
+fn main() {
+    let params = Parameters::new();
+    params.some.level.value();
+}
