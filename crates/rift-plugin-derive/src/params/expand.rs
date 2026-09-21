@@ -2,7 +2,7 @@
 //!
 //! This module is a pure code generator: [`expand`] takes the [`Resolved`] tree
 //! produced by [`super::collect`] and turns it into type definitions, the
-//! `Parameters::create()` tree and the `param_ids` module. It never looks up a
+//! `Parameters::new()` tree and the `param_ids` module. It never looks up a
 //! struct by name and never computes ids, resolution already did both.
 
 use proc_macro2::{Span, TokenStream as TokenStream2};
@@ -17,13 +17,21 @@ pub(crate) fn expand(resolved: Resolved) -> TokenStream2 {
     let Resolved { structs, root, ids } = resolved;
 
     let structs = structs.iter().map(expand_struct_def);
-    let ids = expand_param_ids(&ids);
-    let create = root.as_ref().map(expand_create);
+    let ids_impl = expand_param_ids(&ids);
+    let new_impl = root.as_ref().map(expand_create);
+    let default_impl = root.as_ref().map(expand_default);
+    let params_impl = if let Some(root) = root.as_ref() {
+        Some(expand_params(root, &ids))
+    } else {
+        None
+    };
 
     quote::quote! {
         #( #structs )*
-        #ids
-        #create
+        #ids_impl
+        #new_impl
+        #default_impl
+        #params_impl
     }
 }
 
@@ -90,7 +98,7 @@ impl Module {
         }
     }
 
-    /// The path as an `Option<String>`, for `Param::create`.
+    /// The path as an `Option<String>`, for `Param::new`.
     fn as_option(&self) -> TokenStream2 {
         match self {
             Module::Literal(path) if path.is_empty() => quote::quote! { None },
@@ -138,11 +146,29 @@ fn expand_create(root: &Construct) -> TokenStream2 {
     quote::quote! {
         #[allow(dead_code)]
         impl #name {
-            fn create() -> Self {
+            fn new() -> Self {
                 #body
             }
         }
     }
+}
+
+fn expand_default(root: &Construct) -> TokenStream2 {
+    let name = &root.name;
+
+    quote::quote! {
+        #[allow(dead_code)]
+        impl ::core::default::Default for #name {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+    }
+}
+
+fn expand_params(root: &Construct, ids: &Vec<IdEntry>) -> TokenStream2 {
+    println!("{:#?}", ids);
+    TokenStream2::new()
 }
 
 /// `pub mod param_ids { .. }`, mirroring the parameter groups.
