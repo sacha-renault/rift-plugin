@@ -1,0 +1,15 @@
+[package]
+name = "rift-plugin-wrapper"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clack-plugin = { workspace = true }
+clack-extensions = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
+rift-plugin-gui = { workspace = true }
+rift-plugin-params = { workspace = true }
+rift-plugin-types = { workspace = true }
+rift-plugin-buffers = { workspace = true }
+rift-plugin-context = { workspace = true }

@@ -1,4 +1,4 @@
-use rift_plugin_core::utils::bounded_vec::BoundedVec;
+use rift_plugin_utils::bounded_vec::BoundedVec;
 
 use super::biquad_args::*;
 use super::biquad_filter::*;
@@ -86,7 +86,7 @@ impl BiquadCascade {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_core::utils::spaces::Linspace;
+    use rift_plugin_utils::spaces::Linspace;
 
     use super::*;
 

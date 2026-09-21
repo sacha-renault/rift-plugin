@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rift_plugin_core::prelude::*;
+use rift_plugin_types::transport::*;
 
 use crate::prelude::*;
 

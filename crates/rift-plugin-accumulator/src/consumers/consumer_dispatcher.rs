@@ -1,4 +1,5 @@
-use rift_plugin_core::prelude::{BlockTime, ChannelsInfo, ConsumerCell};
+use rift_plugin_types::transport::{BlockTime, ChannelsInfo};
+use rift_plugin_utils::ConsumerCell;
 
 use crate::prelude::{MonoConsumer, MultiConsumer};
 
@@ -175,7 +176,8 @@ impl ConsumerDispatcher {
 mod tests {
     use std::{cell::RefCell, rc::Rc};
 
-    use rift_plugin_core::prelude::{BlockTime, ChannelsInfo, ConsumerCell};
+    use rift_plugin_types::transport::{BlockTime, ChannelsInfo};
+    use rift_plugin_utils::ConsumerCell;
 
     use crate::prelude::{MonoConsumer, MultiConsumer};
 

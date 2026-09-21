@@ -1,0 +1,233 @@
+use clack_plugin::events::event_types::TransportFlags;
+
+#[derive(Clone, Copy)]
+pub struct ChannelsInfo {
+    pub current: usize,
+    pub total_channels: usize,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub struct BlockIndex(pub i64);
+
+impl BlockIndex {
+    pub fn increment(&mut self) -> Self {
+        if self.0 == i64::MAX {
+            self.0 = 0;
+            *self
+        } else {
+            self.0 += 1;
+            *self
+        }
+    }
+}
+
+impl ChannelsInfo {
+    pub fn mono() -> Self {
+        ChannelsInfo {
+            current: 0,
+            total_channels: 1,
+        }
+    }
+    pub fn is_last_channel(&self) -> bool {
+        // idx starts at 0
+        self.current + 1 == self.total_channels
+    }
+}
+
+#[derive(Clone)]
+pub struct BlockInfo {
+    pub seconds: f64,
+    pub beats: f64,
+    pub samplerate: f64,
+    pub tempo: f64,
+    pub flags: TransportFlags,
+}
+
+impl BlockInfo {
+    pub fn new(seconds: f64, beats: f64, samplerate: f64, tempo: f64) -> Self {
+        Self {
+            seconds,
+            beats,
+            samplerate,
+            tempo,
+            flags: TransportFlags::empty(),
+        }
+    }
+
+    /// Increments the internal timestamps based on a number of processed samples.
+    pub fn advance_by_samples(&mut self, samples: usize) {
+        if !self.is_playing() {
+            return;
+        }
+
+        let delta_seconds = samples as f64 / self.samplerate;
+
+        // Advance seconds if they exist
+        self.seconds += delta_seconds;
+        self.beats += delta_seconds / self.tempo;
+    }
+
+    pub fn is_playing(&self) -> bool {
+        self.flags.contains(TransportFlags::IS_PLAYING)
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct BlockTime {
+    /// This define the timing (seconds and beats) withing the song
+    /// of the first beat of the BUFFER this block belongs to
+    /// We might see many blocks with same seconds or beats if buffer_size > N
+    seconds: f64,
+    beats: f64,
+}
+
+impl BlockTime {
+    #[inline]
+    pub fn new(seconds: f64, beats: f64) -> Self {
+        Self { seconds, beats }
+    }
+
+    #[inline]
+    pub fn new_opt(seconds: Option<f64>, beats: Option<f64>) -> Self {
+        Self {
+            seconds: seconds.unwrap_or(f64::NAN),
+            beats: beats.unwrap_or(f64::NAN),
+        }
+    }
+
+    #[inline]
+    pub fn none() -> Self {
+        Self {
+            seconds: f64::NAN,
+            beats: f64::NAN,
+        }
+    }
+
+    pub fn seconds(&self) -> Option<f64> {
+        if self.seconds.is_nan() {
+            None
+        } else {
+            Some(self.seconds)
+        }
+    }
+
+    pub fn beats(&self) -> Option<f64> {
+        if self.beats.is_nan() {
+            None
+        } else {
+            Some(self.beats)
+        }
+    }
+
+    #[inline]
+    pub fn beat_phase(&self) -> Option<f64> {
+        self.beats().map(|b| b.fract())
+    }
+
+    #[inline]
+    pub fn beat_num(&self) -> Option<i64> {
+        self.beats().map(|b| b.floor() as i64)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! assert_approx_eq {
+        ($a:expr, $b:expr) => {{
+            let diff = ($a - $b).abs();
+            let delta = 1e-6;
+            if diff > delta {
+                panic!(
+                    "assert_approx_eq failed: {} ~= {} (diff: {}, default tolerance: {})",
+                    $a, $b, diff, delta
+                );
+            }
+        }};
+        ($a:expr, $b:expr, $delta:expr) => {{
+            let diff = ($a - $b).abs();
+            if diff > $delta {
+                panic!(
+                    "assert_approx_eq failed: {} ~= {} (diff: {}, tolerance: {})",
+                    $a, $b, diff, $delta
+                );
+            }
+        }};
+    }
+
+    #[test]
+    fn test_channel_info_not_last() {
+        let infos = ChannelsInfo {
+            current: 0,
+            total_channels: 2,
+        };
+
+        assert!(!infos.is_last_channel())
+    }
+
+    #[test]
+    fn test_channel_info_last() {
+        let infos = ChannelsInfo {
+            // Starting at index 0, this is last
+            current: 1,
+            total_channels: 2,
+        };
+
+        assert!(infos.is_last_channel())
+    }
+
+    #[test]
+    fn test_block_info_advance() {
+        let mut infos = BlockInfo {
+            seconds: 0.,
+            beats: 0.,
+            samplerate: 44100.,
+            tempo: 1., // Case BPM = 60
+            flags: TransportFlags::IS_PLAYING,
+        };
+
+        // Advance by a full second
+        infos.advance_by_samples(44100);
+
+        assert_approx_eq!(infos.seconds, 1.);
+        assert_approx_eq!(infos.beats, 1.);
+
+        // Shouldn't change
+        assert_approx_eq!(infos.samplerate, 44100.);
+        assert_approx_eq!(infos.tempo, 1.);
+    }
+
+    #[test]
+    fn test_block_time_none() {
+        let block = BlockTime::none();
+
+        assert_eq!(block.seconds(), None);
+        assert_eq!(block.beats(), None);
+        assert_eq!(block.beat_num(), None);
+        assert_eq!(block.beat_phase(), None);
+    }
+
+    #[test]
+    fn test_block_time_some() {
+        let block = BlockTime::new(1.5, 1.5);
+
+        assert_eq!(block.seconds(), Some(1.5));
+        assert_eq!(block.beats(), Some(1.5));
+        assert_eq!(block.beat_num(), Some(1));
+        assert_eq!(block.beat_phase(), Some(0.5));
+    }
+
+    #[test]
+    fn test_block_time_opt() {
+        let block = BlockTime::new_opt(None, None);
+
+        assert_eq!(block.seconds(), None);
+        assert_eq!(block.beats(), None);
+
+        let block = BlockTime::new_opt(Some(1.), Some(1.));
+
+        assert!(block.seconds().is_some());
+        assert!(block.beats().is_some());
+    }
+}

@@ -1,5 +1,5 @@
-use rift_plugin_core::transport::BlockTime;
-use rift_plugin_core::utils::interpo::lerp_n;
+use rift_plugin_types::transport::BlockTime;
+use rift_plugin_utils::interpo::lerp_n;
 
 use crate::prelude::MonoConsumer;
 
@@ -10,7 +10,7 @@ use crate::prelude::MonoConsumer;
 /// using per-sample linear interpolation, producing a value suitable for
 /// display (e.g. a meter).
 ///
-/// For multi-channel use, wrap in [`MultiChannel<AudioPeak>`](rift_plugin_core::prelude::MultiChannel).
+/// For multi-channel use, wrap in [`MultiChannel<AudioPeak>`](rift_plugin_utils::MultiChannel).
 ///
 /// # Examples
 ///

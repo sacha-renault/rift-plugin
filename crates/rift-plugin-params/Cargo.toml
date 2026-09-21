@@ -1,0 +1,11 @@
+[package]
+name = "rift-plugin-params"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clack-plugin = { workspace = true }
+clack-extensions = { workspace = true }
+bon = { workspace = true }
+log = { workspace = true }
+serde_json = { workspace = true }
