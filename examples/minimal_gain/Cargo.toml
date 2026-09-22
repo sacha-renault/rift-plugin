@@ -1,0 +1,11 @@
+[package]
+name = "minimal_gain"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rift-plugin = { path = "../../" }
+rift-plugin-gui = { workspace = true }
