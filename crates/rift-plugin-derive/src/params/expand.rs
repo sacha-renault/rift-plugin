@@ -170,9 +170,12 @@ fn expand_default(root: &Construct) -> TokenStream2 {
 ///
 /// Every method walks the leaf parameters in declaration order, descending into
 /// arrays with a `for` loop so literal and runtime lengths are handled the same
-/// way. Lookups compare against each param's own [`Param::id`], which `create()`
+/// Lookups compare against each param's own [`Param::id`], which `create()`
 /// already populated from the resolved `param_ids`, so the `ids` tree is not
 /// needed here.
+///
+/// `serialize`/`deserialize` are not implemented yet: they return an error
+/// rather than silently pretending state was saved.
 fn expand_params(root: &Construct) -> TokenStream2 {
     let name = &root.name;
 
@@ -289,11 +292,15 @@ fn expand_params(root: &Construct) -> TokenStream2 {
             }
 
             fn serialize(&self, _writer: &mut dyn ::std::io::Write) -> Result<(), #plugin_error> {
-                todo!("Params::serialize is not implemented yet")
+                Err(#plugin_error::Message(
+                    "Params::serialize is not implemented yet",
+                ))
             }
 
             fn deserialize(&self, _reader: &mut dyn ::std::io::Read) -> Result<(), #plugin_error> {
-                todo!("Params::deserialize is not implemented yet")
+                Err(#plugin_error::Message(
+                    "Params::deserialize is not implemented yet",
+                ))
             }
         }
     }
