@@ -29,7 +29,7 @@ impl<P: ClapPlugin> Plugin for PluginWrapper<P> {
     ) {
         builder.register::<PluginAudioPorts>();
         builder.register::<PluginState>();
-        builder.register::<PluginGui>();
+        // builder.register::<PluginGui>();
         builder.register::<PluginParams>();
         builder.register::<PluginLatency>();
         builder.register::<PluginContextMenu>();

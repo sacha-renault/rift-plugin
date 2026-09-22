@@ -7,8 +7,8 @@ use clack_plugin::events::event_types::{
 use clack_plugin::prelude::*;
 
 use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind};
-use rift_plugin_types::transport::BlockIndex;
 use rift_plugin_params::Params;
+use rift_plugin_types::transport::BlockIndex;
 
 use crate::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
 use rift_plugin_buffers::Buffers;
@@ -143,6 +143,12 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             block_index: self.block_index.increment(),
         };
 
-        self.plugin.process(buffers, context, events.input)
+        self.plugin.process(
+            buffers,
+            context,
+            events.input,
+            self.shared.params.clone(),
+            self.shared.data.clone(),
+        )
     }
 }

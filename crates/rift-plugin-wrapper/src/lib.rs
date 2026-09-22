@@ -75,6 +75,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
         buffers: Buffers,
         context: ProcessContext,
         input_events: &InputEvents,
+        params: Arc<Self::Params>,
+        data: Arc<Self::SharedData>,
     ) -> Result<ProcessStatus, PluginError>;
 
     /// Called when a MIDI message is received.
