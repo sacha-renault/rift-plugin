@@ -24,7 +24,10 @@ pub use zip_events::{FrameEvents, FramesEventZipped, InputEvent, ZipEvents};
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
     /// These are automatically synchronized between the GUI and Audio threads.
-    type ParamType: Params + Default + Send + Sync + 'static;
+    type Params: Params + Default + Send + Sync + 'static;
+
+    /// Shared data (non param) between audio thread and gui thread.
+    type SharedData: Default + Send + Sync + 'static;
 
     /// If `true`, the wrapper automatically updates `ParamType` and calls [`Self::param_changed`]
     /// for every parameter event before [`Self::process`] is called.
@@ -56,7 +59,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// **Notes**:
     /// You may allocate memory during this call.
     fn create(
-        params: Arc<Self::ParamType>,
+        params: Arc<Self::Params>,
         config: PluginAudioConfiguration,
         context: InitContext,
     ) -> Self;
@@ -90,7 +93,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// Since the GUI runs on a separate thread (or even a separate process),
     /// communication with the processor must happen via `params` or `shared`.
-    fn gui(params: Arc<Self::ParamType>) -> Box<dyn GuiFactory>;
+    fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory>;
 
     // ... Later more methods :)
     const ID: &str;

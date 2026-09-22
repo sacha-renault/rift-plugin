@@ -362,6 +362,7 @@ name = "rift-plugin-accumulator"
 version = "0.1.0"
 dependencies = [
  "crossbeam-queue",
+ "rift-plugin-buffers",
  "rift-plugin-types",
  "rift-plugin-utils",
  "rustfft",
