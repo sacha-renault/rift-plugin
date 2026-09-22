@@ -5,7 +5,7 @@ mod consumers;
 pub mod prelude {
     use super::*;
 
-    pub use accumulator::{AudioAccumulator, AudioAccumulatorErased};
+    pub use accumulator::AudioAccumulator;
     pub use audio_block::TimedAudioBlock;
     pub use consumers::*;
 }

@@ -1,7 +1,8 @@
-use crossbeam_queue::ArrayQueue;
+use std::cell::UnsafeCell;
+
 use rift_plugin_types::transport::{BlockInfo, BlockTime};
 
-use crate::prelude::TimedAudioBlock;
+use crate::{accumulator::WriteIdx, prelude::TimedAudioBlock};
 
 /// A lock-free, single-channel audio block producer.
 ///
@@ -9,45 +10,51 @@ use crate::prelude::TimedAudioBlock;
 /// fixed-size [`TimedAudioBlock<N>`] chunks and enqueued into an
 /// [`ArrayQueue`]. The consumer side (UI thread) pops blocks out of
 /// [`Self::buf`] directly.
-pub(crate) struct ChannelProducer<const N: usize> {
-    /// The bounded ring buffer shared between the audio thread (producer)
-    /// and the UI thread (consumer).
-    pub buf: ArrayQueue<TimedAudioBlock<N>>,
+pub(crate) struct RingBuffer {
+    /// Fixed size array that will be used as a rb
+    buffer: UnsafeCell<Box<[f32]>>,
 }
 
-impl<const N: usize> ChannelProducer<N> {
+impl RingBuffer {
     /// Creates a new `ChannelProducer` with a queue that can hold up to
     /// `capacity` blocks before dropping incoming data.
     pub fn new(capacity: usize) -> Self {
         Self {
-            buf: ArrayQueue::new(capacity),
+            buffer: UnsafeCell::new(vec![0f32; capacity].into_boxed_slice()),
         }
     }
 
-    /// Splits `slice` into `N`-frame chunks and enqueues each one without
-    /// any timing information.
-    ///
-    /// Blocks that cannot be enqueued because the queue is full are silently
-    /// dropped.
-    pub fn copy_slice_into_blocks_no_info(&self, slice: &[f32]) {
-        for chunk in slice.chunks(N) {
-            let time = BlockTime::none();
-            let audio_data = TimedAudioBlock::new(chunk, time);
-            let _ = self.buf.push(audio_data);
+    pub fn push_slice(&self, write_idx: WriteIdx, slice: &[f32]) {
+        match write_idx {
+            WriteIdx::Contiguous { start } => unsafe {
+                let dst = self.ring_ptr_mut(start);
+                std::ptr::copy_nonoverlapping(slice.as_ptr(), dst, slice.len());
+            },
+            WriteIdx::Splitted { start, end_wrap } => unsafe {
+                std::ptr::copy_nonoverlapping(slice.as_ptr(), self.ring_ptr_mut(start), end_wrap);
+                std::ptr::copy_nonoverlapping(
+                    slice.as_ptr().add(end_wrap),
+                    self.ring_ptr_mut(0),
+                    slice.len() - end_wrap,
+                );
+            },
         }
     }
 
-    /// Splits `slice` into `N`-frame chunks and enqueues each one with
-    /// accurate transport timing.
-    ///
-    /// Blocks that cannot be enqueued because the queue is full are silently
-    /// dropped.
-    pub fn copy_slice_into_blocks(&self, slice: &[f32], mut block_info: BlockInfo) {
-        for chunk in slice.chunks(N) {
-            let time = BlockTime::new(block_info.seconds, block_info.beats);
-            let audio_data = TimedAudioBlock::new(chunk, time);
-            block_info.advance_by_samples(audio_data.len());
-            let _ = self.buf.push(audio_data);
+    /// SAFETY: only ever called from the UI/consumer thread.
+    pub fn read_slice(&self, start: usize, len: usize, f: impl FnOnce(&[f32])) {
+        unsafe {
+            let ptr = self.ring_ptr(start);
+            f(std::slice::from_raw_parts(ptr, len));
         }
+    }
+
+    /// SAFETY: Caller must be audio thread
+    unsafe fn ring_ptr_mut(&self, offset: usize) -> *mut f32 {
+        unsafe { (*self.buffer.get()).as_mut_ptr().add(offset) }
+    }
+
+    unsafe fn ring_ptr(&self, offset: usize) -> *const f32 {
+        unsafe { (*self.buffer.get()).as_ptr().add(offset) }
     }
 }

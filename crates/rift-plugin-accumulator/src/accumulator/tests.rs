@@ -1,5 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
+use crate::consumers::{ConsumerDispatcher, MonoConsumer};
+
 use super::*;
 use rift_plugin_utils::ConsumerCell;
 
@@ -28,7 +30,7 @@ impl MonoConsumer for ConsumerMock {
 }
 
 fn init_audio_accumulator() -> AudioAccumulator {
-    AudioAccumulator::new::<10>(1, 4)
+    AudioAccumulator::new(1, 4)
 }
 
 fn make_dispatcher_with(consumer: ConsumerCell<dyn MonoConsumer>) -> ConsumerDispatcher {

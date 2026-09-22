@@ -6,5 +6,6 @@ edition = "2024"
 [dependencies]
 rift-plugin-utils = {workspace = true}
 rift-plugin-types = {workspace = true}
+rift-plugin-buffers = {workspace = true}
 crossbeam-queue = {workspace = true}
 rustfft = { workspace = true }
