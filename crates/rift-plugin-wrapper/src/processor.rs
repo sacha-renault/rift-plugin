@@ -105,7 +105,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<Self, PluginError> {
         // Create the plugin instance & activate right away
         let init_context = InitContext::new(&main_thread.host, shared.states.clone());
-        let plugin = P::create(shared.params.clone(), audio_config, init_context);
+        let plugin = P::create(shared.params.as_ref(), audio_config, init_context);
 
         // Allocate a scratch buffer ONCE
         Ok(Self {
@@ -147,8 +147,8 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             buffers,
             context,
             events.input,
-            self.shared.params.clone(),
-            self.shared.data.clone(),
+            self.shared.params.as_ref(),
+            self.shared.data.as_ref(),
         )
     }
 }

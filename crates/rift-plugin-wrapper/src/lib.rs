@@ -59,7 +59,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// **Notes**:
     /// You may allocate memory during this call.
     fn create(
-        params: Arc<Self::Params>,
+        params: &Self::Params,
         config: PluginAudioConfiguration,
         context: InitContext,
     ) -> Self;
@@ -73,10 +73,10 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     fn process(
         &mut self,
         buffers: Buffers,
-        context: ProcessContext,
-        input_events: &InputEvents,
-        params: Arc<Self::Params>,
-        data: Arc<Self::SharedData>,
+        ctx: ProcessContext,
+        events: &InputEvents,
+        params: &Self::Params,
+        data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError>;
 
     /// Called when a MIDI message is received.
