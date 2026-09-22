@@ -60,6 +60,10 @@ impl<'a> AudioPort<'a> {
             in_place_pair: self.in_place_pair,
         }
     }
+
+    pub fn channels(&self) -> u32 {
+        self.channel_count
+    }
 }
 
 /// Specifies whether main port is inputs, outputs, or bidirectional IO for the plugin host.
