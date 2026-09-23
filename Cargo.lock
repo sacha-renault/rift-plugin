@@ -696,11 +696,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "rift-fun-dsp"
+version = "0.1.0"
+dependencies = [
+ "fundsp",
+]
+
+[[package]]
 name = "rift-plugin"
 version = "0.1.0"
 dependencies = [
  "clack-extensions",
  "clack-plugin",
+ "rift-fun-dsp",
  "rift-plugin-buffers",
  "rift-plugin-context",
  "rift-plugin-derive",

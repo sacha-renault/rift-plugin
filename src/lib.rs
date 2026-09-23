@@ -38,6 +38,9 @@ pub mod prelude {
     pub use rift_plugin_derive::{DeriveEnumValues, params};
 
     pub use super::export_clap_plugin;
+
+    #[cfg(feature = "fun-dsp")]
+    pub use rift_fun_dsp::*;
 }
 
 #[doc(hidden)]

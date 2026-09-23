@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-fun-dsp-param = ["dep:fundsp"]
+fun-dsp = ["dep:fundsp"]
 
 [dependencies]
 clack-plugin = { workspace = true }

@@ -18,7 +18,7 @@ params! {
 }
 
 struct FunDspPlugin {
-    generator: Box<dyn AudioUnit>,
+    synth: Box<dyn AudioUnit>,
 }
 
 impl ClapPlugin for FunDspPlugin {
@@ -26,18 +26,22 @@ impl ClapPlugin for FunDspPlugin {
     type SharedData = ();
 
     const PARAM_EVENT_AUTO_HANDLING: bool = true;
-    const MIDI_EVENT_AUTO_HANDLING: bool = false;
+    const MIDI_EVENT_AUTO_HANDLING: bool = true;
 
     fn create(
-        params: &Self::Params,
-        _config: PluginAudioConfiguration,
+        _params: &Self::Params,
+        config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
-        let mono = || var(&params.frequency) >> sine();
-        let stereo = mono() | mono();
+        let freq = Shared::new(0.0);
+        let table = Arc::new(AtomicTable::from_wavetable(triangle_table(), 0));
+
+        let synth = || var(&freq) >> An(AtomicSynth::<f32>::new(table.clone()));
+        let mut stereo = synth() | synth();
+        AudioUnit::set_sample_rate(&mut stereo, config.sample_rate);
 
         Self {
-            generator: Box::new(stereo) as Box<dyn AudioUnit>,
+            synth: Box::new(stereo) as Box<dyn AudioUnit>,
         }
     }
 
@@ -50,7 +54,7 @@ impl ClapPlugin for FunDspPlugin {
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
         buffers.main().for_each_stereo_frame(|[left, right]| {
-            (*left, *right) = self.generator.get_stereo();
+            (*left, *right) = self.synth.get_stereo();
         });
 
         Ok(ProcessStatus::Continue)
@@ -67,7 +71,11 @@ impl ClapPlugin for FunDspPlugin {
     const ID: &str = "com.rift.fun-dsp-generator";
     const NAME: &str = "Fun Dsp Generator";
     const VERSION: &str = "0.1.0";
-    const FEATURES: &[&CStr] = &[features::SYNTHESIZER, features::STEREO];
+    const FEATURES: &[&CStr] = &[
+        features::INSTRUMENT,
+        features::SYNTHESIZER,
+        features::STEREO,
+    ];
 
     const MAIN_AUDIO_PORTS: MainAudioPort = MainAudioPort::OutputOnly(2);
 }

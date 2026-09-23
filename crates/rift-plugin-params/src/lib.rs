@@ -14,7 +14,7 @@ mod param_int;
 mod ptr;
 mod traits;
 
-#[cfg(feature = "fun-dsp-param")]
+#[cfg(feature = "fun-dsp")]
 mod param_float_fun_dsp;
 
 mod test_macros;
@@ -28,5 +28,5 @@ pub use param_int::{IntParam, IntParamConfig};
 pub use ptr::ParamPtr;
 pub use traits::{Param, Params, Persistent, TypedParam};
 
-#[cfg(feature = "fun-dsp-param")]
+#[cfg(feature = "fun-dsp")]
 pub use param_float_fun_dsp::{SharedFloatParam, SharedFloatParamConfig};
