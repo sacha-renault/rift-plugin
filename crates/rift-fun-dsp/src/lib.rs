@@ -4,5 +4,7 @@
 //! trait for building band-limited [`fundsp`] wavetables.
 
 pub mod fun_dsp_ext;
+pub mod process_rift_buffer;
 
 pub use fun_dsp_ext::*;
+pub use process_rift_buffer::*;

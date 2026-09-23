@@ -700,6 +700,7 @@ name = "rift-fun-dsp"
 version = "0.1.0"
 dependencies = [
  "fundsp",
+ "rift-plugin-buffers",
 ]
 
 [[package]]

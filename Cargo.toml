@@ -1,30 +1,7 @@
-[package]
-name = "rift-plugin"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-rift-plugin-derive = { workspace = true }
-rift-plugin-utils = { workspace = true }
-rift-plugin-gui = { workspace = true }
-rift-plugin-params = { workspace = true }
-rift-plugin-types = { workspace = true }
-rift-plugin-buffers = { workspace = true }
-rift-plugin-context = { workspace = true }
-rift-plugin-wrapper = { workspace = true }
-rift-fun-dsp = { workspace = true, optional = true }
-
-clack-plugin = { workspace =  true }
-clack-extensions = { workspace =  true }
-serde_json = { workspace = true }
-
-[features]
-default = ["fun-dsp"]
-fun-dsp = ["rift-plugin-params/fun-dsp", "dep:rift-fun-dsp"]
-
 [workspace]
 resolver = "2"
 members = [
+  "crates/rift-plugin",
   "crates/rift-fun-dsp",
   "crates/rift-plugin-accumulator",
   "crates/rift-plugin-derive",
@@ -44,11 +21,8 @@ members = [
   "xtask",
 ]
 
-examples = [
-
-]
-
 [workspace.dependencies]
+rift-plugin = { path = "crates/rift-plugin" }
 rift-fun-dsp  = { path = "crates/rift-fun-dsp" }
 rift-plugin-derive  = { path = "crates/rift-plugin-derive" }
 rift-plugin-resolver = { path = "crates/rift-plugin-resolver" }

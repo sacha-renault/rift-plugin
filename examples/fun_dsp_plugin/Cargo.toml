@@ -7,6 +7,6 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-rift-plugin = { path = "../../" }
+rift-plugin = { workspace = true }
 rift-plugin-gui = { workspace = true }
 fundsp = { workspace = true }

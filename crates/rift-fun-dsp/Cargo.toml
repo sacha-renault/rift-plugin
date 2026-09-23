@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 fundsp = { workspace = true }
+rift-plugin-buffers = { workspace = true, features = ["internal"] }

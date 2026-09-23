@@ -57,6 +57,8 @@ impl ClapPlugin for FunDspPlugin {
             (*left, *right) = self.synth.get_stereo();
         });
 
+        // self.synth.process(size, input, output);
+
         Ok(ProcessStatus::Continue)
     }
 
