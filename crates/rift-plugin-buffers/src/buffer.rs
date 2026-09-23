@@ -50,6 +50,12 @@ impl<'a> Buffer<'a> {
         }
     }
 
+    #[cfg(feature = "internal")]
+    #[inline]
+    pub fn raw_ptrs(&'a self) -> &'a [*mut f32] {
+        self.raw_data()
+    }
+
     #[inline]
     pub(crate) fn raw_data(&'a self) -> &'a [*mut f32] {
         match self {
