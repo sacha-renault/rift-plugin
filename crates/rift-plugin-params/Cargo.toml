@@ -3,9 +3,13 @@ name = "rift-plugin-params"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+fun-dsp-param = ["dep:fundsp"]
+
 [dependencies]
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
 bon = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
+fundsp = { workspace = true, optional = true }

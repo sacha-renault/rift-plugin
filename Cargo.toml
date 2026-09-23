@@ -15,8 +15,11 @@ rift-plugin-wrapper = { workspace = true }
 
 clack-plugin = { workspace =  true }
 clack-extensions = { workspace =  true }
-
 serde_json = { workspace = true }
+
+[features]
+default = ["fun-dsp-param"]
+fun-dsp-param = ["rift-plugin-params/fun-dsp-param"]
 
 [workspace]
 resolver = "2"
@@ -33,6 +36,10 @@ members = [
   "crates/rift-plugin-dsp",
 
   "examples/buffer-iter-benchmark",
+  "examples/minimal_gain",
+  "examples/fun_dsp_plugin",
+
+  "xtask",
 ]
 
 examples = [
@@ -73,3 +80,4 @@ raw-window-handle = "0.5.0"
 log = "0.4"
 bon = "3.8.2"
 serde_json = { version = "1" }
+fundsp = { version = "0.23.0" }

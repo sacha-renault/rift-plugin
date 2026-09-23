@@ -14,6 +14,9 @@ mod param_int;
 mod ptr;
 mod traits;
 
+#[cfg(feature = "fun-dsp-param")]
+mod param_float_fun_dsp;
+
 mod test_macros;
 
 pub use atomic_f32::AtomicF32;
@@ -24,3 +27,6 @@ pub use param_float::{FloatParam, FloatParamConfig, RangeMapping};
 pub use param_int::{IntParam, IntParamConfig};
 pub use ptr::ParamPtr;
 pub use traits::{Param, Params, Persistent, TypedParam};
+
+#[cfg(feature = "fun-dsp-param")]
+pub use param_float_fun_dsp::{SharedFloatParam, SharedFloatParamConfig};
