@@ -1,0 +1,12 @@
+[package]
+name = "fun_dsp_plugin"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rift-plugin = { path = "../../" }
+rift-plugin-gui = { workspace = true }
+fundsp = { workspace = true }
