@@ -41,7 +41,7 @@ members = [
   "examples/minimal_gain",
   "examples/fun_dsp_plugin",
 
-  "xtask", "crates/rift-fun-dsp",
+  "xtask",
 ]
 
 examples = [
