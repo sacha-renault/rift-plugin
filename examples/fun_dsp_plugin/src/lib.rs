@@ -49,14 +49,9 @@ impl ClapPlugin for FunDspPlugin {
         _params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        let mut main = buffers.main();
-
-        for frame in main.iter_samples() {
-            let (l, r) = self.generator.get_stereo();
-            for (sample, o) in frame.zip([l, r].into_iter()) {
-                *sample = o;
-            }
-        }
+        buffers.main().for_each_stereo_frame(|[left, right]| {
+            (*left, *right) = self.generator.get_stereo();
+        });
 
         Ok(ProcessStatus::Continue)
     }

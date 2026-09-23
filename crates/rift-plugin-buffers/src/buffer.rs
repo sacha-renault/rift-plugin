@@ -79,6 +79,31 @@ impl<'a> Buffer<'a> {
         }
     }
 
+    pub fn for_each_frame<const N: usize>(&'a mut self, mut f: impl FnMut(&mut [f32; N])) {
+        assert_eq!(self.channels(), N);
+
+        let samples = self.samples();
+        let vec = self.raw_data();
+
+        let mut frame = [0f32; N];
+        for pos in 0..samples {
+            for (ch, s) in frame.iter_mut().enumerate() {
+                *s = unsafe { *vec[ch].add(pos) };
+            }
+
+            f(&mut frame);
+
+            for (ch, s) in frame.iter().enumerate() {
+                unsafe { *vec[ch].add(pos) = *s };
+            }
+        }
+    }
+
+    #[allow(unused_mut)]
+    pub fn for_each_stereo_frame(&'a mut self, mut f: impl FnMut(&mut [f32; 2])) {
+        self.for_each_frame::<2>(f)
+    }
+
     pub fn iter_channels(&self) -> impl Iterator<Item = &[f32]> {
         let samples = self.samples();
         self.raw_data()
