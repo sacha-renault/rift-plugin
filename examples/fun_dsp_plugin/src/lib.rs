@@ -59,17 +59,15 @@ impl ClapPlugin for FunDspPlugin {
         _params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        // if !self.is_playing {
-        //     buffers.main().zero_fill();
-        //     return Ok(ProcessStatus::Continue);
-        // }
+        if !self.is_playing {
+            buffers.main().zero_fill();
+            return Ok(ProcessStatus::Continue);
+        }
 
         for (events, frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
             for _event in events {}
 
-            if self.is_playing {
-                self.synth.fill_frame::<2>(frame);
-            }
+            self.synth.fill_frame::<2>(frame);
         }
 
         // self.synth.process(size, input, output);
