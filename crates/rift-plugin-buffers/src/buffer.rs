@@ -129,4 +129,11 @@ impl<'a> Buffer<'a> {
             .iter()
             .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, samples) })
     }
+
+    /// Fill the entire buffer with 0s
+    pub fn zero_fill(&'a mut self) {
+        for channel in self.iter_channels_mut() {
+            channel.fill(0f32);
+        }
+    }
 }

@@ -114,22 +114,3 @@ impl<'a> Iterator for Frame<'a> {
         }
     }
 }
-
-impl<'a> Frame<'a> {
-    pub fn as_slice<const N: usize>(&mut self) -> [&'a mut f32; N] {
-        assert!(N < self.channels);
-
-        let mut samples: [&'a mut f32; N] =
-            std::array::from_fn(|_| unsafe { &mut *(self.vec[0].add(0)) });
-
-        for (i, sample) in samples.iter_mut().enumerate() {
-            let ptr = self.vec[i];
-            *sample = unsafe { &mut (*ptr.add(self.channel_position)) };
-        }
-        samples
-    }
-
-    pub fn as_stereo_slice(&mut self) -> [&'a mut f32; 2] {
-        self.as_slice::<2>()
-    }
-}
