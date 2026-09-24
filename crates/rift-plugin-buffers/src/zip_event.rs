@@ -5,59 +5,20 @@ use clack_plugin::{
     prelude::InputEvents,
 };
 
-use rift_plugin_buffers::frame::{Frame, SampleFrames};
-use rift_plugin_types::MidiMessage;
+use crate::{
+    event_handling::{InputEvent, ZipEventConfig},
+    frame::{Frame, SampleFrames},
+};
 
-use crate::ClapPlugin;
-
-/// Pairs each audio frame with its corresponding CLAP input events.
-///
-/// This is an extension over [`SampleFrames`]: it zips the frame iterator with
-/// an event stream, yielding `(FrameEvents, Frame)` pairs where each
-/// `FrameEvents` contains only the events whose timestamp matches that frame's
-/// position.
-///
-/// Events already auto-handled by the wrapper (controlled by
-/// [`ClapPlugin::PARAM_EVENT_AUTO_HANDLING`] and
-/// [`ClapPlugin::MIDI_EVENT_AUTO_HANDLING`]) are silently skipped.
-///
-/// # Example
-///
-/// ```ignore
-/// for (events, frame) in sample_frames.zip_events::<Self>(&input_events) {
-///     for event in events {
-///         match event {
-///             InputEvent::MidiEvent(msg) => { /* handle MIDI */ }
-///             InputEvent::ParamEvent(val) => { /* handle param change */ }
-///         }
-///     }
-///     // process `frame` audio data
-/// }
-/// ```
-pub trait ZipEvents<'a> {
-    fn zip_events<P: ClapPlugin>(self, events: &'a InputEvents) -> FramesEventZipped<'a, P>;
-}
-
-impl<'a> ZipEvents<'a> for SampleFrames<'a> {
-    fn zip_events<P: ClapPlugin>(self, events: &'a InputEvents) -> FramesEventZipped<'a, P> {
-        FramesEventZipped::from_frame_iter(self, events)
-    }
-}
-
-pub enum InputEvent {
-    MidiEvent(MidiMessage),
-    ParamEvent(ParamValueEvent),
-}
-
-pub struct FramesEventZipped<'a, P: ClapPlugin> {
+pub struct FramesEventZipped<'a, C: ZipEventConfig> {
     inner: SampleFrames<'a>,
     events: &'a InputEvents<'a>,
     events_position: usize,
-    _p: PhantomData<P>,
+    _p: PhantomData<C>,
 }
 
-impl<'a, P: ClapPlugin> FramesEventZipped<'a, P> {
-    fn from_frame_iter(frames: SampleFrames<'a>, events: &'a InputEvents) -> Self {
+impl<'a, C: ZipEventConfig> FramesEventZipped<'a, C> {
+    pub(crate) fn from_frame_iter(frames: SampleFrames<'a>, events: &'a InputEvents) -> Self {
         Self {
             inner: frames,
             events,
@@ -75,8 +36,8 @@ impl<'a, P: ClapPlugin> FramesEventZipped<'a, P> {
     }
 }
 
-impl<'a, P: ClapPlugin> Iterator for FramesEventZipped<'a, P> {
-    type Item = (FrameEvents<'a, P>, Frame<'a>);
+impl<'a, C: ZipEventConfig> Iterator for FramesEventZipped<'a, C> {
+    type Item = (FrameEvents<'a, C>, Frame<'a>);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -99,14 +60,14 @@ impl<'a, P: ClapPlugin> Iterator for FramesEventZipped<'a, P> {
     }
 }
 
-pub struct FrameEvents<'a, P: ClapPlugin> {
+pub struct FrameEvents<'a, C: ZipEventConfig> {
     events: &'a InputEvents<'a>,
     position: usize,
     end: usize,
-    _p: PhantomData<P>,
+    _p: PhantomData<C>,
 }
 
-impl<'a, P: ClapPlugin> Iterator for FrameEvents<'a, P> {
+impl<'a, C: ZipEventConfig> Iterator for FrameEvents<'a, C> {
     type Item = InputEvent;
 
     #[inline]
@@ -122,11 +83,11 @@ impl<'a, P: ClapPlugin> Iterator for FrameEvents<'a, P> {
             // any other won't be
             #[allow(clippy::collapsible_if)]
             if let Some(&param_event) = event.as_event::<ParamValueEvent>() {
-                if !P::PARAM_EVENT_AUTO_HANDLING {
+                if !C::PARAM_EVENT_AUTO_HANDLING {
                     return Some(InputEvent::ParamEvent(param_event));
                 }
             } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
-                if !P::MIDI_EVENT_AUTO_HANDLING {
+                if !C::MIDI_EVENT_AUTO_HANDLING {
                     return Some(InputEvent::MidiEvent(midi_event.into()));
                 }
             }

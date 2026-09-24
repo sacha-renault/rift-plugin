@@ -11,15 +11,13 @@ use rift_plugin_gui::GuiFactory;
 use rift_plugin_params::Params;
 use rift_plugin_types::{AudioPort, EventSource, MainAudioPort, MidiMessage, MidiPort};
 
+pub mod event_config;
 pub mod factory;
 pub mod main_thread;
 pub mod processor;
 pub mod shared;
 
-mod zip_events;
-
 pub use factory::PluginWrapper;
-pub use zip_events::{FrameEvents, FramesEventZipped, InputEvent, ZipEvents};
 
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
