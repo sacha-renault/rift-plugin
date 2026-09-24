@@ -58,7 +58,7 @@ impl<'a> Buffers<'a> {
     }
 
     /// Retrieve port pair 0 and copy, if needed, input into output.
-    fn main_input_into_output(&mut self) -> Result<(), PluginError> {
+    fn copy_main_input_into_output(&mut self) -> Result<(), PluginError> {
         if self.is_main_copied {
             return Ok(());
         }
@@ -93,7 +93,7 @@ impl<'a> Buffers<'a> {
     ///
     /// This function must be called only in the case of [`MainAudioPort::InputOutput`].
     fn get_main_io(&mut self) -> Result<Buffer<'_>, PluginError> {
-        self.main_input_into_output()?;
+        self.copy_main_input_into_output()?;
         self.get_output(0)
     }
 
@@ -179,7 +179,7 @@ impl<'a> Drop for Buffers<'a> {
     fn drop(&mut self) {
         match self.main_config {
             MainAudioPort::InputOutput(_) if !self.is_main_copied => {
-                let _ = self.main_input_into_output();
+                let _ = self.copy_main_input_into_output();
             }
 
             // Nothing to do on input only
