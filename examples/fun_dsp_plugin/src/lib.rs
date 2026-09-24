@@ -3,7 +3,9 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
+use rift_plugin::prelude::clack_extensions::note_ports::{NoteDialect, NoteDialects};
 use rift_plugin::prelude::clack_plugin::plugin::features;
+use rift_plugin::prelude::utils::notes::midi_to_frequency;
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
 
@@ -19,6 +21,8 @@ params! {
 
 struct FunDspPlugin {
     synth: Box<dyn AudioUnit>,
+    freq: Shared,
+    is_playing: bool,
 }
 
 impl ClapPlugin for FunDspPlugin {
@@ -33,7 +37,7 @@ impl ClapPlugin for FunDspPlugin {
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
-        let freq = Shared::new(0.0);
+        let freq = Shared::new(440f32);
         let table = Arc::new(AtomicTable::from_wavetable(triangle_table(), 0));
 
         let synth = || var(&freq) >> An(AtomicSynth::<f32>::new(table.clone()));
@@ -42,6 +46,8 @@ impl ClapPlugin for FunDspPlugin {
 
         Self {
             synth: Box::new(stereo) as Box<dyn AudioUnit>,
+            freq,
+            is_playing: false,
         }
     }
 
@@ -53,11 +59,17 @@ impl ClapPlugin for FunDspPlugin {
         _params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        for (events, mut frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
+        // if !self.is_playing {
+        //     buffers.main().zero_fill();
+        //     return Ok(ProcessStatus::Continue);
+        // }
+
+        for (events, frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
             for _event in events {}
 
-            let [left, right] = frame.as_stereo_slice();
-            (*left, *right) = self.synth.get_stereo();
+            if self.is_playing {
+                self.synth.fill_frame::<2>(frame);
+            }
         }
 
         // self.synth.process(size, input, output);
@@ -65,7 +77,16 @@ impl ClapPlugin for FunDspPlugin {
         Ok(ProcessStatus::Continue)
     }
 
-    fn on_midi_message(&mut self, _midi: MidiMessage) {}
+    fn on_midi_message(&mut self, midi: MidiMessage) {
+        match midi.kind {
+            MidiMessageKind::NoteOn { note, .. } => {
+                self.is_playing = true;
+                self.freq.set(midi_to_frequency(note));
+            }
+            MidiMessageKind::NoteOff { .. } => self.is_playing = false,
+            _ => {}
+        }
+    }
 
     fn param_changed(&mut self, _id: ClapId, _source: EventSource) {}
 
@@ -83,6 +104,10 @@ impl ClapPlugin for FunDspPlugin {
     ];
 
     const MAIN_AUDIO_PORTS: MainAudioPort = MainAudioPort::OutputOnly(2);
+    const MIDI_PORTS: &[MidiPort<'_>] = &[MidiPort::input(b"Notes")
+        .supported_dialects(NoteDialects::MIDI)
+        .preferred_dialect(NoteDialect::Midi)];
+    const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
 }
 
 /// No-op GUI. Every CLAP GUI callback succeeds and does nothing.
