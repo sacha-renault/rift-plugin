@@ -7,8 +7,15 @@
 #[macro_export]
 macro_rules! export_clap_plugin {
     ($PluginType:ty) => {
-        use clack_plugin::clack_export_entry;
-        use rift_plugin::prelude::PluginWrapper;
+        use ::rift_plugin::prelude::clack_plugin::clack_export_entry;
+        use ::rift_plugin::prelude::{PluginWrapper, ZipEventConfig};
+
+        impl ZipEventConfig for $PluginType {
+            const MIDI_EVENT_AUTO_HANDLING: bool =
+                <$PluginType as ClapPlugin>::MIDI_EVENT_AUTO_HANDLING;
+            const PARAM_EVENT_AUTO_HANDLING: bool =
+                <$PluginType as ClapPlugin>::PARAM_EVENT_AUTO_HANDLING;
+        }
 
         clack_export_entry! {
             clack_plugin::prelude::SinglePluginEntry<PluginWrapper<$PluginType>>

@@ -49,13 +49,16 @@ impl ClapPlugin for FunDspPlugin {
         &mut self,
         mut buffers: Buffers,
         _context: ProcessContext,
-        _input_events: &InputEvents,
+        events: &InputEvents,
         _params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        buffers.main().for_each_stereo_frame(|[left, right]| {
+        for (events, mut frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
+            for _event in events {}
+
+            let [left, right] = frame.as_stereo_slice();
             (*left, *right) = self.synth.get_stereo();
-        });
+        }
 
         // self.synth.process(size, input, output);
 

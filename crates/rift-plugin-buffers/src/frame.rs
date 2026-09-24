@@ -54,6 +54,14 @@ impl<'a> SampleFrames<'a> {
     /// `FrameEvents` contains only the events whose timestamp matches that frame's
     /// position.
     ///
+    /// Your plugin needs to implement [`ZipEventConfig`] so you can use ::<Self> in the process function.
+    /// ```ignore
+    /// impl ZipEventConfig for YourPlugin {
+    ///     const MIDI_EVENT_AUTO_HANDLING: bool = <YourPlugin as ClapPlugin>::MIDI_EVENT_AUTO_HANDLING;
+    ///     const PARAM_EVENT_AUTO_HANDLING: bool = <YourPlugin as ClapPlugin>::PARAM_EVENT_AUTO_HANDLING;
+    /// }
+    /// ```
+    ///
     /// Events already auto-handled by the wrapper (controlled by
     /// [`ClapPlugin::PARAM_EVENT_AUTO_HANDLING`] and
     /// [`ClapPlugin::MIDI_EVENT_AUTO_HANDLING`]) are silently skipped.
@@ -61,7 +69,7 @@ impl<'a> SampleFrames<'a> {
     /// # Example
     ///
     /// ```ignore
-    /// for (events, frame) in sample_frames.zip_events(&input_events) {
+    /// for (events, frame) in sample_frames.zip_events::<Self>(&input_events) {
     ///     for event in events {
     ///         match event {
     ///             InputEvent::MidiEvent(msg) => { /* handle MIDI */ }
@@ -104,5 +112,24 @@ impl<'a> Iterator for Frame<'a> {
         } else {
             None
         }
+    }
+}
+
+impl<'a> Frame<'a> {
+    pub fn as_slice<const N: usize>(&mut self) -> [&'a mut f32; N] {
+        assert!(N < self.channels);
+
+        let mut samples: [&'a mut f32; N] =
+            std::array::from_fn(|_| unsafe { &mut *(self.vec[0].add(0)) });
+
+        for (i, sample) in samples.iter_mut().enumerate() {
+            let ptr = self.vec[i];
+            *sample = unsafe { &mut (*ptr.add(self.channel_position)) };
+        }
+        samples
+    }
+
+    pub fn as_stereo_slice(&mut self) -> [&'a mut f32; 2] {
+        self.as_slice::<2>()
     }
 }
