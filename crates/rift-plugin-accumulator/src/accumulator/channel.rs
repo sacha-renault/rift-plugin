@@ -1,8 +1,9 @@
 use std::cell::UnsafeCell;
 
-use rift_plugin_types::transport::{BlockInfo, BlockTime};
+// use rift_plugin_types::transport::{BlockInfo, BlockTime};
 
-use crate::{accumulator::WriteIdx, prelude::TimedAudioBlock};
+use crate::accumulator::WriteIdx;
+// use crate::prelude::TimedAudioBlock;
 
 /// A lock-free, single-channel audio block producer.
 ///

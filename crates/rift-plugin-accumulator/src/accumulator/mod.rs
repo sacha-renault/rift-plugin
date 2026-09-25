@@ -30,6 +30,10 @@ pub struct AudioAccumulator {
 
     read_position: AtomicUsize,
     write_position: AtomicUsize,
+    // --
+    // TODO
+    // add an anchor with a block position so the reader knows the actual time
+    // of what he gets.
 }
 
 impl AudioAccumulator {

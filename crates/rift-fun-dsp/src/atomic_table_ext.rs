@@ -39,7 +39,7 @@ where
 
     let mut a = vec![Complex32::ZERO; length];
 
-    for i in 1..=harmonics {
+    for (i, bin) in a.iter_mut().enumerate().skip(1).take(harmonics) {
         let f = pitch * i as f64;
 
         // Get harmonic amplitude.
@@ -48,7 +48,7 @@ where
         let w = w * smooth5(clamp01(delerp(MAX_F, FADE_F, f)));
         // Insert partial.
         if w > 0.0 {
-            a[i] = Complex32::from_polar(w as f32, (f64::TAU * phase(i as u32)) as f32);
+            *bin = Complex32::from_polar(w as f32, (f64::TAU * phase(i as u32)) as f32);
         }
     }
 

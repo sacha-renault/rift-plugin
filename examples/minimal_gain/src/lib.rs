@@ -75,7 +75,7 @@ impl ClapPlugin for MinimalGain {
         let mut main = buffers.main();
         for frame in main.iter_samples() {
             for sample in frame {
-                *sample = *sample * gain;
+                *sample *= gain;
             }
         }
 
