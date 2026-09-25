@@ -3,8 +3,12 @@
 //! Currently re-exports [`fun_dsp_ext`], which adds the [`AtomicTableExt`]
 //! trait for building band-limited [`fundsp`] wavetables.
 
-pub mod atomic_table_ext;
-pub mod audio_unit_ext;
+macro_rules! mod_exp {
+    ($mod_name:ident) => {
+        pub mod $mod_name;
+        pub use $mod_name::*;
+    };
+}
 
-pub use atomic_table_ext::*;
-pub use audio_unit_ext::*;
+mod_exp!(atomic_table_ext);
+mod_exp!(audio_unit_ext);
