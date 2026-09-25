@@ -33,12 +33,20 @@ impl<'a> MidiPort<'a> {
 
     /// Sets the dialect the host should prefer when sending events to this port.
     pub const fn preferred_dialect(mut self, dialect: NoteDialect) -> Self {
+        if dialect as u32 != NoteDialect::Midi as u32 {
+            panic!("Only supported dialect is MIDI. Later implement others.")
+        }
+
         self.preferred_dialect = Some(dialect);
         self
     }
 
     /// Sets supported dialects
     pub const fn supported_dialects(mut self, dialects: NoteDialects) -> Self {
+        if dialects.difference(NoteDialects::MIDI).bits() != 0 {
+            panic!("Only supported dialect is MIDI. Later implement others.")
+        }
+
         self.supported_dialects = dialects;
         self
     }
