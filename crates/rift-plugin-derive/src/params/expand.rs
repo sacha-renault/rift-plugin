@@ -20,11 +20,7 @@ pub(crate) fn expand(resolved: Resolved) -> TokenStream2 {
     let ids_impl = expand_param_ids(&ids);
     let new_impl = root.as_ref().map(expand_create);
     let default_impl = root.as_ref().map(expand_default);
-    let params_impl = if let Some(root) = root.as_ref() {
-        Some(expand_params(root))
-    } else {
-        None
-    };
+    let params_impl = root.as_ref().map(expand_params);
 
     quote::quote! {
         #( #structs )*
