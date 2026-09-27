@@ -9,4 +9,5 @@ crate-type = ["cdylib"]
 [dependencies]
 rift-plugin = { workspace = true }
 rift-plugin-gui = { workspace = true }
+rift-plugin-dsp = { workspace = true }
 fundsp = { workspace = true }

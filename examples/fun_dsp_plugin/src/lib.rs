@@ -7,22 +7,30 @@ use rift_plugin::prelude::clack_extensions::note_ports::{NoteDialect, NoteDialec
 use rift_plugin::prelude::clack_plugin::plugin::features;
 use rift_plugin::prelude::utils::notes::midi_to_frequency;
 use rift_plugin::prelude::*;
+use rift_plugin_dsp::oscillator::OscillatorPosition;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
 
 params! {
     params {
-        param frequency: SharedFloatParam {
-            default: 440f32,
-            min: 20f32,
-            max: 2000f32,
+        filters: Array<1> {
+            param cutoff: SharedFloatParam {
+                default: 440f32,
+                min: 20f32,
+                max: 2000f32,
+            },
         },
+
+        param wt_position: IntParam {
+            default: 0,
+            min:0,
+            max: 255,
+        }
     }
 }
 
 struct FunDspPlugin {
-    synth: Box<dyn AudioUnit>,
-    freq: Shared,
-    is_playing: bool,
+    synths: [Box<dyn AudioUnit>; 256],
+    phase: OscillatorPosition,
 }
 
 impl ClapPlugin for FunDspPlugin {
@@ -33,21 +41,47 @@ impl ClapPlugin for FunDspPlugin {
     const MIDI_EVENT_AUTO_HANDLING: bool = true;
 
     fn create(
-        _params: &Self::Params,
+        params: &Self::Params,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
-        let freq = Shared::new(440f32);
-        let table = Arc::new(AtomicTable::from_wavetable(triangle_table(), 0));
+        let synth = |table| An(PhaseSynth::new(table));
 
-        let synth = || var(&freq) >> An(AtomicSynth::<f32>::new(table.clone()));
-        let mut stereo = synth() | synth();
-        AudioUnit::set_sample_rate(&mut stereo, config.sample_rate);
+        // Band-limited wavetable range shared by every morph position.
+        const MIN_PITCH: f64 = 20.0;
+        const MAX_PITCH: f64 = 20_000.0;
+        const TABLES_PER_OCTAVE: f64 = 4.0;
+
+        let synths = std::array::from_fn(|idx| {
+            // `idx / 255` morphs 0 (pure sine) -> 1 (band-limited square).
+            let morph = idx as f64 / 255.0;
+
+            // All partials are sine-phased, keeping the wave odd and symmetric.
+            let phase = |_i: u32| 0.0;
+
+            // A sine is just the fundamental; a square adds odd harmonics at 1/i.
+            let amplitude = move |_pitch: f64, i: u32| {
+                if i % 2 == 0 {
+                    0.0
+                } else {
+                    (1.0 - morph) * if i == 1 { 1.0 } else { 0.0 } + morph * (1.0 / i as f64)
+                }
+            };
+
+            let table = Wavetable::new(MIN_PITCH, MAX_PITCH, TABLES_PER_OCTAVE, &phase, &amplitude);
+            let mut mono = synth(Arc::new(table));
+            AudioUnit::set_sample_rate(&mut mono, config.sample_rate);
+            Box::new(mono) as Box<dyn AudioUnit>
+        });
+
+        let mono_filter = || (pass() | var(&params.filters[0].cutoff) | dc(0.5f32)) >> lowpass();
+        let mut filter = mono_filter() | mono_filter();
+
+        AudioUnit::set_sample_rate(&mut filter, config.sample_rate);
 
         Self {
-            synth: Box::new(stereo) as Box<dyn AudioUnit>,
-            freq,
-            is_playing: false,
+            synths,
+            phase: OscillatorPosition::new(config.sample_rate as f32),
         }
     }
 
@@ -56,18 +90,25 @@ impl ClapPlugin for FunDspPlugin {
         mut buffers: Buffers,
         _context: ProcessContext,
         events: &InputEvents,
-        _params: &Self::Params,
+        params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        if !self.is_playing {
+        if !self.phase.is_active() {
             buffers.main().zero_fill();
             return Ok(ProcessStatus::Continue);
         }
 
+        let wt_pos = params.wt_position.value() as usize;
+
         for (events, frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
             for _event in events {}
 
-            self.synth.fill_frame::<2>(frame);
+            let value = self.synths[wt_pos].filter_mono(self.phase.get_next_phase());
+            // TODO, filter stuff, later
+
+            for sample in frame {
+                *sample = value;
+            }
         }
 
         // self.synth.process(size, input, output);
@@ -78,10 +119,9 @@ impl ClapPlugin for FunDspPlugin {
     fn on_midi_message(&mut self, midi: MidiMessage) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, .. } => {
-                self.is_playing = true;
-                self.freq.set(midi_to_frequency(note));
+                self.phase.trigger(midi_to_frequency(note));
             }
-            MidiMessageKind::NoteOff { .. } => self.is_playing = false,
+            MidiMessageKind::NoteOff { .. } => self.phase.deactivate(),
             _ => {}
         }
     }
