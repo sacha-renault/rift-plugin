@@ -2,7 +2,8 @@ use clack_plugin::process::audio::{InputChannels, OutputChannels};
 
 use crate::frame::SampleFrames;
 
-pub enum Buffer<'a> {
+/// Internal storage backing a [`Buffer`].
+pub(crate) enum BufferData<'a> {
     OutputChannels(OutputChannels<'a, f32>),
     InputChannels(InputChannels<'a, f32>),
     RawData {
@@ -11,28 +12,10 @@ pub enum Buffer<'a> {
     },
 }
 
-impl<'a> Buffer<'a> {
-    #[inline]
-    pub(crate) fn output(data: OutputChannels<'a, f32>) -> Self {
-        Self::OutputChannels(data)
-    }
-
-    #[inline]
-    pub(crate) fn input(data: InputChannels<'a, f32>) -> Self {
-        Self::InputChannels(data)
-    }
-
-    #[inline]
-    pub fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
-        Self::RawData {
-            raw_data,
-            frames_count,
-        }
-    }
-
+impl<'a> BufferData<'a> {
     /// Return the number of channels in this buffer.
     #[inline]
-    pub fn channels(&self) -> usize {
+    pub(crate) fn channels(&self) -> usize {
         match self {
             Self::OutputChannels(data) => data.channel_count() as usize,
             Self::InputChannels(data) => data.channel_count() as usize,
@@ -42,7 +25,7 @@ impl<'a> Buffer<'a> {
 
     /// Return the number of samples per channel in this buffer
     #[inline]
-    pub fn samples(&self) -> usize {
+    pub(crate) fn samples(&self) -> usize {
         match self {
             Self::OutputChannels(data) => data.frames_count() as usize,
             Self::InputChannels(data) => data.frames_count() as usize,
@@ -52,7 +35,7 @@ impl<'a> Buffer<'a> {
 
     #[cfg(feature = "internal")]
     #[inline]
-    pub fn raw_ptrs(&'a self) -> &'a [*mut f32] {
+    pub(crate) fn raw_ptrs(&'a self) -> &'a [*mut f32] {
         self.raw_data()
     }
 
@@ -63,6 +46,64 @@ impl<'a> Buffer<'a> {
             Self::InputChannels(data) => data.raw_data(),
             Self::RawData { raw_data, .. } => raw_data,
         }
+    }
+}
+
+/// A view over a block of audio channels handed to the plugin's `process`.
+///
+/// This is the public handle on the audio data: it wraps the internal
+/// [`BufferData`] and may grow additional fields (shift, port metadata, ...)
+/// later on.
+pub struct Buffer<'a> {
+    data: BufferData<'a>,
+}
+
+impl<'a> Buffer<'a> {
+    #[inline]
+    pub(crate) fn output(data: OutputChannels<'a, f32>) -> Self {
+        Self {
+            data: BufferData::OutputChannels(data),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn input(data: InputChannels<'a, f32>) -> Self {
+        Self {
+            data: BufferData::InputChannels(data),
+        }
+    }
+
+    #[inline]
+    pub fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
+        Self {
+            data: BufferData::RawData {
+                raw_data,
+                frames_count,
+            },
+        }
+    }
+
+    /// Return the number of channels in this buffer.
+    #[inline]
+    pub fn channels(&self) -> usize {
+        self.data.channels()
+    }
+
+    /// Return the number of samples per channel in this buffer
+    #[inline]
+    pub fn samples(&self) -> usize {
+        self.data.samples()
+    }
+
+    #[cfg(feature = "internal")]
+    #[inline]
+    pub fn raw_ptrs(&'a self) -> &'a [*mut f32] {
+        self.data.raw_ptrs()
+    }
+
+    #[inline]
+    pub(crate) fn raw_data(&'a self) -> &'a [*mut f32] {
+        self.data.raw_data()
     }
 
     /// Iterates sample-by-sample, yielding all channels at each time position.
