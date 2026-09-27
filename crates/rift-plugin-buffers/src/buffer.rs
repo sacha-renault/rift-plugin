@@ -3,6 +3,12 @@ use clack_plugin::process::audio::{InputChannels, OutputChannels};
 use crate::frame::SampleFrames;
 
 /// Internal storage backing a [`Buffer`].
+///
+/// TODO
+/// it's not possible right now to store raw data & frame_count
+/// directly because [`OutputChannels::raw_data`] lifetime is bound to
+/// self instead of 'a like in [`InputChannels::raw_data`].
+/// It should be shrinked down to a struct when this is possible.
 pub(crate) enum BufferData<'a> {
     OutputChannels(OutputChannels<'a, f32>),
     InputChannels(InputChannels<'a, f32>),
