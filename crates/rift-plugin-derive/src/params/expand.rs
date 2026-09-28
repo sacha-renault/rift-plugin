@@ -71,8 +71,11 @@ fn expand_construct(fields: &[Field]) -> TokenStream2 {
 fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
     let ty = type_path_expr(&leaf.ty);
 
-    let name = leaf.name.clone().unwrap_or_else(|| leaf.ident.to_string());
-    let id = leaf.id.clone().unwrap_or_else(|| name.clone());
+    let field = leaf.ident.to_string();
+    let name = leaf.name.clone().unwrap_or_else(|| field.clone());
+    // The id defaults to the *field* identifier, not the display name, so that
+    // renaming a label does not silently change the id (and thus saved state).
+    let id = leaf.id.clone().unwrap_or(field);
 
     let name_lit = LitStr::new(&name, leaf.ident.span());
     let id_lit = LitStr::new(&id, leaf.ident.span());

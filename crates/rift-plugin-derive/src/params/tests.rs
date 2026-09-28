@@ -40,13 +40,14 @@ const ROOT: &str = r#"
 "#;
 
 #[test]
-fn leaf_uses_builder_with_id_from_name() {
+fn leaf_id_defaults_to_field_ident() {
     let out = expand(ROOT);
 
     assert!(out.contains("<FloatParam>::builder()"), "{out}");
-    // `id` defaults to `name`, and the leaf lives at the root (empty module).
+    // `id` defaults to the *field* ident (not the display name), so renaming a
+    // label keeps the id stable. The leaf lives at the root (empty module).
     assert!(
-        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"Gain")"#),
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"gain")"#),
         "{out}"
     );
     assert!(
@@ -148,7 +149,7 @@ fn nested_construction_propagates_module_path() {
 
     // A leaf inside `MyNestedParams` uses the module passed in by its parent.
     assert!(
-        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"Pan")"#),
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"pan")"#),
         "{out}"
     );
     assert!(out.contains("<InnerParams>::create_with_module"), "{out}");
