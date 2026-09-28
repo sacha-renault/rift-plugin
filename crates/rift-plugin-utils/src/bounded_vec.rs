@@ -156,6 +156,14 @@ impl<T> BoundedVec<T> {
     pub fn swap(&mut self, a: usize, b: usize) {
         self.inner.swap(a, b);
     }
+
+    /// Retain (or not) element in inner
+    pub fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        self.inner.retain(f);
+    }
 }
 
 impl<T> BoundedVec<T>

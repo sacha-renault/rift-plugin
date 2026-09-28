@@ -10,7 +10,17 @@ use rift_plugin::prelude::*;
 use rift_plugin_dsp::oscillator::OscillatorPosition;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
 
+pub mod oscillator;
+
 params! {
+    struct Oscillator {
+        param wt_position: IntParam {
+            default: 0,
+            min:0,
+            max: 255,
+        }
+    }
+
     params {
         filters: Array<1> {
             param cutoff: SharedFloatParam {
@@ -20,17 +30,12 @@ params! {
             },
         },
 
-        param wt_position: IntParam {
-            default: 0,
-            min:0,
-            max: 255,
-        }
+        oscillators: Array<1, Oscillator>
     }
 }
 
 struct FunDspPlugin {
-    synths: [Box<dyn AudioUnit>; 256],
-    phase: OscillatorPosition,
+    oscillator: crate::oscillator::Oscillator,
 }
 
 impl ClapPlugin for FunDspPlugin {
@@ -52,37 +57,36 @@ impl ClapPlugin for FunDspPlugin {
         const MAX_PITCH: f64 = 20_000.0;
         const TABLES_PER_OCTAVE: f64 = 4.0;
 
-        let synths = std::array::from_fn(|idx| {
-            // `idx / 255` morphs 0 (pure sine) -> 1 (band-limited square).
-            let morph = idx as f64 / 255.0;
+        let wt = (0..256)
+            .map(|idx| {
+                // `idx / 255` morphs 0 (pure sine) -> 1 (band-limited square).
+                let morph = idx as f64 / 255.0;
 
-            // All partials are sine-phased, keeping the wave odd and symmetric.
-            let phase = |_i: u32| 0.0;
+                // All partials are sine-phased, keeping the wave odd and symmetric.
+                let phase = |_i: u32| 0.0;
 
-            // A sine is just the fundamental; a square adds odd harmonics at 1/i.
-            let amplitude = move |_pitch: f64, i: u32| {
-                if i % 2 == 0 {
-                    0.0
-                } else {
-                    (1.0 - morph) * if i == 1 { 1.0 } else { 0.0 } + morph * (1.0 / i as f64)
-                }
-            };
+                // A sine is just the fundamental; a square adds odd harmonics at 1/i.
+                let amplitude = move |_pitch: f64, i: u32| {
+                    if i % 2 == 0 {
+                        0.0
+                    } else {
+                        (1.0 - morph) * if i == 1 { 1.0 } else { 0.0 } + morph * (1.0 / i as f64)
+                    }
+                };
 
-            let table = Wavetable::new(MIN_PITCH, MAX_PITCH, TABLES_PER_OCTAVE, &phase, &amplitude);
-            let mut mono = synth(Arc::new(table));
-            AudioUnit::set_sample_rate(&mut mono, config.sample_rate);
-            Box::new(mono) as Box<dyn AudioUnit>
-        });
+                Wavetable::new(MIN_PITCH, MAX_PITCH, TABLES_PER_OCTAVE, &phase, &amplitude)
+            })
+            .collect();
 
-        let mono_filter = || (pass() | var(&params.filters[0].cutoff) | dc(0.5f32)) >> lowpass();
-        let mut filter = mono_filter() | mono_filter();
+        let mut oscillator = crate::oscillator::Oscillator::new(config.sample_rate, 256, 256);
+        oscillator.set_wavetables(wt);
 
-        AudioUnit::set_sample_rate(&mut filter, config.sample_rate);
+        // let mono_filter = || (pass() | var(&params.filters[0].cutoff) | dc(0.5f32)) >> lowpass();
+        // let mut filter = mono_filter() | mono_filter();
 
-        Self {
-            synths,
-            phase: OscillatorPosition::new(config.sample_rate as f32),
-        }
+        // AudioUnit::set_sample_rate(&mut filter, config.sample_rate);
+
+        Self { oscillator }
     }
 
     fn process(
@@ -93,22 +97,20 @@ impl ClapPlugin for FunDspPlugin {
         params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        if !self.phase.is_active() {
-            buffers.main().zero_fill();
-            return Ok(ProcessStatus::Continue);
-        }
-
-        let wt_pos = params.wt_position.value() as usize;
-
         for (events, frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
             for _event in events {}
 
-            let value = self.synths[wt_pos].filter_mono(self.phase.get_next_phase());
-            // TODO, filter stuff, later
+            let mut fr = [0f32; 2];
 
-            for sample in frame {
-                *sample = value;
+            for oscillator in &params.oscillators {
+                let wt_pos = oscillator.wt_position.value();
+                let [l, r] = self.oscillator.tick(wt_pos as usize);
+
+                fr[0] += l;
+                fr[1] += r;
             }
+
+            frame.fill(fr);
         }
 
         // self.synth.process(size, input, output);
@@ -119,9 +121,10 @@ impl ClapPlugin for FunDspPlugin {
     fn on_midi_message(&mut self, midi: MidiMessage) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, .. } => {
-                self.phase.trigger(midi_to_frequency(note));
+                self.oscillator
+                    .trigger(note, midi_to_frequency(note), || 0f32);
             }
-            MidiMessageKind::NoteOff { .. } => self.phase.deactivate(),
+            MidiMessageKind::NoteOff { note, .. } => self.oscillator.deactivate(note),
             _ => {}
         }
     }
