@@ -65,7 +65,7 @@ impl ClapPlugin for FunDspPlugin {
 
                 // A sine is just the fundamental; a square adds odd harmonics at 1/i.
                 let amplitude = move |_pitch: f64, i: u32| {
-                    if i % 2 == 0 {
+                    if i.is_multiple_of(2) {
                         0.0
                     } else {
                         (1.0 - morph) * if i == 1 { 1.0 } else { 0.0 } + morph * (1.0 / i as f64)

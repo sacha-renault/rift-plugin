@@ -41,8 +41,7 @@ impl ParamCollection for ParamsWrapper {
     fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>> {
         self.params
             .values()
-            .skip(index as usize)
-            .next()
+            .nth(index as usize)
             .map(ParamPtr::param_info)
     }
 
