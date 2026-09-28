@@ -41,20 +41,18 @@ impl Oscillator {
         self.voices.retain(|v| v.note() != note);
     }
 
-    pub fn tick(&mut self, wt_pos: f32) -> [f32; 2] {
+    pub fn tick(&mut self, wt_pos: f32) -> f32 {
         let wt = ((self.wavetables.len() - 1) as f32 * wt_pos.clamp(0.0, 1.0)) as usize;
         let table = &self.wavetables[wt];
 
-        let mut l = 0.0;
-        let mut r = 0.0;
+        let mut v = 0f32;
         for voice in self.voices.iter_mut() {
             // fundsp's own API: frequency is known, so pass it directly
             let (value, hint) =
                 table.read(voice.table_hint(), voice.frequency(), voice.next_phase());
             voice.set_table_hint(hint);
-            l += value;
-            r += value;
+            v += value;
         }
-        [l, r]
+        v
     }
 }

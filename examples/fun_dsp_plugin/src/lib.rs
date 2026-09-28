@@ -12,6 +12,12 @@ pub mod oscillator;
 pub struct OscillatorParams {
     #[param(id = "Wt Position", default = 0)]
     pub wt_position: FloatParam,
+
+    #[param(id = "Pan", default = 0, range=-0.5..0.5)]
+    pub pan: FloatParam,
+
+    #[param(id = "Gain", default = 1, range=0..2)]
+    pub gain: FloatParam,
 }
 
 #[derive(Params)]
@@ -24,17 +30,19 @@ pub struct FilterParams {
     pub cutoff: SharedFloatParam,
 }
 
+const OSC_COUNT: usize = 1;
+
 #[derive(Params)]
 pub struct FunDspParams {
     #[nested]
     pub filters: [FilterParams; 1],
 
     #[nested]
-    pub oscillators: [OscillatorParams; 1],
+    pub oscillators: [OscillatorParams; OSC_COUNT],
 }
 
 struct FunDspPlugin {
-    oscillator: crate::oscillator::Oscillator,
+    oscillators: [crate::oscillator::Oscillator; OSC_COUNT],
 }
 
 impl ClapPlugin for FunDspPlugin {
@@ -89,7 +97,9 @@ impl ClapPlugin for FunDspPlugin {
 
         // AudioUnit::set_sample_rate(&mut filter, config.sample_rate);
 
-        Self { oscillator }
+        Self {
+            oscillators: [oscillator],
+        }
     }
 
     fn process(
@@ -105,12 +115,15 @@ impl ClapPlugin for FunDspPlugin {
 
             let mut fr = [0f32; 2];
 
-            for oscillator in &params.oscillators {
-                let wt_pos = oscillator.wt_position.value();
-                let [l, r] = self.oscillator.tick(wt_pos);
+            for (oscillator, osc_params) in self.oscillators.iter_mut().zip(&params.oscillators) {
+                let wt_pos = osc_params.wt_position.value();
+                let pan = osc_params.pan.value();
+                let gain = osc_params.gain.value();
 
-                fr[0] += l;
-                fr[1] += r;
+                let v = oscillator.tick(wt_pos);
+
+                fr[0] += gain * v * (0.5 - pan).clamp(0f32, 1f32);
+                fr[1] += gain * v * (0.5 + pan).clamp(0f32, 1f32);
             }
 
             frame.fill(fr);
@@ -124,9 +137,15 @@ impl ClapPlugin for FunDspPlugin {
     fn on_midi_message(&mut self, midi: MidiMessage) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, .. } => {
-                self.oscillator.trigger(note, || 0f32);
+                for osc in &mut self.oscillators {
+                    osc.trigger(note, || 0f32);
+                }
             }
-            MidiMessageKind::NoteOff { note, .. } => self.oscillator.deactivate(note),
+            MidiMessageKind::NoteOff { note, .. } => {
+                for osc in &mut self.oscillators {
+                    osc.deactivate(note);
+                }
+            }
             _ => {}
         }
     }
