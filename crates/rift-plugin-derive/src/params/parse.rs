@@ -1,13 +1,35 @@
 //! Parsing of a `#[derive(Params)]` struct into a small IR.
 //!
+//! Field attributes are parsed with `darling` (as in the enum derive). The
+//! struct layout, the leaf/nested discrimination and the [`ParamKind`] deduced
+//! from the field type stay hand-written.
+//!
 //! Every field must carry exactly one of `#[param(...)]` (a leaf parameter) or
 //! `#[nested]` / `#[nested(module = "...")]` (a struct, or an array of structs,
 //! that itself derives `Params`).
 
-use syn::{
-    Attribute, Data, DeriveInput, Expr, Fields, Generics, Ident, LitStr, Meta, Type,
-    meta::ParseNestedMeta,
-};
+use darling::FromField;
+use syn::{Data, DeriveInput, Expr, Fields, Generics, Ident, Type};
+
+/// Receiver for `#[param(...)]` on a leaf field.
+#[derive(FromField)]
+#[darling(attributes(param))]
+struct ParamArgs {
+    name: Option<String>,
+    id: Option<String>,
+    unit: Option<String>,
+    default: Option<Expr>,
+    range: Option<Expr>,
+    mapping: Option<Expr>,
+    flags: Option<Expr>,
+}
+
+/// Receiver for `#[nested(...)]` on a nested field.
+#[derive(FromField)]
+#[darling(attributes(nested))]
+struct NestedArgs {
+    module: Option<String>,
+}
 
 /// A parsed `#[derive(Params)]` struct.
 #[derive(Debug)]
@@ -43,9 +65,9 @@ pub(crate) struct Leaf {
     pub ident: Ident,
     pub ty: Type,
     pub kind: ParamKind,
-    pub name: Option<LitStr>,
-    pub id: Option<LitStr>,
-    pub unit: Option<LitStr>,
+    pub name: Option<String>,
+    pub id: Option<String>,
+    pub unit: Option<String>,
     pub default: Option<Expr>,
     pub range: Option<(Expr, Expr)>,
     pub mapping: Option<Expr>,
@@ -60,7 +82,7 @@ pub(crate) struct Nested {
     pub element_ty: Type,
     /// The array length, for `[T; N]` fields.
     pub array_len: Option<Expr>,
-    pub module: Option<LitStr>,
+    pub module: Option<String>,
 }
 
 impl Params {
@@ -99,100 +121,83 @@ fn parse_field(field: &syn::Field) -> syn::Result<Field> {
         .clone()
         .expect("named fields always have an identifier");
 
-    let mut param = None;
-    let mut nested = None;
-    for attr in &field.attrs {
-        if attr.path().is_ident("param") {
-            if param.is_some() {
-                return Err(syn::Error::new_spanned(
-                    attr,
-                    "duplicate `#[param]` attribute",
-                ));
-            }
-            param = Some(attr);
-        } else if attr.path().is_ident("nested") {
-            if nested.is_some() {
-                return Err(syn::Error::new_spanned(
-                    attr,
-                    "duplicate `#[nested]` attribute",
-                ));
-            }
-            nested = Some(attr);
-        }
-    }
+    let has_param = field.attrs.iter().any(|attr| attr.path().is_ident("param"));
+    let has_nested = field
+        .attrs
+        .iter()
+        .any(|attr| attr.path().is_ident("nested"));
 
-    match (param, nested) {
-        (Some(_), Some(_)) => Err(syn::Error::new_spanned(
+    match (has_param, has_nested) {
+        (true, true) => Err(syn::Error::new_spanned(
             &field.ty,
             "a field cannot be both `#[param]` and `#[nested]`",
         )),
-        (Some(attr), None) => parse_leaf(field, attr),
-        (None, Some(attr)) => parse_nested(field, attr),
-        (None, None) => Err(syn::Error::new(
+        (true, false) => parse_leaf(field),
+        (false, true) => parse_nested(field),
+        (false, false) => Err(syn::Error::new(
             ident.span(),
             "every field must be marked `#[param]` or `#[nested]`",
         )),
     }
 }
 
-fn parse_leaf(field: &syn::Field, attr: &Attribute) -> syn::Result<Field> {
+fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
     let ident = field.ident.clone().expect("named field");
     let ty = field.ty.clone();
     let kind = param_kind(&ty)?;
 
-    let mut leaf = Leaf {
+    let ParamArgs {
+        name,
+        id,
+        unit,
+        default,
+        range,
+        mapping,
+        flags,
+    } = ParamArgs::from_field(field)?;
+
+    let leaf = Leaf {
         ident,
         ty,
         kind,
-        name: None,
-        id: None,
-        unit: None,
-        default: None,
-        range: None,
-        mapping: None,
-        flags: None,
+        name,
+        id,
+        unit,
+        default,
+        range: range.as_ref().map(parse_range).transpose()?,
+        mapping,
+        flags,
     };
-
-    match &attr.meta {
-        Meta::List(_) => attr.parse_nested_meta(|meta| parse_leaf_entry(&mut leaf, meta))?,
-        Meta::Path(_) => {}
-        Meta::NameValue(_) => {
-            return Err(syn::Error::new_spanned(
-                attr,
-                "expected `#[param(...)]`, not `#[param = ...]`",
-            ));
-        }
-    }
 
     validate_leaf(&leaf)?;
     Ok(Field::Leaf(leaf))
 }
 
-fn parse_leaf_entry(leaf: &mut Leaf, meta: ParseNestedMeta) -> syn::Result<()> {
-    if meta.path.is_ident("name") {
-        leaf.name = Some(meta.value()?.parse()?);
-    } else if meta.path.is_ident("id") {
-        leaf.id = Some(meta.value()?.parse()?);
-    } else if meta.path.is_ident("unit") {
-        leaf.unit = Some(meta.value()?.parse()?);
-    } else if meta.path.is_ident("default") {
-        leaf.default = Some(meta.value()?.parse()?);
-    } else if meta.path.is_ident("range") {
-        let expr: Expr = meta.value()?.parse()?;
-        leaf.range = Some(parse_range(&expr)?);
-    } else if meta.path.is_ident("mapping") {
-        leaf.mapping = Some(meta.value()?.parse()?);
-    } else if meta.path.is_ident("flags") {
-        leaf.flags = Some(meta.value()?.parse()?);
-    } else {
-        return Err(meta.error(
-            "unknown `#[param]` key; expected one of `name`, `id`, `unit`, `default`, \
-             `range`, `mapping`, `flags`",
+fn parse_nested(field: &syn::Field) -> syn::Result<Field> {
+    let ident = field.ident.clone().expect("named field");
+    let NestedArgs { module } = NestedArgs::from_field(field)?;
+
+    let (element_ty, array_len) = match &field.ty {
+        Type::Array(array) => ((*array.elem).clone(), Some(array.len.clone())),
+        other => (other.clone(), None),
+    };
+
+    if !matches!(element_ty, Type::Path(_)) {
+        return Err(syn::Error::new_spanned(
+            &field.ty,
+            "`#[nested]` requires a struct type or an array of struct types",
         ));
     }
-    Ok(())
+
+    Ok(Field::Nested(Nested {
+        ident,
+        element_ty,
+        array_len,
+        module,
+    }))
 }
 
+/// A `range = a..b` value, destructured into its two bounds.
 fn parse_range(expr: &Expr) -> syn::Result<(Expr, Expr)> {
     let Expr::Range(range) = expr else {
         return Err(syn::Error::new_spanned(
@@ -263,46 +268,4 @@ fn param_kind(ty: &Type) -> syn::Result<ParamKind> {
             ));
         }
     })
-}
-
-fn parse_nested(field: &syn::Field, attr: &Attribute) -> syn::Result<Field> {
-    let ident = field.ident.clone().expect("named field");
-
-    let mut module = None;
-    match &attr.meta {
-        Meta::List(_) => attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("module") {
-                module = Some(meta.value()?.parse()?);
-                Ok(())
-            } else {
-                Err(meta.error("unknown `#[nested]` key; expected `module`"))
-            }
-        })?,
-        Meta::Path(_) => {}
-        Meta::NameValue(_) => {
-            return Err(syn::Error::new_spanned(
-                attr,
-                "expected `#[nested]` or `#[nested(module = \"...\")]`",
-            ));
-        }
-    }
-
-    let (element_ty, array_len) = match &field.ty {
-        Type::Array(array) => ((*array.elem).clone(), Some(array.len.clone())),
-        other => (other.clone(), None),
-    };
-
-    if !matches!(element_ty, Type::Path(_)) {
-        return Err(syn::Error::new_spanned(
-            &field.ty,
-            "`#[nested]` requires a struct type or an array of struct types",
-        ));
-    }
-
-    Ok(Field::Nested(Nested {
-        ident,
-        element_ty,
-        array_len,
-        module,
-    }))
 }

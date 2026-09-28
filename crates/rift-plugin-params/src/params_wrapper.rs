@@ -30,11 +30,11 @@ impl ParamCollection for ParamsWrapper {
         self.params.len() as u32
     }
 
-    fn deserialize(&self, reader: &mut dyn std::io::prelude::Read) -> Result<(), PluginError> {
+    fn deserialize(&self, _: &mut dyn std::io::prelude::Read) -> Result<(), PluginError> {
         unimplemented!()
     }
 
-    fn serialize(&self, writer: &mut dyn std::io::prelude::Write) -> Result<(), PluginError> {
+    fn serialize(&self, _: &mut dyn std::io::prelude::Write) -> Result<(), PluginError> {
         unimplemented!()
     }
 

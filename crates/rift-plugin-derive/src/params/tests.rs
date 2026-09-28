@@ -201,5 +201,5 @@ fn rejects_unknown_param_key() {
     )
     .unwrap_err();
 
-    assert!(err.to_string().contains("unknown `#[param]` key"), "{err}");
+    assert!(err.to_string().contains("Unknown field: `smooth`"), "{err}");
 }

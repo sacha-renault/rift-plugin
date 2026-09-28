@@ -71,16 +71,8 @@ fn expand_construct(fields: &[Field]) -> TokenStream2 {
 fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
     let ty = type_path_expr(&leaf.ty);
 
-    let name = leaf
-        .name
-        .as_ref()
-        .map(LitStr::value)
-        .unwrap_or_else(|| leaf.ident.to_string());
-    let id = leaf
-        .id
-        .as_ref()
-        .map(LitStr::value)
-        .unwrap_or_else(|| name.clone());
+    let name = leaf.name.clone().unwrap_or_else(|| leaf.ident.to_string());
+    let id = leaf.id.clone().unwrap_or_else(|| name.clone());
 
     let name_lit = LitStr::new(&name, leaf.ident.span());
     let id_lit = LitStr::new(&id, leaf.ident.span());
@@ -97,7 +89,10 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
     });
 
     let mapping = leaf.mapping.as_ref().map(|expr| quote! { .mapping(#expr) });
-    let unit = leaf.unit.as_ref().map(|lit| quote! { .unit(#lit) });
+    let unit = leaf.unit.as_ref().map(|unit| {
+        let lit = LitStr::new(unit, leaf.ident.span());
+        quote! { .unit(#lit) }
+    });
     let flags = leaf.flags.as_ref().map(|expr| quote! { .flags(#expr) });
 
     quote! {
@@ -120,10 +115,11 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
 /// The construction of a nested struct (or array of structs), threading the
 /// child module path down to the nested struct.
 fn expand_nested(nested: &Nested) -> TokenStream2 {
-    let segment = nested
+    let segment_str = nested
         .module
         .clone()
-        .unwrap_or_else(|| LitStr::new(&nested.ident.to_string(), nested.ident.span()));
+        .unwrap_or_else(|| nested.ident.to_string());
+    let segment = LitStr::new(&segment_str, nested.ident.span());
     let elem = &nested.element_ty;
 
     if nested.array_len.is_some() {

@@ -19,7 +19,11 @@ pub struct OscillatorParams {
 
 #[derive(Params)]
 pub struct FilterParams {
-    #[param(name = "Cutoff", range = 20..2000, default = 440.0)]
+    #[param(
+        name = "Cutoff",
+        range = 20..2000,
+        default = 440.0,
+    )]
     pub cutoff: SharedFloatParam,
 }
 
