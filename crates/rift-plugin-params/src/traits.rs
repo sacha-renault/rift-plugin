@@ -150,12 +150,25 @@ pub trait Persistent {
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
 }
 
+/// Implemented by the `#[derive(Params)]` structs written by the user.
+///
+/// It exposes every leaf parameter reachable from the struct (walking nested
+/// structs and arrays) as a type-erased [`ParamPtr`], which the wrapper then
+/// collects into a [`ParamCollection`] map.
+pub trait UserParams {
+    /// Every parameter reachable from this struct, in declaration order.
+    fn all_params(&self) -> Vec<ParamPtr>;
+}
+
 /// Collection trait for accessing parameters in a plugin.
 ///
 /// This trait acts as the bridge between the host and a group of parameters, allowing
 /// retrieval of values by ID and batch operations like text formatting.
-/// There is a derive macro that implement this automatically : [`crate::prelude::DeriveParams`]
-pub trait Params: Sync + Send + 'static {
+///
+/// It is implemented by the single host-facing wrapper (see
+/// [`crate::params_wrapper::ParamsWrapper`]), not by the user's
+/// `#[derive(Params)]` structs (those implement [`UserParams`]).
+pub trait ParamCollection: Sync + Send + 'static {
     /// Get the total count of parameters available.
     fn count(&self) -> u32;
 
@@ -187,38 +200,4 @@ pub trait Params: Sync + Send + 'static {
     fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
 
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
-}
-
-impl Params for () {
-    fn count(&self) -> u32 {
-        0
-    }
-
-    fn deserialize(&self, _: &mut dyn Read) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn get_param_info<'a>(&'a self, _: u32) -> Option<ParamInfo<'a>> {
-        None
-    }
-
-    fn get_value(&self, _: ClapId) -> Option<f32> {
-        None
-    }
-
-    fn serialize(&self, _: &mut dyn Write) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn set_value(&self, _: ClapId, _: f32) {}
-
-    fn set_value_normalized(&self, _: ClapId, _: f32) {}
-
-    fn text_to_value(&self, _: ClapId, _: &CStr) -> Option<f32> {
-        None
-    }
-
-    fn value_to_text(&self, _: ClapId, _: f32, _: &mut ParamDisplayWriter) -> std::fmt::Result {
-        Err(std::fmt::Error)
-    }
 }

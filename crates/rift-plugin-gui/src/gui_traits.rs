@@ -4,13 +4,13 @@ use std::sync::atomic::AtomicBool;
 use clack_extensions::gui::*;
 use clack_plugin::{plugin::PluginError, utils::ClapId};
 
-use rift_plugin_params::Params;
+use rift_plugin_params::ParamCollection;
 
 use super::events::GuiParamEvent;
 
 pub trait GuiContext: Send + Sync {
     fn param_event(&self, event: GuiParamEvent);
-    fn params(&self) -> Arc<dyn Params>;
+    fn params(&self) -> Arc<dyn ParamCollection>;
     fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
     fn is_playing(&self) -> Arc<AtomicBool>;
 }

@@ -3,7 +3,7 @@ pub use clack_extensions::params::*;
 use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
-use rift_plugin_params::Params;
+use rift_plugin_params::ParamCollection;
 
 use crate::ClapPlugin;
 
@@ -11,9 +11,9 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
     fn count(&mut self) -> u32 {
         log::debug!(
             "PluginMainThreadParams::count {}",
-            self.shared.params.count()
+            self.shared.host_params.count()
         );
-        self.shared.params.count()
+        self.shared.host_params.count()
     }
 
     fn flush(&mut self, inputs: &InputEvents, _outputs: &mut OutputEvents) {
@@ -23,7 +23,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
                     continue;
                 };
                 let value = param_event.value();
-                self.shared.params.set_value(id, value as f32);
+                self.shared.host_params.set_value(id, value as f32);
             };
         }
         // todo!()
@@ -31,20 +31,23 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {
         log::debug!("PluginMainThreadParams::get_info {param_index}");
-        if let Some(inf) = self.shared.params.get_param_info(param_index) {
+        if let Some(inf) = self.shared.host_params.get_param_info(param_index) {
             info.set(&inf);
         }
     }
 
     fn get_value(&mut self, param_id: ClapId) -> Option<f64> {
         log::debug!("PluginMainThreadParams::get_value");
-        self.shared.params.get_value(param_id).map(|x| x as f64)
+        self.shared
+            .host_params
+            .get_value(param_id)
+            .map(|x| x as f64)
     }
 
     fn text_to_value(&mut self, param_id: ClapId, text: &std::ffi::CStr) -> Option<f64> {
         log::debug!("PluginMainThreadParams::text_to_value");
         self.shared
-            .params
+            .host_params
             .text_to_value(param_id, text)
             .map(|x| x as f64)
     }
@@ -57,7 +60,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
     ) -> core::fmt::Result {
         log::debug!("PluginMainThreadParams::value_to_text");
         self.shared
-            .params
+            .host_params
             .value_to_text(param_id, value as f32, writer)
     }
 }

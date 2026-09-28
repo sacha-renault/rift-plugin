@@ -13,6 +13,7 @@ use super::traits::{Param, TypedParam};
 pub struct IntParam {
     /// Default value for the param
     #[allow(unused)]
+    #[builder(default)]
     pub(crate) default: i32,
 
     #[builder(skip = AtomicI32::new(default))]
@@ -21,10 +22,9 @@ pub struct IntParam {
     /// The name of the param will
     /// be initialized in the derive with it's clap ID
     /// and module.
-    #[builder(skip = String::from(""))]
+    #[builder(default)]
     name: String,
 
-    #[builder(skip = None)]
     module: Option<String>,
 
     #[builder(default = "")]
@@ -39,50 +39,8 @@ pub struct IntParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
 
-    #[builder(skip = ClapId::new(0))]
+    #[builder(default = ClapId::new(0))]
     pub(crate) id: ClapId,
-}
-
-impl IntParam {
-    pub fn create(
-        id: ClapId,
-        name: String,
-        module: Option<String>,
-        config: IntParamConfig,
-    ) -> Self {
-        Self {
-            default: config.default,
-            value: AtomicI32::new(config.default),
-            name,
-            module,
-            unit: config.unit,
-            min_value: config.min,
-            max_value: config.max,
-            flags: config.flags,
-            id,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct IntParamConfig {
-    pub default: i32,
-    pub unit: &'static str,
-    pub min: i32,
-    pub max: i32,
-    pub flags: ParamInfoFlags,
-}
-
-impl Default for IntParamConfig {
-    fn default() -> Self {
-        Self {
-            default: 0,
-            unit: "",
-            min: 0,
-            max: 1,
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
-        }
-    }
 }
 
 impl TypedParam for IntParam {

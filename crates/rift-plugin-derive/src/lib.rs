@@ -8,7 +8,7 @@ pub fn derive_enum_values(input: TokenStream) -> TokenStream {
     enum_param::derive_enum_values(input)
 }
 
-#[proc_macro]
-pub fn params(input: TokenStream) -> TokenStream {
-    params::proc_params(input)
+#[proc_macro_derive(Params, attributes(param, nested))]
+pub fn derive_params(input: TokenStream) -> TokenStream {
+    params::derive_params(input)
 }

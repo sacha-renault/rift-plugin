@@ -13,6 +13,7 @@ use crate::atomic_f32::AtomicF32;
 #[derive(bon::Builder)]
 pub struct FloatParam {
     #[allow(unused)]
+    #[builder(default)]
     pub(crate) default: f32,
 
     #[builder(skip = AtomicF32::new(default))]
@@ -21,10 +22,9 @@ pub struct FloatParam {
     /// The name of the param will
     /// be initialized in the derive with it's clap ID
     /// and module.
-    #[builder(skip = String::from(""))]
+    #[builder(default)]
     name: String,
 
-    #[builder(skip = None)]
     module: Option<String>,
 
     #[builder(default = "")]
@@ -42,62 +42,8 @@ pub struct FloatParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
 
-    #[builder(skip = ClapId::new(0))]
+    #[builder(default = ClapId::new(0))]
     pub(crate) id: ClapId,
-}
-
-impl FloatParam {
-    pub fn create(
-        id: ClapId,
-        name: String,
-        module: Option<String>,
-        config: FloatParamConfig,
-    ) -> Self {
-        let FloatParamConfig {
-            default,
-            unit,
-            min,
-            max,
-            mapping,
-            flags,
-        } = config;
-
-        Self {
-            default,
-            value: AtomicF32::new(default),
-            name,
-            module,
-            unit,
-            min_value: min,
-            max_value: max,
-            mapping,
-            flags,
-            id,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct FloatParamConfig {
-    pub default: f32,
-    pub unit: &'static str,
-    pub min: f32,
-    pub max: f32,
-    pub mapping: RangeMapping,
-    pub flags: ParamInfoFlags,
-}
-
-impl Default for FloatParamConfig {
-    fn default() -> Self {
-        Self {
-            default: 0.0,
-            unit: "",
-            min: 0.0,
-            max: 1.0,
-            mapping: RangeMapping::Linear,
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
-        }
-    }
 }
 
 impl TypedParam for FloatParam {

@@ -5,11 +5,11 @@ use rift_plugin_gui::{GuiContext, GuiParamEvent};
 
 use crate::SharedQueues;
 use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
-use rift_plugin_params::Params;
+use rift_plugin_params::ParamCollection;
 
 pub struct GuiContextImpl {
     pub states: Arc<SharedQueues>,
-    pub params: Arc<dyn Params>,
+    pub params: Arc<dyn ParamCollection>,
 }
 
 impl GuiContext for GuiContextImpl {
@@ -24,7 +24,7 @@ impl GuiContext for GuiContextImpl {
         }
     }
 
-    fn params(&self) -> Arc<dyn Params> {
+    fn params(&self) -> Arc<dyn ParamCollection> {
         self.params.clone()
     }
 

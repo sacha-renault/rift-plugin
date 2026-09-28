@@ -5,7 +5,7 @@ use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
 
 use crate::ClapPlugin;
-use rift_plugin_params::Params;
+use rift_plugin_params::ParamCollection;
 
 impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
     fn save(&mut self, output: &mut OutputStream) -> Result<(), PluginError> {
@@ -18,7 +18,7 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
         );
 
         let mut state_buf = Vec::new();
-        self.shared.params.serialize(&mut state_buf)?;
+        self.shared.host_params.serialize(&mut state_buf)?;
         let state: serde_json::Value = serde_json::from_slice(&state_buf)
             .map_err(|_| PluginError::Message("Failed to serialize state"))?;
         root.insert("params".to_string(), state);
@@ -49,7 +49,9 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
 
         let params_buf = serde_json::to_vec(params_value)
             .map_err(|_| PluginError::Message("Failed to deserialize params"))?;
-        self.shared.params.deserialize(&mut params_buf.as_slice())?;
+        self.shared
+            .host_params
+            .deserialize(&mut params_buf.as_slice())?;
 
         Ok(())
     }
