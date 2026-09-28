@@ -10,75 +10,39 @@ use super::traits::{Param, TypedParam};
 
 use crate::RangeMapping;
 
+#[derive(bon::Builder)]
 pub struct SharedFloatParam {
     /// The name of the param will
     /// be initialized in the derive with it's clap ID
     /// and module.
+    #[builder(default)]
     name: String,
+
     module: Option<String>,
 
+    #[builder(default)]
     pub(crate) default: f32,
+
+    #[builder(skip = Shared::new(default))]
     pub(crate) value: Shared,
+
+    #[builder(default = "")]
     pub(crate) unit: &'static str,
+
+    #[builder(default = 0.0)]
     pub(crate) min_value: f32,
+
+    #[builder(default = 1.0)]
     pub(crate) max_value: f32,
+
+    #[builder(default)]
     pub(crate) mapping: RangeMapping,
+
+    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
+
+    #[builder(default = ClapId::new(0))]
     pub(crate) id: ClapId,
-}
-
-impl SharedFloatParam {
-    pub fn create(
-        id: ClapId,
-        name: String,
-        module: Option<String>,
-        config: SharedFloatParamConfig,
-    ) -> Self {
-        let SharedFloatParamConfig {
-            default,
-            unit,
-            min,
-            max,
-            mapping,
-            flags,
-        } = config;
-
-        Self {
-            default,
-            value: Shared::new(default),
-            name,
-            module,
-            unit,
-            min_value: min,
-            max_value: max,
-            mapping,
-            flags,
-            id,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct SharedFloatParamConfig {
-    pub default: f32,
-    pub unit: &'static str,
-    pub min: f32,
-    pub max: f32,
-    pub mapping: RangeMapping,
-    pub flags: ParamInfoFlags,
-}
-
-impl Default for SharedFloatParamConfig {
-    fn default() -> Self {
-        Self {
-            default: 0.0,
-            unit: "",
-            min: 0.0,
-            max: 1.0,
-            mapping: RangeMapping::Linear,
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
-        }
-    }
 }
 
 impl TypedParam for SharedFloatParam {
@@ -92,6 +56,8 @@ impl TypedParam for SharedFloatParam {
         self.value.set(value.clamp(self.min_value, self.max_value));
     }
 }
+
+impl crate::traits::__private::Sealed for SharedFloatParam {}
 
 impl Param for SharedFloatParam {
     fn name(&self) -> &str {

@@ -14,14 +14,10 @@ use rift_plugin::prelude::clack_plugin::plugin::features;
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
 
-params! {
-    params {
-        param gain: FloatParam {
-            default: 1f32,
-            min: 0f32,
-            max: 2f32,
-        },
-    }
+#[derive(Params)]
+pub struct MinimalGainParams {
+    #[param(name = "Gain", range = 0..2, default = 1.0)]
+    pub gain: FloatParam,
 }
 
 /// Shared between the audio thread and the main/GUI thread.
@@ -48,7 +44,7 @@ impl<P: ClapPlugin> Default for SharedData<P> {
 struct MinimalGain {}
 
 impl ClapPlugin for MinimalGain {
-    type Params = Parameters;
+    type Params = MinimalGainParams;
     type SharedData = SharedData<Self>;
 
     const PARAM_EVENT_AUTO_HANDLING: bool = true;

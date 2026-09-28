@@ -1,528 +1,206 @@
-use super::collect::*;
+use super::parse::Params;
+use syn::DeriveInput;
 
-const DEV_INPUT: &str = r#"
-        struct OscillatorParam {
-            param frequency: FloatParam {
-                default: 20f32,
-                range: 10f32..20000f32,
-            },
-            param wave: EnumParam<WaveType> {
-                default: WaveType::Square,
-            },
-            nested_params: {
-                param gain: FloatParam {
-                    default: 1f32,
-                    range: 0f32..2f32,
-                },
-                param pan: FloatParam {
-                    default: 0f32,
-                    range: -1f32..1f32,
-                },
-            }
+/// Parse and expand `input`, returning the whitespace-stripped token stream so
+/// assertions are insensitive to `quote!` formatting.
+fn expand(input: &str) -> String {
+    let input: DeriveInput = syn::parse_str(input).expect("input should be valid Rust");
+    let params = Params::from_derive_input(&input).expect("input should parse");
+    strip(&super::expand::expand(params).to_string())
+}
+
+fn strip(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+const NESTED: &str = r#"
+    struct MyNestedParams {
+        #[param(name = "Pan", range = -1..1, unit = "pan")]
+        pub pan: FloatParam,
+
+        #[nested]
+        pub inner: InnerParams,
+    }
+"#;
+
+const ROOT: &str = r#"
+    struct MyParams {
+        #[param(name = "Gain", range = -60..6, unit = "dB")]
+        pub gain: FloatParam,
+
+        #[param(default = true, flags = ParamInfoFlags::IS_AUTOMATABLE)]
+        pub bypass: BoolParam,
+
+        #[nested(module = "osc")]
+        pub osc: MyNestedParams,
+
+        #[nested]
+        pub voices: [MyNestedParams; 8],
+    }
+"#;
+
+#[test]
+fn leaf_id_defaults_to_field_ident() {
+    let out = expand(ROOT);
+
+    assert!(out.contains("<FloatParam>::builder()"), "{out}");
+    // `id` defaults to the *field* ident (not the display name), so renaming a
+    // label keeps the id stable. The leaf lives at the root (empty module).
+    assert!(
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"gain")"#),
+        "{out}"
+    );
+    assert!(
+        out.contains(r#".name(::std::string::String::from("Gain"))"#),
+        "{out}"
+    );
+    assert!(out.contains(".maybe_module(__module.clone())"), "{out}");
+}
+
+#[test]
+fn explicit_id_overrides_name() {
+    let out = expand(
+        r#"
+        struct P {
+            #[param(name = "Volume", id = "Gain")]
+            pub gain: FloatParam,
         }
-
-        struct ChannelParam {
-            param gain: FloatParam {
-                default: 1f32,
-                range: 0f32..2f32,
-            },
-        }
-    "#;
-
-fn parse(input: &str) -> Params {
-    syn::parse_str::<Params>(input).expect("should parse")
-}
-
-/// Resolve and expand `params`, returning the normalized generated tokens.
-fn expanded(params: Params) -> String {
-    let resolved = params.resolve().expect("should resolve");
-    normalized(&crate::params::expand::expand(resolved).to_string())
-}
-
-/// Render any token streamable node for assertions.
-fn ts<T: quote::ToTokens>(node: &T) -> String {
-    quote::quote!(#node).to_string()
-}
-
-#[test]
-fn parses_top_level_structs() {
-    let params = parse(DEV_INPUT);
-    let names: Vec<_> = params.structs.iter().map(|s| s.name.to_string()).collect();
-    assert_eq!(names, ["OscillatorParam", "ChannelParam"]);
-}
-
-#[test]
-fn parses_leaf_params_with_entries() {
-    let params = parse(DEV_INPUT);
-    let osc = &params.structs[0];
-
-    let FieldValue::Leaf(frequency) = &osc.fields[0].value else {
-        panic!("frequency should be a leaf param");
-    };
-    assert_eq!(ts(&frequency.ty), "FloatParam");
-    let keys: Vec<_> = frequency
-        .entries
-        .iter()
-        .map(|e| e.key.to_string())
-        .collect();
-    assert_eq!(keys, ["default", "range"]);
-
-    let FieldValue::Leaf(wave) = &osc.fields[1].value else {
-        panic!("wave should be a leaf param");
-    };
-    assert_eq!(ts(&wave.ty), "EnumParam < WaveType >");
-
-    let FieldValue::Inline(nested) = &osc.fields[2].value else {
-        panic!("nested_params should be inline");
-    };
-    assert_eq!(nested.len(), 2);
-}
-
-#[test]
-fn hoists_inline_structs_into_definitions() {
-    let resolved = parse(DEV_INPUT).resolve().expect("should resolve");
-    let names: Vec<_> = resolved
-        .structs
-        .iter()
-        .map(|s| s.name.to_string())
-        .collect();
-    assert_eq!(
-        names,
-        [
-            "OscillatorParam",
-            "OscillatorParamNestedParams",
-            "ChannelParam",
-        ]
-    );
-
-    // The inline field is now typed by the hoisted struct.
-    let osc = resolved
-        .structs
-        .iter()
-        .find(|s| s.name == "OscillatorParam")
-        .unwrap();
-    let nested = osc
-        .fields
-        .iter()
-        .find(|f| f.name == "nested_params")
-        .unwrap();
-    assert_eq!(ts(&nested.ty), "OscillatorParamNestedParams");
-
-    // And the hoisted struct kept the original fields.
-    let nested = resolved
-        .structs
-        .iter()
-        .find(|s| s.name == "OscillatorParamNestedParams")
-        .unwrap();
-    let fields: Vec<_> = nested.fields.iter().map(|f| f.name.to_string()).collect();
-    assert_eq!(fields, ["gain", "pan"]);
-}
-
-#[test]
-fn parses_reference_field() {
-    let params = parse(
-        r#"
-            struct Group {
-                left: ChannelParam,
-            }
         "#,
     );
-    let FieldValue::Reference(ty) = &params.structs[0].fields[0].value else {
-        panic!("left should be a reference");
-    };
-    assert_eq!(ts(ty), "ChannelParam");
-}
 
-#[test]
-fn parses_named_array() {
-    let params = parse(
-        r#"
-            struct Group {
-                voices: Array<4, ChannelParam>,
-            }
-        "#,
+    assert!(
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"Gain")"#),
+        "{out}"
     );
-    let FieldValue::Array(array) = &params.structs[0].fields[0].value else {
-        panic!("voices should be an array");
-    };
-    assert_eq!(ts(&array.len), "4");
-
-    let ArrayElement::Named(ty) = &array.element else {
-        panic!("element should be a named type");
-    };
-    assert_eq!(ts(ty), "ChannelParam");
-}
-
-#[test]
-fn parses_const_ident_array_length() {
-    let params = parse(
-        r#"
-            struct Group {
-                voices: Array<MAX_VOICES, ChannelParam>,
-            }
-        "#,
+    assert!(
+        out.contains(r#".name(::std::string::String::from("Volume"))"#),
+        "{out}"
     );
-    let FieldValue::Array(array) = &params.structs[0].fields[0].value else {
-        panic!("voices should be an array");
-    };
-    assert_eq!(ts(&array.len), "MAX_VOICES");
 }
 
 #[test]
-fn hoists_anonymous_array_elements() {
-    let resolved = parse(
-        r#"
-            struct EnvelopeParam {
-                param attack: FloatParam { default: 0.1f32 },
-                stages: Array<3> {
-                    param level: FloatParam { default: 1f32 },
-                },
-            }
-        "#,
+fn int_literals_are_coerced_for_float_params() {
+    let out = expand(ROOT);
+
+    assert!(out.contains("min_value(-(60.0)).max_value(6.0)"), "{out}");
+    // Absent `default` falls back to `Default::default()`.
+    assert!(
+        out.contains(".default(::core::default::Default::default())"),
+        "{out}"
+    );
+}
+
+#[test]
+fn bool_param_keeps_default_and_flags() {
+    let out = expand(ROOT);
+
+    assert!(out.contains(".default(true)"), "{out}");
+    assert!(
+        out.contains(".flags(ParamInfoFlags::IS_AUTOMATABLE)"),
+        "{out}"
+    );
+}
+
+#[test]
+fn nested_uses_module_override_and_field_name() {
+    let out = expand(ROOT);
+
+    // `#[nested(module = "osc")]` overrides the field name as the module segment.
+    assert!(
+        out.contains(r#"::std::format!("{}.{}",__parent,"osc")"#),
+        "{out}"
+    );
+    // `#[nested]` falls back to the field name (`voices`, exercised as the
+    // array element module in the generated `format!`).
+    assert!(
+        out.contains(r#"::std::format!("{}[{}]","voices",__i)"#),
+        "{out}"
+    );
+    assert!(
+        out.contains("<MyNestedParams>::create_with_module"),
+        "{out}"
+    );
+}
+
+#[test]
+fn nested_array_is_built_with_from_fn_and_indexed_module() {
+    let out = expand(ROOT);
+
+    assert!(out.contains("::core::array::from_fn(|__i|"), "{out}");
+    assert!(
+        out.contains(r#"::std::format!("{}[{}]","voices",__i)"#),
+        "{out}"
+    );
+}
+
+#[test]
+fn all_params_walks_leaves_and_nested_fields() {
+    let out = expand(ROOT);
+
+    assert!(out.contains("Param::as_ptr(&self.gain)"), "{out}");
+    assert!(out.contains("UserParams::all_params(&self.osc)"), "{out}");
+    assert!(out.contains("for__iteminself.voices.iter()"), "{out}");
+    assert!(out.contains("UserParams::all_params(__item)"), "{out}");
+}
+
+#[test]
+fn nested_construction_propagates_module_path() {
+    let out = expand(NESTED);
+
+    // A leaf inside `MyNestedParams` uses the module passed in by its parent.
+    assert!(
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"pan")"#),
+        "{out}"
+    );
+    assert!(out.contains("<InnerParams>::create_with_module"), "{out}");
+}
+
+#[test]
+fn rejects_fields_without_attribute() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>("struct P { pub gain: FloatParam }").unwrap(),
     )
-    .resolve()
-    .expect("should resolve");
+    .unwrap_err();
 
-    let names: Vec<_> = resolved
-        .structs
-        .iter()
-        .map(|s| s.name.to_string())
-        .collect();
-    assert_eq!(names, ["EnvelopeParam", "EnvelopeParamStages"]);
-
-    // The array now points at the generated struct and keeps its length.
-    let env = &resolved.structs[0];
-    let stages = env.fields.iter().find(|f| f.name == "stages").unwrap();
-    assert_eq!(normalized(&ts(&stages.ty)), "[EnvelopeParamStages;3]");
-
-    let element = resolved
-        .structs
-        .iter()
-        .find(|s| s.name == "EnvelopeParamStages")
-        .unwrap();
-    let fields: Vec<_> = element.fields.iter().map(|f| f.name.to_string()).collect();
-    assert_eq!(fields, ["level"]);
-}
-
-#[test]
-fn parses_leaf_without_config() {
-    let params = parse("struct Foo { param gain: FloatParam }");
-    let FieldValue::Leaf(leaf) = &params.structs[0].fields[0].value else {
-        panic!("gain should be a leaf");
-    };
-    assert_eq!(leaf.kind, LeafKind::Param);
-    assert_eq!(ts(&leaf.ty), "FloatParam");
-    assert!(leaf.entries.is_empty());
-}
-
-#[test]
-fn reports_missing_kind_for_leaf() {
-    let msg = parse_err("struct Foo { gain: FloatParam { default: 1f32 } }");
     assert!(
-        msg.contains("expected a field kind before a parameter definition"),
-        "{msg}"
+        err.to_string().contains("`#[param]` or `#[nested]`"),
+        "{err}"
     );
 }
 
 #[test]
-fn pascal_case_helper() {
-    assert_eq!(to_pascal_case("nested_params"), "NestedParams");
-    assert_eq!(to_pascal_case("gain"), "Gain");
-    assert_eq!(to_pascal_case("a_b_c"), "ABC");
-}
-
-fn parse_err(input: &str) -> String {
-    syn::parse_str::<Params>(input)
-        .expect_err("should fail to parse")
-        .to_string()
-}
-
-#[test]
-fn reports_missing_struct_keyword() {
-    let msg = parse_err("Foo { a: FloatParam }");
-    assert!(msg.contains("expected a `struct` definition"), "{msg}");
-}
-
-#[test]
-fn reports_missing_struct_brace() {
-    let msg = parse_err("struct Foo;");
-    assert!(
-        msg.contains("expected `{` to open the struct body"),
-        "{msg}"
-    );
-}
-
-#[test]
-fn reports_missing_field_value() {
-    let msg = parse_err("struct Foo { gain: }");
-    assert!(msg.contains("expected a field value"), "{msg}");
-}
-
-#[test]
-fn reports_missing_colon() {
-    let msg = parse_err("struct Foo { gain FloatParam }");
-    assert!(msg.contains("expected `:` after field `gain`"), "{msg}");
-}
-
-#[test]
-fn reports_missing_comma_between_fields() {
-    let msg = parse_err("struct Foo { a: FloatParam b: FloatParam }");
-    assert!(msg.contains("expected `,` between fields"), "{msg}");
-}
-
-#[test]
-fn reports_missing_array_body() {
-    let msg = parse_err("struct Foo { stages: Array<3> }");
-    assert!(
-        msg.contains("expected `{` to open the anonymous `Array` element body"),
-        "{msg}"
-    );
-}
-
-#[test]
-fn reports_duplicate_struct() {
-    let msg = parse_err("struct Foo {} struct Foo {}");
-    assert!(
-        msg.contains("struct `Foo` is defined more than once"),
-        "{msg}"
-    );
-}
-
-#[test]
-fn reports_duplicate_field() {
-    let msg = parse_err("struct Foo { a: FloatParam, a: FloatParam }");
-    assert!(
-        msg.contains("field `a` is defined more than once in struct `Foo`"),
-        "{msg}"
-    );
-}
-
-#[test]
-fn reports_empty_anonymous_group() {
-    let msg = parse_err("struct Foo { empty_param: {} }");
-    assert!(
-        msg.contains("`empty_param` is an empty param group"),
-        "{msg}"
-    );
-}
-
-#[test]
-fn reports_empty_array_element_group() {
-    let msg = parse_err("struct Foo { stages: Array<3> {} }");
-    assert!(msg.contains("`stages` is an empty param group"), "{msg}");
-}
-
-/// Collapse all whitespace so token-stream assertions are stable.
-fn normalized(tokens: &str) -> String {
-    tokens.chars().filter(|c| !c.is_whitespace()).collect()
-}
-
-#[test]
-fn expands_struct_definitions() {
-    let params = parse(
-        r#"
-            struct Child {
-                param gain: FloatParam { default: 1f32 },
-            }
-
-            struct Parent {
-                param freq: FloatParam { default: 20f32, range: 10f32..20000f32 },
-                child: Child,
-                voices: Array<2, Child>,
-            }
-        "#,
-    );
-
-    let out = expanded(params);
-
-    assert!(out.contains("structChild{gain:FloatParam,}"), "{out}");
-    assert!(
-        out.contains("structParent{freq:FloatParam,child:Child,voices:[Child;2],}"),
-        "{out}"
-    );
-    // Structs stay path-agnostic: no constructors, ids or modules here.
-    assert!(!out.contains("fncreate"), "{out}");
-    assert!(!out.contains("ClapId"), "{out}");
-}
-
-#[test]
-fn expands_hoisted_group_definitions() {
-    let params = parse(
-        r#"
-            struct Envelope {
-                stages: Array<3> {
-                    param level: FloatParam { default: 1f32 },
-                },
-            }
-        "#,
-    );
-
-    let out = expanded(params);
-
-    assert!(
-        out.contains("structEnvelope{stages:[EnvelopeStages;3],}"),
-        "{out}"
-    );
-    assert!(
-        out.contains("structEnvelopeStages{level:FloatParam,}"),
-        "{out}"
-    );
-}
-
-#[test]
-fn expands_generic_field_type() {
-    let params =
-        parse("struct Foo { param wave: EnumParam<WaveType> { default: WaveType::Square } }");
-    let out = expanded(params);
-
-    assert!(
-        out.contains("structFoo{wave:EnumParam<WaveType>,}"),
-        "{out}"
-    );
-}
-
-#[test]
-fn expands_root_create() {
-    let params = parse(
-        r#"
-            struct ChannelParam {
-                param gain: FloatParam { default: 1f32, min: 0f32, max: 1f32 },
-            }
-            struct OscillatorParam {
-                param frequency: FloatParam { default: 20f32 },
-                nested: {
-                    param pan: FloatParam { default: 0f32 },
-                },
-            }
-            params {
-                left: ChannelParam,
-                oscillator: Array<2, OscillatorParam>,
-            }
-        "#,
-    );
-
-    let out = expanded(params);
-
-    // Root type definition.
-    assert!(
-        out.contains("structParameters{left:ChannelParam,oscillator:[OscillatorParam;2],}"),
-        "{out}"
-    );
-    // Ids are derived from module.name, not from a positional cursor.
-    assert!(
-        out.contains("::rift_plugin::prelude::param_id(\"left\",\"gain\")"),
-        "{out}"
-    );
-    // A fully static path becomes a compile-time `const` in `param_ids`.
-    assert!(out.contains("pubconstLEFT_GAIN:"), "{out}");
-    assert!(out.contains("pubmodparam_ids"), "{out}");
-    // The `module` is already the namespace, so no `_ID` suffix.
-    assert!(!out.contains("_ID"), "{out}");
-    // A literal `Array` unrolls one module per element.
-    assert!(
-        out.contains("pubmodoscillator{pubmodi0{pubconstFREQUENCY:"),
-        "{out}"
-    );
-    assert!(
-        out.contains("param_id(\"oscillator[0]\",\"frequency\")"),
-        "{out}"
-    );
-    assert!(
-        out.contains("param_id(\"oscillator[0].nested\",\"pan\")"),
-        "{out}"
-    );
-    assert!(out.contains("pubmodi1{pubconstFREQUENCY:"), "{out}");
-    // The static module path is passed through as a literal.
-    assert!(out.contains("Some(\"left\".to_string())"), "{out}");
-    // Array element uses a unique index var and an indexed module path.
-    assert!(out.contains("::core::array::from_fn(|i0|"), "{out}");
-    assert!(
-        out.contains("let__module1:String=format!(\"{}[{}]\",\"oscillator\",i0)"),
-        "{out}"
-    );
-    // An array-indexed leaf cannot be a `const`, so it hashes the runtime path.
-    assert!(
-        out.contains("param_id(__module1.as_str(),\"frequency\")"),
-        "{out}"
-    );
-    // Nested group path is composed from the parent binding.
-    assert!(
-        out.contains("let__module1:String=format!(\"{}.{}\",__module1,\"nested\")"),
-        "{out}"
-    );
-}
-
-#[test]
-fn unrolls_literal_array_ids() {
-    let params = parse(
-        r#"
-            struct Child {
-                param gain: FloatParam { default: 1f32 },
-            }
-            params {
-                voices: Array<2, Child>,
-            }
-        "#,
-    );
-
-    let out = expanded(params);
-
-    assert!(
-        out.contains("pubmodparam_ids{pubmodvoices{pubmodi0{pubconstGAIN:"),
-        "{out}"
-    );
-    assert!(out.contains("param_id(\"voices[0]\",\"gain\")"), "{out}");
-    assert!(out.contains("pubmodi1{pubconstGAIN:"), "{out}");
-    assert!(out.contains("param_id(\"voices[1]\",\"gain\")"), "{out}");
-}
-
-#[test]
-fn indexes_const_length_array_ids_at_runtime() {
-    let params = parse(
-        r#"
-            struct Child {
-                param gain: FloatParam { default: 1f32 },
-            }
-            params {
-                voices: Array<MAX_VOICES, Child>,
-            }
-        "#,
-    );
-
-    let out = expanded(params);
-
-    // A non-literal length cannot be unrolled, so the id is a function of the
-    // index, using the very module string `create()` builds.
-    assert!(
-        out.contains("pubmodvoices{pubfngain(index0:usize,)"),
-        "{out}"
-    );
-    assert!(
-        out.contains("param_id(&format!(\"voices[{}]\",index0),\"gain\")"),
-        "{out}"
-    );
-}
-
-#[test]
-fn reports_unknown_struct_in_root() {
-    let err = parse("params { left: Missing }")
-        .resolve()
-        .expect_err("should fail to resolve")
-        .to_string();
-    assert!(err.contains("unknown struct `Missing`"), "{err}");
-}
-
-#[test]
-fn reports_recursive_struct() {
-    let err = parse(
-        r#"
-            struct A { b: B }
-            struct B { a: A }
-            params { a: A }
-        "#,
+fn rejects_leaf_arrays() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>("struct P { #[param] pub gains: [FloatParam; 2] }").unwrap(),
     )
-    .resolve()
-    .expect_err("should fail to resolve")
-    .to_string();
-    assert!(err.contains("`A` contains itself"), "{err}");
+    .unwrap_err();
+
+    assert!(err.to_string().contains("arrays of leaf params"), "{err}");
+}
+
+#[test]
+fn rejects_range_on_bool() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>("struct P { #[param(range = 0..1)] pub bypass: BoolParam }")
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(
+        err.to_string().contains("`range` is only supported"),
+        "{err}"
+    );
+}
+
+#[test]
+fn rejects_unknown_param_key() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P { #[param(smooth = "exp(5)")] pub gain: FloatParam }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("Unknown field: `smooth`"), "{err}");
 }

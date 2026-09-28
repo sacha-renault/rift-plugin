@@ -8,7 +8,7 @@ pub use clack_plugin::prelude::*;
 use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{InitContext, ProcessContext};
 use rift_plugin_gui::GuiFactory;
-use rift_plugin_params::Params;
+use rift_plugin_params::UserParams;
 use rift_plugin_types::{AudioPort, EventSource, MainAudioPort, MidiMessage, MidiPort};
 
 pub mod event_config;
@@ -22,7 +22,10 @@ pub use factory::PluginWrapper;
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
     /// These are automatically synchronized between the GUI and Audio threads.
-    type Params: Params + Default + Send + Sync + 'static;
+    ///
+    /// Implemented with `#[derive(Params)]`; the wrapper builds a host-facing
+    /// [`rift_plugin_params::ParamCollection`] view over it automatically.
+    type Params: UserParams + Default + Send + Sync + 'static;
 
     /// Shared data (non param) between audio thread and gui thread.
     type SharedData: Default + Send + Sync + 'static;

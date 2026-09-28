@@ -6,7 +6,7 @@ use clack_plugin::utils::ClapId;
 
 use crate::Persistent;
 
-use super::param_int::{IntParam, IntParamConfig};
+use super::param_int::IntParam;
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
@@ -39,54 +39,84 @@ impl<E: EnumValues> EnumParam<E> {
         }
     }
 
-    pub fn create(
-        id: ClapId,
-        name: String,
-        module: Option<String>,
-        config: EnumParamConfig<E>,
-    ) -> Self {
-        let total = E::count() as i32;
-        let default = config.default.to_index() as i32;
-
-        let inner = IntParam::create(
-            id,
-            name,
-            module,
-            IntParamConfig {
-                default,
-                unit: config.unit,
-                min: 0,
-                max: total - 1,
-                flags: config.flags,
-            },
-        );
-
-        Self {
-            inner,
-            _p: PhantomData,
-        }
-    }
-
     pub fn with_flags(mut self, param_flags: ParamInfoFlags) -> Self {
         self.inner.flags = self.inner.flags.union(param_flags);
         self
     }
-}
 
-#[derive(Debug)]
-pub struct EnumParamConfig<E> {
-    pub default: E,
-    pub unit: &'static str,
-    pub flags: ParamInfoFlags,
-}
-
-impl<E: EnumValues> Default for EnumParamConfig<E> {
-    fn default() -> Self {
-        Self {
+    /// Entry point for the derive macro; mirrors the `bon` builders of the
+    /// other parameter types.
+    pub fn builder() -> EnumParamBuilder<E> {
+        EnumParamBuilder {
+            id: ClapId::new(0),
+            name: String::new(),
+            module: None,
             default: E::default(),
             unit: "",
             // Enum flags default to empty; `with_flags` unions on top.
             flags: ParamInfoFlags::empty(),
+        }
+    }
+}
+
+/// Builder for [`EnumParam`], mirroring the `bon`-generated builders of the
+/// other parameter types (same setters, same `build`).
+pub struct EnumParamBuilder<E: EnumValues> {
+    id: ClapId,
+    name: String,
+    module: Option<String>,
+    default: E,
+    unit: &'static str,
+    flags: ParamInfoFlags,
+}
+
+impl<E: EnumValues> EnumParamBuilder<E> {
+    pub fn id(mut self, id: ClapId) -> Self {
+        self.id = id;
+        self
+    }
+
+    pub fn name(mut self, name: String) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn maybe_module(mut self, module: Option<String>) -> Self {
+        self.module = module;
+        self
+    }
+
+    pub fn default(mut self, default: E) -> Self {
+        self.default = default;
+        self
+    }
+
+    pub fn unit(mut self, unit: &'static str) -> Self {
+        self.unit = unit;
+        self
+    }
+
+    pub fn flags(mut self, flags: ParamInfoFlags) -> Self {
+        self.flags = flags;
+        self
+    }
+
+    pub fn build(self) -> EnumParam<E> {
+        let total = E::count() as i32;
+        let inner = IntParam::builder()
+            .id(self.id)
+            .name(self.name)
+            .maybe_module(self.module)
+            .default(self.default.to_index() as i32)
+            .min_value(0)
+            .max_value(total - 1)
+            .unit(self.unit)
+            .flags(self.flags)
+            .build();
+
+        EnumParam {
+            inner,
+            _p: PhantomData,
         }
     }
 }
@@ -115,6 +145,8 @@ impl<E: EnumValues> TypedParam for EnumParam<E> {
         }
     }
 }
+
+impl<E: EnumValues> crate::traits::__private::Sealed for EnumParam<E> {}
 
 impl<E: EnumValues> Param for EnumParam<E> {
     fn name(&self) -> &str {

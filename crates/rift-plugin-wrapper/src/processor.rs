@@ -7,7 +7,7 @@ use clack_plugin::events::event_types::{
 use clack_plugin::prelude::*;
 
 use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind};
-use rift_plugin_params::Params;
+use rift_plugin_params::ParamCollection;
 use rift_plugin_types::transport::BlockIndex;
 
 use crate::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
@@ -54,7 +54,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     && let Some(id) = event.param_id()
                 {
                     let value = event.value();
-                    self.shared.params.set_value(id, value as f32);
+                    self.shared.host_params.set_value(id, value as f32);
                     self.plugin.param_changed(id, EventSource::Host);
                 }
             } else if let Some(event) = event.as_event::<MidiEvent>() {

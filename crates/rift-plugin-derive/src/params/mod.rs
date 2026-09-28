@@ -1,26 +1,22 @@
-//! The `params!` procedural macro.
+//! The `Params` derive macro.
 //!
-//! The pipeline has two stages, each in its own module:
-//!
-//! - [`collect`] parses the token stream and *resolves* it into a
-//!   self-contained IR (structs hoisted and named, references substituted,
-//!   module paths and ids computed).
-//! - [`expand`] renders that IR into Rust code, without any further lookup.
+//! [`parse`] turns the annotated struct into a small IR, [`expand`] renders it
+//! into the constructor (`new`/`Default`) and the `UserParams` implementation.
 
-mod collect;
 mod expand;
+mod parse;
 
 #[cfg(test)]
 mod tests;
 
 use proc_macro::TokenStream;
+use syn::parse_macro_input;
 
-pub fn proc_params(input: TokenStream) -> TokenStream {
-    match syn::parse::<collect::Params>(input)
-        .and_then(collect::Params::resolve)
-        .map(expand::expand)
-    {
-        Ok(tokens) => tokens.into(),
-        Err(e) => e.into_compile_error().into(),
+pub fn derive_params(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as syn::DeriveInput);
+
+    match parse::Params::from_derive_input(&input) {
+        Ok(params) => expand::expand(params).into(),
+        Err(error) => error.into_compile_error().into(),
     }
 }

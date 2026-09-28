@@ -42,12 +42,15 @@ pub mod prelude {
     pub use rift_plugin_utils::{ConsumerCell, MultiChannel};
     pub use rift_plugin_wrapper::*;
 
-    pub use rift_plugin_derive::{DeriveEnumValues, params};
+    pub use rift_plugin_derive::{DeriveEnumValues, Params};
 
     pub use super::export_clap_plugin;
 
     #[cfg(feature = "fun-dsp")]
     pub use rift_fun_dsp::*;
+
+    pub use clack_extensions::note_ports::{NoteDialect, NoteDialects};
+    pub use clack_plugin::plugin::features;
 }
 
 #[doc(hidden)]

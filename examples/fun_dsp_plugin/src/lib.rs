@@ -3,35 +3,35 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
-use rift_plugin::prelude::clack_extensions::note_ports::{NoteDialect, NoteDialects};
-use rift_plugin::prelude::clack_plugin::plugin::features;
 use rift_plugin::prelude::utils::notes::midi_to_frequency;
 use rift_plugin::prelude::*;
-use rift_plugin_dsp::oscillator::OscillatorPosition;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
 
 pub mod oscillator;
 
-params! {
-    struct Oscillator {
-        param wt_position: IntParam {
-            default: 0,
-            min:0,
-            max: 255,
-        }
-    }
+#[derive(Params)]
+pub struct OscillatorParams {
+    #[param(id = "Wt Position", range = 0..255, default = 0)]
+    pub wt_position: IntParam,
+}
 
-    params {
-        filters: Array<1> {
-            param cutoff: SharedFloatParam {
-                default: 440f32,
-                min: 20f32,
-                max: 2000f32,
-            },
-        },
+#[derive(Params)]
+pub struct FilterParams {
+    #[param(
+        id = "Cutoff",
+        range = 20..2000,
+        default = 440.0,
+    )]
+    pub cutoff: SharedFloatParam,
+}
 
-        oscillators: Array<1, Oscillator>
-    }
+#[derive(Params)]
+pub struct FunDspParams {
+    #[nested]
+    pub filters: [FilterParams; 1],
+
+    #[nested]
+    pub oscillators: [OscillatorParams; 1],
 }
 
 struct FunDspPlugin {
@@ -39,19 +39,17 @@ struct FunDspPlugin {
 }
 
 impl ClapPlugin for FunDspPlugin {
-    type Params = Parameters;
+    type Params = FunDspParams;
     type SharedData = ();
 
     const PARAM_EVENT_AUTO_HANDLING: bool = true;
     const MIDI_EVENT_AUTO_HANDLING: bool = true;
 
     fn create(
-        params: &Self::Params,
+        _params: &Self::Params,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
-        let synth = |table| An(PhaseSynth::new(table));
-
         // Band-limited wavetable range shared by every morph position.
         const MIN_PITCH: f64 = 20.0;
         const MAX_PITCH: f64 = 20_000.0;
@@ -67,7 +65,7 @@ impl ClapPlugin for FunDspPlugin {
 
                 // A sine is just the fundamental; a square adds odd harmonics at 1/i.
                 let amplitude = move |_pitch: f64, i: u32| {
-                    if i % 2 == 0 {
+                    if i.is_multiple_of(2) {
                         0.0
                     } else {
                         (1.0 - morph) * if i == 1 { 1.0 } else { 0.0 } + morph * (1.0 / i as f64)

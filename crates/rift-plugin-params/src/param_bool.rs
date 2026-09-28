@@ -13,6 +13,7 @@ use super::traits::{Param, TypedParam};
 pub struct BoolParam {
     /// Default value for the param
     #[allow(unused)]
+    #[builder(default)]
     default: bool,
 
     #[builder(skip = AtomicBool::new(default))]
@@ -21,10 +22,9 @@ pub struct BoolParam {
     /// The name of the param will
     /// be initialized in the derive with it's clap ID
     /// and module.
-    #[builder(skip = String::from(""))]
+    #[builder(default)]
     name: String,
 
-    #[builder(skip = None)]
     module: Option<String>,
 
     #[builder(default = "")]
@@ -33,44 +33,8 @@ pub struct BoolParam {
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     flags: ParamInfoFlags,
 
-    #[builder(skip = ClapId::new(0))]
+    #[builder(default = ClapId::new(0))]
     id: ClapId,
-}
-
-impl BoolParam {
-    pub fn create(
-        id: ClapId,
-        name: String,
-        module: Option<String>,
-        config: BoolParamConfig,
-    ) -> Self {
-        Self {
-            default: config.default,
-            value: AtomicBool::new(config.default),
-            name,
-            module,
-            unit: config.unit,
-            flags: config.flags,
-            id,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct BoolParamConfig {
-    pub default: bool,
-    pub unit: &'static str,
-    pub flags: ParamInfoFlags,
-}
-
-impl Default for BoolParamConfig {
-    fn default() -> Self {
-        Self {
-            default: false,
-            unit: "",
-            flags: ParamInfoFlags::IS_AUTOMATABLE,
-        }
-    }
 }
 
 impl TypedParam for BoolParam {
@@ -84,6 +48,8 @@ impl TypedParam for BoolParam {
         self.value.store(value, Ordering::SeqCst);
     }
 }
+
+impl crate::traits::__private::Sealed for BoolParam {}
 
 impl Param for BoolParam {
     fn name(&self) -> &str {
