@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 use rift_plugin::prelude::utils::bounded_vec::BoundedVec;
-use rift_plugin_dsp::oscillator::OscillatorPosition;
+use rift_plugin_dsp::oscillator::OscillatorVoice;
 
 pub struct Oscillator {
-    phases: BoundedVec<(u8, OscillatorPosition)>,
-    wavetables: BoundedVec<An<PhaseSynth>>,
+    voices: BoundedVec<OscillatorVoice>,
+    wavetables: BoundedVec<Arc<Wavetable>>,
     samplerate: f64,
 }
 
@@ -14,50 +14,47 @@ impl Oscillator {
     pub fn new(samplerate: f64, phases_cap: usize, wt_cap: usize) -> Self {
         Self {
             samplerate,
-            phases: BoundedVec::new(phases_cap),
+            voices: BoundedVec::new(phases_cap),
             wavetables: BoundedVec::new(wt_cap),
         }
     }
 
-    pub fn set_wavetables(&mut self, wt: Vec<Wavetable>) {
+    pub fn set_wavetables(&mut self, wt: Vec<Arc<Wavetable>>) {
         self.wavetables.clear();
 
         for table in wt {
-            let mut s = An(PhaseSynth::new(Arc::new(table)));
-            AudioUnit::set_sample_rate(&mut s, self.samplerate);
-            self.wavetables.push(s);
+            self.wavetables.push(table);
         }
     }
 
-    pub fn trigger(
-        &mut self,
-        note: u8,
-        frequency: f32,
-        phase_generator: impl FnOnce() -> f32,
-    ) -> bool {
-        let mut pos = OscillatorPosition::new(self.samplerate as f32);
-        pos.trigger_with_phase(frequency, phase_generator);
+    pub fn trigger(&mut self, note: u8, phase_generator: impl FnOnce() -> f32) -> bool {
+        let position = OscillatorVoice::new_with_phase_generator(
+            self.samplerate as f32,
+            note,
+            phase_generator,
+        );
 
-        self.phases.try_push((note, pos)).is_ok()
+        self.voices.try_push(position).is_ok()
     }
 
     pub fn deactivate(&mut self, note: u8) {
-        self.phases.retain(|(n, _)| *n != note);
+        self.voices.retain(|v| v.note() != note);
     }
 
-    pub fn tick(&mut self, mut wt_pos: usize) -> [f32; 2] {
-        let mut l = 0f32;
-        let mut r = 0f32;
+    pub fn tick(&mut self, wt_pos: f32) -> [f32; 2] {
+        let wt = ((self.wavetables.len() - 1) as f32 * wt_pos.clamp(0.0, 1.0)) as usize;
+        let table = &self.wavetables[wt];
 
-        wt_pos = std::cmp::min(wt_pos, self.wavetables.len());
-
-        for (_, phase) in self.phases.iter_mut() {
-            let value = self.wavetables[wt_pos].filter_mono(phase.get_next_phase());
-
+        let mut l = 0.0;
+        let mut r = 0.0;
+        for voice in self.voices.iter_mut() {
+            // fundsp's own API: frequency is known, so pass it directly
+            let (value, hint) =
+                table.read(voice.table_hint(), voice.frequency(), voice.next_phase());
+            voice.set_table_hint(hint);
             l += value;
             r += value;
         }
-
         [l, r]
     }
 }

@@ -11,8 +11,8 @@ pub mod oscillator;
 
 #[derive(Params)]
 pub struct OscillatorParams {
-    #[param(id = "Wt Position", range = 0..255, default = 0)]
-    pub wt_position: IntParam,
+    #[param(id = "Wt Position", default = 0)]
+    pub wt_position: FloatParam,
 }
 
 #[derive(Params)]
@@ -61,7 +61,7 @@ impl ClapPlugin for FunDspPlugin {
                 let morph = idx as f64 / 255.0;
 
                 // All partials are sine-phased, keeping the wave odd and symmetric.
-                let phase = |_i: u32| 0.0;
+                let phase = |_| 0.0;
 
                 // A sine is just the fundamental; a square adds odd harmonics at 1/i.
                 let amplitude = move |_pitch: f64, i: u32| {
@@ -72,7 +72,13 @@ impl ClapPlugin for FunDspPlugin {
                     }
                 };
 
-                Wavetable::new(MIN_PITCH, MAX_PITCH, TABLES_PER_OCTAVE, &phase, &amplitude)
+                Arc::new(Wavetable::new(
+                    MIN_PITCH,
+                    MAX_PITCH,
+                    TABLES_PER_OCTAVE,
+                    &phase,
+                    &amplitude,
+                ))
             })
             .collect();
 
@@ -102,7 +108,7 @@ impl ClapPlugin for FunDspPlugin {
 
             for oscillator in &params.oscillators {
                 let wt_pos = oscillator.wt_position.value();
-                let [l, r] = self.oscillator.tick(wt_pos as usize);
+                let [l, r] = self.oscillator.tick(wt_pos);
 
                 fr[0] += l;
                 fr[1] += r;
@@ -119,8 +125,7 @@ impl ClapPlugin for FunDspPlugin {
     fn on_midi_message(&mut self, midi: MidiMessage) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, .. } => {
-                self.oscillator
-                    .trigger(note, midi_to_frequency(note), || 0f32);
+                self.oscillator.trigger(note, || 0f32);
             }
             MidiMessageKind::NoteOff { note, .. } => self.oscillator.deactivate(note),
             _ => {}

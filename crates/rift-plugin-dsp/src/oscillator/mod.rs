@@ -7,8 +7,6 @@
 //!
 //! [`Oscillator`] manages a bank of 127 voices (one per MIDI note) and
 //! combines their output through a caller-supplied waveform function.
-mod oscillator;
-mod oscillator_position;
+mod voice;
 
-pub use oscillator::Oscillator;
-pub use oscillator_position::OscillatorPosition;
+pub use voice::OscillatorVoice;
