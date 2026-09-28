@@ -204,5 +204,5 @@ pub trait ParamCollection: Sync + Send + 'static {
 
 #[doc(hidden)]
 pub(crate) mod __private {
-    pub(crate) trait Sealed {}
+    pub trait Sealed {}
 }
