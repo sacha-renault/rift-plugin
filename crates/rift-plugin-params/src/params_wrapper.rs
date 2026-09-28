@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use clack_extensions::params::ParamInfo;
 use clack_plugin::{plugin::PluginError, utils::ClapId};
@@ -6,22 +6,34 @@ use clack_plugin::{plugin::PluginError, utils::ClapId};
 use crate::{Param, ParamCollection, ParamPtr};
 
 pub struct ParamsWrapper {
-    params: BTreeMap<ClapId, ParamPtr>,
+    params: Box<[ParamPtr]>,
+    mapping: HashMap<ClapId, usize>,
 }
 
 impl ParamsWrapper {
     pub fn new(params: Vec<ParamPtr>) -> Self {
-        let mut map = BTreeMap::new();
+        let mut mapping = HashMap::new();
 
-        for param in params {
+        for (idx, param) in params.iter().enumerate() {
             let info = param.param_info();
 
-            if map.insert(info.id, param).is_some() {
+            if mapping.insert(info.id, idx).is_some() {
                 panic!("Two or more parameters share the same id.")
             }
         }
 
-        Self { params: map }
+        Self {
+            params: params.into_boxed_slice(),
+            mapping,
+        }
+    }
+
+    fn get(&self, id: ClapId) -> Option<ParamPtr> {
+        if let Some(&idx) = self.mapping.get(&id) {
+            Some(self.params[idx])
+        } else {
+            None
+        }
     }
 }
 
@@ -39,30 +51,27 @@ impl ParamCollection for ParamsWrapper {
     }
 
     fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>> {
-        self.params
-            .values()
-            .nth(index as usize)
-            .map(ParamPtr::param_info)
+        self.params.get(index as usize).map(ParamPtr::param_info)
     }
 
     fn get_value(&self, id: ClapId) -> Option<f32> {
-        self.params.get(&id).map(ParamPtr::get_raw)
+        self.get(id).map(|ptr| ptr.get_raw())
     }
 
     fn set_value(&self, id: ClapId, value: f32) {
-        if let Some(param) = self.params.get(&id) {
+        if let Some(param) = self.get(id) {
             param.set_raw(value);
         }
     }
 
     fn set_value_normalized(&self, id: ClapId, value: f32) {
-        if let Some(param) = self.params.get(&id) {
+        if let Some(param) = self.get(id) {
             param.set_normalized(value);
         }
     }
 
     fn text_to_value(&self, id: ClapId, text: &std::ffi::CStr) -> Option<f32> {
-        if let Some(param) = self.params.get(&id) {
+        if let Some(param) = self.get(id) {
             param.text_to_value(text)
         } else {
             None
@@ -75,7 +84,7 @@ impl ParamCollection for ParamsWrapper {
         value: f32,
         writer: &mut clack_extensions::params::ParamDisplayWriter,
     ) -> std::fmt::Result {
-        if let Some(param) = self.params.get(&id) {
+        if let Some(param) = self.get(id) {
             param.value_to_text(value, writer)
         } else {
             Err(::core::fmt::Error)
