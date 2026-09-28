@@ -76,11 +76,17 @@ impl<'a, C: ZipEventConfig> Iterator for FrameEvents<'a, C> {
             let event = &self.events[self.position];
             self.position += 1;
 
-            // We yield events here ONLY if the wrapper didn't already
-            // "consume" them in the pre-process flush.
-
-            // We don't wanna collapse those, because if one as_event is true
-            // any other won't be
+            // We yield events here only when the wrapper didn't already apply them
+            // itself during the pre-process flush:
+            // - a param event is applied automatically only when
+            //   `PARAM_EVENT_AUTO_HANDLING` is set. When it isn't, `param_changed` was
+            //   still called during the flush, but applying the value is the plugin's
+            //   job, so we yield the event here.
+            // - a MIDI event is applied automatically only when
+            //   `MIDI_EVENT_AUTO_HANDLING` is set.
+            //
+            // We don't collapse the two branches: an event is at most one concrete type,
+            // so `as_event` can match only one of them.
             #[allow(clippy::collapsible_if)]
             if let Some(&param_event) = event.as_event::<ParamValueEvent>() {
                 if !C::PARAM_EVENT_AUTO_HANDLING {

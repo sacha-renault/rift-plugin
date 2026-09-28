@@ -54,7 +54,7 @@ impl<'a> SampleFrames<'a> {
     /// `FrameEvents` contains only the events whose timestamp matches that frame's
     /// position.
     ///
-    /// Your plugin needs to implement [`ZipEventConfig`] so you can use ::<Self> in the process function.
+    /// Your plugin needs to implement [`ZipEventConfig`] so you can use `::<Self>` in the process function.
     /// ```ignore
     /// impl ZipEventConfig for YourPlugin {
     ///     const MIDI_EVENT_AUTO_HANDLING: bool = <YourPlugin as ClapPlugin>::MIDI_EVENT_AUTO_HANDLING;
@@ -62,9 +62,14 @@ impl<'a> SampleFrames<'a> {
     /// }
     /// ```
     ///
-    /// Events already auto-handled by the wrapper (controlled by
-    /// [`ClapPlugin::PARAM_EVENT_AUTO_HANDLING`] and
-    /// [`ClapPlugin::MIDI_EVENT_AUTO_HANDLING`]) are silently skipped.
+    /// Events the wrapper already applies on its own are silently skipped: host
+    /// parameters when `ClapPlugin::PARAM_EVENT_AUTO_HANDLING` is `true`, and MIDI when
+    /// `ClapPlugin::MIDI_EVENT_AUTO_HANDLING` is `true`.
+    ///
+    /// This iterator and `ClapPlugin::param_changed` are not mutually exclusive: when
+    /// `ClapPlugin::PARAM_EVENT_AUTO_HANDLING` is `false` the value is not applied
+    /// automatically, so the event is yielded here *and* `param_changed` has already been
+    /// called for it during the pre-process flush.
     ///
     /// # Example
     ///

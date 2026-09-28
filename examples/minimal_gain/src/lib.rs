@@ -80,8 +80,6 @@ impl ClapPlugin for MinimalGain {
 
     fn on_midi_message(&mut self, _midi: MidiMessage) {}
 
-    fn param_changed(&mut self, _id: ClapId, _source: EventSource) {}
-
     fn gui(_params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
         Box::new(NoGuiFactory)
     }

@@ -3,7 +3,6 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
-use rift_plugin::prelude::utils::notes::midi_to_frequency;
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
 
@@ -131,8 +130,6 @@ impl ClapPlugin for FunDspPlugin {
             _ => {}
         }
     }
-
-    fn param_changed(&mut self, _id: ClapId, _source: EventSource) {}
 
     fn gui(_params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
         Box::new(NoGuiFactory)

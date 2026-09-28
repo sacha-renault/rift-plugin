@@ -11,7 +11,6 @@ use rift_plugin_gui::GuiFactory;
 use rift_plugin_params::UserParams;
 use rift_plugin_types::{AudioPort, EventSource, MainAudioPort, MidiMessage, MidiPort};
 
-pub mod event_config;
 pub mod factory;
 pub mod main_thread;
 pub mod processor;
@@ -30,15 +29,17 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Shared data (non param) between audio thread and gui thread.
     type SharedData: Default + Send + Sync + 'static;
 
-    /// If `true`, the wrapper automatically updates `ParamType` and calls [`Self::param_changed`]
-    /// for every parameter event before [`Self::process`] is called.
+    /// If `true`, the wrapper automatically writes incoming host parameter values into
+    /// the parameter store during the pre-[`Self::process`] flush, so the parameters
+    /// already hold the new value when [`Self::process`] runs.
     ///
-    /// If `false`, parameter events are ignored by the wrapper and must be handled manually
-    /// via the [`ProcessContext`] events iterator.
+    /// If `false`, the wrapper leaves the values untouched: the plugin is responsible for
+    /// applying them itself, typically sample-accurately via the events yielded by
+    /// `zip_events`.
     ///
-    /// **Notes**:
-    /// Param events from GUI cannot really be sample accurate and GUI change will trigger
-    /// [`Self::param_changed`] calls even if this is false!
+    /// This flag only controls whether the *value* is applied automatically.
+    /// [`Self::param_changed`] is notified for host parameter events regardless of this
+    /// setting (see its documentation).
     const PARAM_EVENT_AUTO_HANDLING: bool;
 
     /// If `true`, the wrapper automatically calls [`Self::on_midi_message`] for every MIDI
@@ -86,11 +87,21 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Messages are delivered once per block, before the call to [`Self::process`].
     fn on_midi_message(&mut self, midi: MidiMessage);
 
-    /// Called when a parameter value is changed.
+    /// Called when a parameter value changes.
     ///
-    /// If [`Self::PARAM_EVENT_AUTO_HANDLING`] is `true`, this is called automatically.
-    /// If `false`, this is called only for GUI events.
-    fn param_changed(&mut self, id: ClapId, source: EventSource);
+    /// - Changes coming from the GUI always notify, with [`EventSource::GUI`]. GUI edits
+    ///   are not sample-accurate, so this fires independently of
+    ///   [`Self::PARAM_EVENT_AUTO_HANDLING`].
+    /// - Changes coming from the host/automation notify once per block, before
+    ///   [`Self::process`], with [`EventSource::Host`] - even when
+    ///   [`Self::PARAM_EVENT_AUTO_HANDLING`] is `false` (in which case the wrapper does
+    ///   not apply the value itself, it only tells you it changed).
+    ///
+    /// Host notifications are skipped only when both [`Self::PARAM_EVENT_AUTO_HANDLING`]
+    /// and [`Self::MIDI_EVENT_AUTO_HANDLING`] are `false`, since the wrapper then leaves
+    /// all incoming events to the plugin.
+    #[allow(unused)]
+    fn param_changed(&mut self, id: ClapId, params: &Self::Params, source: EventSource) {}
 
     /// Creates the GUI factory for this plugin.
     ///

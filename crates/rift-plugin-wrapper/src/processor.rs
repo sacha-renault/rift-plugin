@@ -64,12 +64,14 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
         for event in events.iter() {
             if let Some(event) = event.as_event::<ParamValueEvent>() {
-                if P::PARAM_EVENT_AUTO_HANDLING
-                    && let Some(id) = event.param_id()
-                {
-                    let value = event.value();
-                    self.shared.host_params.set_value(id, value as f32);
-                    self.plugin.param_changed(id, EventSource::Host);
+                if let Some(id) = event.param_id() {
+                    if P::PARAM_EVENT_AUTO_HANDLING {
+                        let value = event.value();
+                        self.shared.host_params.set_value(id, value as f32);
+                    }
+
+                    self.plugin
+                        .param_changed(id, &&self.shared.params, EventSource::Host);
                 }
             } else if let Some(event) = event.as_event::<MidiEvent>() {
                 if P::MIDI_EVENT_AUTO_HANDLING {
@@ -92,10 +94,12 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
             GuiParamEventKind::Value(_) => {
-                self.plugin.param_changed(event.param_id, EventSource::GUI);
+                self.plugin
+                    .param_changed(event.param_id, &self.shared.params, EventSource::GUI);
             }
             GuiParamEventKind::ValueLess => {
-                self.plugin.param_changed(event.param_id, EventSource::GUI)
+                self.plugin
+                    .param_changed(event.param_id, &self.shared.params, EventSource::GUI)
             }
         }
     }
