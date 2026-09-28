@@ -48,6 +48,9 @@ pub mod prelude {
 
     #[cfg(feature = "fun-dsp")]
     pub use rift_fun_dsp::*;
+
+    pub use clack_extensions::note_ports::{NoteDialect, NoteDialects};
+    pub use clack_plugin::plugin::features;
 }
 
 #[doc(hidden)]

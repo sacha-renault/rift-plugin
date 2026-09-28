@@ -3,8 +3,6 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
-use rift_plugin::prelude::clack_extensions::note_ports::{NoteDialect, NoteDialects};
-use rift_plugin::prelude::clack_plugin::plugin::features;
 use rift_plugin::prelude::utils::notes::midi_to_frequency;
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
