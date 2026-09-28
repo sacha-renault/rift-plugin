@@ -15,6 +15,20 @@ use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{AudioThreadTask, InitContext, ProcessContext};
 use rift_plugin_types::EventSource;
 
+/// Runs the audio callback under `assert_no_alloc` when the debug-only
+/// `assert-no-alloc` feature is enabled, and calls it directly otherwise.
+#[cfg(all(feature = "assert-no-alloc", debug_assertions))]
+#[inline]
+fn audio_callback<R>(f: impl FnOnce() -> R) -> R {
+    assert_no_alloc::assert_no_alloc(f)
+}
+
+#[cfg(not(all(feature = "assert-no-alloc", debug_assertions)))]
+#[inline]
+fn audio_callback<R>(f: impl FnOnce() -> R) -> R {
+    f()
+}
+
 pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,
     plugin: P,
@@ -123,32 +137,34 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         audio: Audio,
         events: Events,
     ) -> Result<ProcessStatus, PluginError> {
-        self.flush(events.input, events.output);
-        let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
+        audio_callback(|| {
+            self.flush(events.input, events.output);
+            let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
 
-        if let Some(flags) = process.transport.map(|tr| tr.flags) {
-            self.shared.states.is_playing.store(
-                flags.contains(TransportFlags::IS_PLAYING),
-                Ordering::Relaxed,
-            );
-        }
+            if let Some(flags) = process.transport.map(|tr| tr.flags) {
+                self.shared.states.is_playing.store(
+                    flags.contains(TransportFlags::IS_PLAYING),
+                    Ordering::Relaxed,
+                );
+            }
 
-        let context = ProcessContext {
-            host: &self.host,
-            states: self.shared.states.clone(),
-            process,
-            samplerate: self.samplerate,
-            num_events: 0,
-            outputs_events: events.output,
-            block_index: self.block_index.increment(),
-        };
+            let context = ProcessContext {
+                host: &self.host,
+                states: self.shared.states.clone(),
+                process,
+                samplerate: self.samplerate,
+                num_events: 0,
+                outputs_events: events.output,
+                block_index: self.block_index.increment(),
+            };
 
-        self.plugin.process(
-            buffers,
-            context,
-            events.input,
-            self.shared.params.as_ref(),
-            self.shared.data.as_ref(),
-        )
+            self.plugin.process(
+                buffers,
+                context,
+                events.input,
+                self.shared.params.as_ref(),
+                self.shared.data.as_ref(),
+            )
+        })
     }
 }

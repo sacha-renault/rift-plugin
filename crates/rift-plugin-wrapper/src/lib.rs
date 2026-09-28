@@ -113,3 +113,9 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
     const MIDI_PORTS: &[MidiPort<'_>] = &[];
 }
+
+// Opt-in, debug-only global allocator used by `assert_no_alloc` to catch
+// allocations on the realtime thread. Only installed when the feature is on.
+#[cfg(all(feature = "assert-no-alloc", debug_assertions))]
+#[global_allocator]
+static A: assert_no_alloc::AllocDisabler = assert_no_alloc::AllocDisabler;

@@ -21,3 +21,4 @@ serde_json = { workspace = true }
 [features]
 default = ["fun-dsp"]
 fun-dsp = ["rift-plugin-params/fun-dsp", "dep:rift-fun-dsp"]
+assert-no-alloc = ["rift-plugin-wrapper/assert-no-alloc"]

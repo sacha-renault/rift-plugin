@@ -3,6 +3,9 @@ name = "rift-plugin-wrapper"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+assert-no-alloc = ["dep:assert_no_alloc"]
+
 [dependencies]
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
@@ -13,3 +16,4 @@ rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-buffers = { workspace = true }
 rift-plugin-context = { workspace = true }
+assert_no_alloc = { version = "1.1.2", optional=true}

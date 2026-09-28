@@ -7,7 +7,7 @@ edition = "2024"
 crate-type = ["cdylib"]
 
 [dependencies]
-rift-plugin = { workspace = true }
+rift-plugin = { workspace = true, features = ["assert-no-alloc"] }
 rift-plugin-gui = { workspace = true }
 rift-plugin-dsp = { workspace = true }
 fundsp = { workspace = true }
