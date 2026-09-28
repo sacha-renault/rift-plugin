@@ -146,6 +146,8 @@ impl<E: EnumValues> TypedParam for EnumParam<E> {
     }
 }
 
+impl<E: EnumValues> crate::traits::__private::Sealed for EnumParam<E> {}
+
 impl<E: EnumValues> Param for EnumParam<E> {
     fn name(&self) -> &str {
         self.inner.name()

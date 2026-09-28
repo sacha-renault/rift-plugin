@@ -8,7 +8,7 @@ use super::ptr::ParamPtr;
 /// Core abstraction for audio plugin parameters.
 ///
 /// Represents a single control within a plugin (e.g., volume, cutoff).
-pub trait Param {
+pub trait Param: __private::Sealed {
     /// Get the display name of the parameter (e.g., "Cutoff").
     ///
     /// # Panics
@@ -200,4 +200,9 @@ pub trait ParamCollection: Sync + Send + 'static {
     fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
 
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
+}
+
+#[doc(hidden)]
+pub(crate) mod __private {
+    pub(crate) trait Sealed {}
 }

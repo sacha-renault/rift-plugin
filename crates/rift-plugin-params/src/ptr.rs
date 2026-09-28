@@ -21,6 +21,7 @@ impl ParamPtr {
 
 unsafe impl Send for ParamPtr {}
 unsafe impl Sync for ParamPtr {}
+impl crate::traits::__private::Sealed for ParamPtr {}
 
 impl Param for ParamPtr {
     #[inline]
@@ -117,6 +118,8 @@ mod tests {
     struct MockParam {
         value: std::cell::Cell<f32>,
     }
+
+    impl crate::traits::__private::Sealed for MockParam {}
 
     impl MockParam {
         fn new(value: f32) -> Self {

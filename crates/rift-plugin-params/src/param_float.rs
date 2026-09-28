@@ -61,6 +61,8 @@ impl TypedParam for FloatParam {
     }
 }
 
+impl crate::traits::__private::Sealed for FloatParam {}
+
 impl Param for FloatParam {
     fn name(&self) -> &str {
         &self.name

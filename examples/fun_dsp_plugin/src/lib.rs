@@ -11,14 +11,14 @@ pub mod oscillator;
 
 #[derive(Params)]
 pub struct OscillatorParams {
-    #[param(name = "Wt Position", range = 0..255, default = 0)]
+    #[param(id = "Wt Position", range = 0..255, default = 0)]
     pub wt_position: IntParam,
 }
 
 #[derive(Params)]
 pub struct FilterParams {
     #[param(
-        name = "Cutoff",
+        id = "Cutoff",
         range = 20..2000,
         default = 440.0,
     )]

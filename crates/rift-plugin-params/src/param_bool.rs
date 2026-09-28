@@ -49,6 +49,8 @@ impl TypedParam for BoolParam {
     }
 }
 
+impl crate::traits::__private::Sealed for BoolParam {}
+
 impl Param for BoolParam {
     fn name(&self) -> &str {
         &self.name

@@ -57,6 +57,8 @@ impl TypedParam for SharedFloatParam {
     }
 }
 
+impl crate::traits::__private::Sealed for SharedFloatParam {}
+
 impl Param for SharedFloatParam {
     fn name(&self) -> &str {
         &self.name
