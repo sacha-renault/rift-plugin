@@ -37,24 +37,24 @@ pub trait Param: __private::Sealed {
     /// The string will be appended automatically to formatted text outputs.
     fn unit(&self) -> &str;
 
-    /// Get the raw, un-normalized value of the parameter.
+    /// Get the plain, un-normalized value of the parameter.
     ///
-    /// Raw values are often used for audio algorithms (e.g., filter cutoff in Hz) before being mapped to UI ranges.
-    fn get_raw(&self) -> f32;
+    /// Plain values are often used for audio algorithms (e.g., filter cutoff in Hz) before being mapped to UI ranges.
+    fn plain(&self) -> f32;
 
-    /// Set the raw, un-normalized value.
-    fn set_raw(&self, value: f32);
+    /// Set the plain, un-normalized value.
+    fn set_plain(&self, value: f32);
 
-    /// Get the default raw value.
-    fn default_raw(&self) -> f32;
+    /// Get the default plain value.
+    fn default_plain(&self) -> f32;
 
-    /// Get the minimum raw value (e.g., 20.0 Hz).
+    /// Get the minimum plain value (e.g., 20.0 Hz).
     fn min_value(&self) -> f32;
 
-    /// Get the maximum raw value (e.g., 20000.0 Hz).
+    /// Get the maximum plain value (e.g., 20000.0 Hz).
     fn max_value(&self) -> f32;
 
-    /// Convert a raw value to its normalized range [0.0, 1.0].
+    /// Convert a plain value to its normalized range [0.0, 1.0].
     ///
     /// # Behavior
     /// * Values outside `[min_value(), max_value()]` are clamped or undefined depending on implementation.
@@ -63,24 +63,24 @@ pub trait Param: __private::Sealed {
     /// Set the normalized value [0.0, 1.0].
     ///
     /// # Warning
-    /// If you set a value outside `[0.0, 1.0]`, the behavior is undefined. Always clamp inputs or use `set_raw()`.
+    /// If you set a value outside `[0.0, 1.0]`, the behavior is undefined. Always clamp inputs or use `set_plain()`.
     fn set_normalized(&self, normalized: f32);
 
-    /// Format a raw value into text with optional unit suffix.
+    /// Format a plain value into text with optional unit suffix.
     ///
     /// By default, this simply writes `{value}{unit}`. Custom implementations should handle rounding and special cases (e.g., "120.00 Hz" vs "120 Hz").
     fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
         write!(writer, "{}{}", value, self.unit())
     }
 
-    /// Format the current raw parameter value into a `String`.
+    /// Format the current plain parameter value into a `String`.
     fn to_text(&self) -> String {
         let mut s = String::new();
-        self.value_to_text(self.get_raw(), &mut s).ok();
+        self.value_to_text(self.plain(), &mut s).ok();
         s
     }
 
-    /// Parse a text string back into a raw value.
+    /// Parse a text string back into a plain value.
     ///
     /// # Parsing Rules
     /// 1. The input string is trimmed and checked to end with the result of `unit()`.
@@ -100,12 +100,12 @@ pub trait Param: __private::Sealed {
     /// Get flags describing the parameter's properties.
     fn flags(&self) -> ParamInfoFlags;
 
-    /// Apply the normalization tension to a raw value.
+    /// Apply the normalization tension to a plain value.
     ///
-    /// Generally equivalent to `get_normalized()` but allows manual conversion.
+    /// Generally equivalent to `normalized()` but allows manual conversion.
     fn normalize(&self, value: f32) -> f32;
 
-    /// Inverse of `normalize()`. Converts [0.0, 1.0] back to the raw scale.
+    /// Inverse of `normalize()`. Converts [0.0, 1.0] back to the plain scale.
     fn denormalize(&self, normalized: f32) -> f32;
 
     /// Build the complete [`ParamInfo`] struct for this parameter.
@@ -121,7 +121,7 @@ pub trait Param: __private::Sealed {
             module: self.module().unwrap_or("").as_bytes(),
             min_value: self.min_value() as f64,
             max_value: self.max_value() as f64,
-            default_value: self.default_raw() as f64,
+            default_value: self.default_plain() as f64,
         }
     }
 
@@ -177,19 +177,19 @@ pub trait ParamCollection: Sync + Send + 'static {
     /// Note: Host should query param in range 0..self.count()
     fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>>;
 
-    /// Get the raw value for a parameter by its `ClapId`.
+    /// Get the plain value for a parameter by its `ClapId`.
     fn get_value(&self, id: ClapId) -> Option<f32>;
 
-    /// Set the raw value for a parameter.
+    /// Set the plain value for a parameter.
     fn set_value(&self, id: ClapId, value: f32);
 
     /// Set the normalized value (0.0–1.0).
     fn set_value_normalized(&self, id: ClapId, value: f32);
 
-    /// Parse text into a raw value for a specific parameter ID.
+    /// Parse text into a plain value for a specific parameter ID.
     fn text_to_value(&self, id: ClapId, text: &CStr) -> Option<f32>;
 
-    /// Format a raw value into a display buffer.
+    /// Format a plain value into a display buffer.
     fn value_to_text(
         &self,
         id: ClapId,

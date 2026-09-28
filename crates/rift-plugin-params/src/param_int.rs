@@ -74,26 +74,26 @@ impl Param for IntParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f32) {
+    fn set_plain(&self, value: f32) {
         let int_value = (value as i32).clamp(self.min_value, self.max_value);
         self.value.store(int_value, Ordering::SeqCst);
     }
 
-    fn get_raw(&self) -> f32 {
+    fn plain(&self) -> f32 {
         self.value.load(Ordering::SeqCst) as f32
     }
 
-    fn default_raw(&self) -> f32 {
+    fn default_plain(&self) -> f32 {
         self.default as f32
     }
 
     fn normalized(&self) -> f32 {
-        let value = self.get_raw();
+        let value = self.plain();
         self.normalize(value)
     }
 
     fn set_normalized(&self, normalized: f32) {
-        self.set_raw(self.denormalize(normalized));
+        self.set_plain(self.denormalize(normalized));
     }
 
     fn min_value(&self) -> f32 {
@@ -156,7 +156,7 @@ mod tests {
             .build();
 
         assert_eq!(param.unit(), "st");
-        assert_eq!(param.default_raw(), 0.0);
+        assert_eq!(param.default_plain(), 0.0);
         assert_approx_eq!(param.normalized(), 0.5);
         assert_eq!(param.min_value(), -12.0);
         assert_eq!(param.max_value(), 12.0);
@@ -179,29 +179,29 @@ mod tests {
     }
 
     #[test]
-    fn set_raw_clamps() {
+    fn set_plain_clamps() {
         let param = IntParam::builder()
             .default(0)
             .min_value(0)
             .max_value(5)
             .build();
 
-        param.set_raw(10.0);
+        param.set_plain(10.0);
         assert_eq!(param.value(), 5);
 
-        param.set_raw(-3.0);
+        param.set_plain(-3.0);
         assert_eq!(param.value(), 0);
     }
 
     #[test]
-    fn set_raw_truncates_float() {
+    fn set_plain_truncates_float() {
         let param = IntParam::builder()
             .default(0)
             .min_value(0)
             .max_value(10)
             .build();
 
-        param.set_raw(3.9);
+        param.set_plain(3.9);
         assert_eq!(param.value(), 3);
     }
 

@@ -45,18 +45,18 @@ impl Param for ParamPtr {
     }
 
     #[inline]
-    fn get_raw(&self) -> f32 {
-        unsafe { (*self.ptr).get_raw() }
+    fn plain(&self) -> f32 {
+        unsafe { (*self.ptr).plain() }
     }
 
     #[inline]
-    fn set_raw(&self, value: f32) {
-        unsafe { (*self.ptr).set_raw(value) }
+    fn set_plain(&self, value: f32) {
+        unsafe { (*self.ptr).set_plain(value) }
     }
 
     #[inline]
-    fn default_raw(&self) -> f32 {
-        unsafe { (*self.ptr).default_raw() }
+    fn default_plain(&self) -> f32 {
+        unsafe { (*self.ptr).default_plain() }
     }
 
     #[inline]
@@ -143,13 +143,13 @@ mod tests {
         fn unit(&self) -> &str {
             "dB"
         }
-        fn get_raw(&self) -> f32 {
+        fn plain(&self) -> f32 {
             self.value.get()
         }
-        fn set_raw(&self, value: f32) {
+        fn set_plain(&self, value: f32) {
             self.value.set(value);
         }
-        fn default_raw(&self) -> f32 {
+        fn default_plain(&self) -> f32 {
             0.5
         }
         fn normalized(&self) -> f32 {
@@ -192,12 +192,12 @@ mod tests {
     }
 
     #[test]
-    fn test_get_set_raw() {
+    fn test_get_set_plain() {
         let mock = MockParam::new(10.0);
         let ptr = make_ptr(&mock);
-        assert_eq!(ptr.get_raw(), 10.0);
-        ptr.set_raw(99.0);
-        assert_eq!(ptr.get_raw(), 99.0);
+        assert_eq!(ptr.plain(), 10.0);
+        ptr.set_plain(99.0);
+        assert_eq!(ptr.plain(), 99.0);
     }
 
     #[test]
@@ -214,7 +214,7 @@ mod tests {
         let ptr = make_ptr(&mock);
         assert_eq!(ptr.normalized(), 0.5);
         ptr.set_normalized(1.0);
-        assert_eq!(ptr.get_raw(), 100.0);
+        assert_eq!(ptr.plain(), 100.0);
     }
 
     #[test]
@@ -247,7 +247,7 @@ mod tests {
         let ptr = make_ptr(&mock);
         assert_eq!(ptr.min_value(), 0.0);
         assert_eq!(ptr.max_value(), 100.0);
-        assert_eq!(ptr.default_raw(), 0.5);
+        assert_eq!(ptr.default_plain(), 0.5);
     }
 
     #[test]
@@ -255,7 +255,7 @@ mod tests {
         let mock = MockParam::new(77.0);
         let ptr = make_ptr(&mock);
         let ptr2 = ptr.as_ptr();
-        assert_eq!(ptr2.get_raw(), 77.0);
+        assert_eq!(ptr2.plain(), 77.0);
     }
 
     #[test]

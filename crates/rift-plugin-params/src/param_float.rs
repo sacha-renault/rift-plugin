@@ -80,25 +80,25 @@ impl Param for FloatParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f32) {
+    fn set_plain(&self, value: f32) {
         self.value.store(value, Ordering::SeqCst);
     }
 
-    fn get_raw(&self) -> f32 {
+    fn plain(&self) -> f32 {
         self.value.load(Ordering::SeqCst)
     }
 
-    fn default_raw(&self) -> f32 {
+    fn default_plain(&self) -> f32 {
         self.default
     }
 
     fn normalized(&self) -> f32 {
-        let value = self.get_raw();
+        let value = self.plain();
         self.normalize(value)
     }
 
     fn set_normalized(&self, normalized: f32) {
-        self.set_raw(self.denormalize(normalized));
+        self.set_plain(self.denormalize(normalized));
     }
 
     fn flags(&self) -> ParamInfoFlags {
@@ -188,7 +188,7 @@ mod tests {
             .build();
 
         assert_eq!(param.unit(), "dB");
-        assert_eq!(param.default_raw(), 0.);
+        assert_eq!(param.default_plain(), 0.);
         assert_eq!(param.normalized(), 0.5);
         assert_eq!(param.max_value(), 1.);
         assert_eq!(param.min_value(), -1.);

@@ -68,11 +68,11 @@ impl Param for BoolParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f32) {
+    fn set_plain(&self, value: f32) {
         self.value.store(value >= 0.5, Ordering::SeqCst);
     }
 
-    fn get_raw(&self) -> f32 {
+    fn plain(&self) -> f32 {
         if self.value.load(Ordering::SeqCst) {
             1.0
         } else {
@@ -80,16 +80,16 @@ impl Param for BoolParam {
         }
     }
 
-    fn default_raw(&self) -> f32 {
+    fn default_plain(&self) -> f32 {
         if self.default { 1.0 } else { 0.0 }
     }
 
     fn normalized(&self) -> f32 {
-        self.get_raw()
+        self.plain()
     }
 
     fn set_normalized(&self, normalized: f32) {
-        self.set_raw(normalized);
+        self.set_plain(normalized);
     }
 
     fn flags(&self) -> ParamInfoFlags {
@@ -153,7 +153,7 @@ mod tests {
 
         assert_eq!(param.unit(), "on/off");
         assert_eq!(param.value(), true);
-        assert_eq!(param.default_raw(), 1.0);
+        assert_eq!(param.default_plain(), 1.0);
         assert_eq!(param.min_value(), 0.0);
         assert_eq!(param.max_value(), 1.0);
         assert_eq!(param.id(), ClapId::new(0));
@@ -172,29 +172,29 @@ mod tests {
     }
 
     #[test]
-    fn set_raw_threshold() {
+    fn set_plain_threshold() {
         let param = BoolParam::builder().default(false).build();
 
-        param.set_raw(0.49);
+        param.set_plain(0.49);
         assert_eq!(param.value(), false);
 
-        param.set_raw(0.5);
+        param.set_plain(0.5);
         assert_eq!(param.value(), true);
 
-        param.set_raw(1.0);
+        param.set_plain(1.0);
         assert_eq!(param.value(), true);
 
-        param.set_raw(0.0);
+        param.set_plain(0.0);
         assert_eq!(param.value(), false);
     }
 
     #[test]
-    fn get_raw_returns_0_or_1() {
+    fn plain_returns_0_or_1() {
         let param = BoolParam::builder().default(false).build();
-        assert_eq!(param.get_raw(), 0.0);
+        assert_eq!(param.plain(), 0.0);
 
         param.set_value(true);
-        assert_eq!(param.get_raw(), 1.0);
+        assert_eq!(param.plain(), 1.0);
     }
 
     #[test]

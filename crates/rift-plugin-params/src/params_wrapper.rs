@@ -55,12 +55,12 @@ impl ParamCollection for ParamsWrapper {
     }
 
     fn get_value(&self, id: ClapId) -> Option<f32> {
-        self.get(id).map(|ptr| ptr.get_raw())
+        self.get(id).map(|ptr| ptr.plain())
     }
 
     fn set_value(&self, id: ClapId, value: f32) {
         if let Some(param) = self.get(id) {
-            param.set_raw(value);
+            param.set_plain(value);
         }
     }
 

@@ -125,11 +125,11 @@ impl<E: EnumValues> TypedParam for EnumParam<E> {
     type Type = E;
 
     fn set_value(&self, value: Self::Type) {
-        self.set_raw(value.to_index() as f32);
+        self.set_plain(value.to_index() as f32);
     }
 
     fn value(&self) -> Self::Type {
-        let enum_idx = self.get_raw().round() as u32;
+        let enum_idx = self.plain().round() as u32;
         if let Some(v) = E::from_index(enum_idx) {
             v
         } else {
@@ -165,16 +165,16 @@ impl<E: EnumValues> Param for EnumParam<E> {
         self.inner.unit()
     }
 
-    fn get_raw(&self) -> f32 {
-        self.inner.get_raw()
+    fn plain(&self) -> f32 {
+        self.inner.plain()
     }
 
     fn normalized(&self) -> f32 {
         self.inner.normalized()
     }
 
-    fn default_raw(&self) -> f32 {
-        self.inner.default_raw()
+    fn default_plain(&self) -> f32 {
+        self.inner.default_plain()
     }
 
     fn flags(&self) -> ParamInfoFlags {
@@ -197,8 +197,8 @@ impl<E: EnumValues> Param for EnumParam<E> {
         self.inner.max_value as f32
     }
 
-    fn set_raw(&self, value: f32) {
-        self.inner.set_raw(value);
+    fn set_plain(&self, value: f32) {
+        self.inner.set_plain(value);
     }
 
     fn set_normalized(&self, normalized: f32) {
@@ -271,7 +271,7 @@ mod tests {
     fn default_value() {
         let param = EnumParam::new(TestEnum::B);
         assert_eq!(param.value(), TestEnum::B);
-        assert_eq!(param.default_raw(), 1.0);
+        assert_eq!(param.default_plain(), 1.0);
     }
 
     #[test]
@@ -282,9 +282,9 @@ mod tests {
     }
 
     #[test]
-    fn set_raw_rounds_to_variant() {
+    fn set_plain_rounds_to_variant() {
         let param = EnumParam::new(TestEnum::A);
-        param.set_raw(1.6);
+        param.set_plain(1.6);
         assert_eq!(param.value(), TestEnum::B);
     }
 

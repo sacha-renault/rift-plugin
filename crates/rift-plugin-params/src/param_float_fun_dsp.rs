@@ -76,25 +76,25 @@ impl Param for SharedFloatParam {
         self.unit
     }
 
-    fn set_raw(&self, value: f32) {
+    fn set_plain(&self, value: f32) {
         self.value.set(value);
     }
 
-    fn get_raw(&self) -> f32 {
+    fn plain(&self) -> f32 {
         self.value.value()
     }
 
-    fn default_raw(&self) -> f32 {
+    fn default_plain(&self) -> f32 {
         self.default
     }
 
     fn normalized(&self) -> f32 {
-        let value = self.get_raw();
+        let value = self.plain();
         self.normalize(value)
     }
 
     fn set_normalized(&self, normalized: f32) {
-        self.set_raw(self.denormalize(normalized));
+        self.set_plain(self.denormalize(normalized));
     }
 
     fn flags(&self) -> ParamInfoFlags {
