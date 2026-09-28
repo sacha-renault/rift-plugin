@@ -114,3 +114,13 @@ impl<'a> Iterator for Frame<'a> {
         }
     }
 }
+
+impl<'a> Frame<'a> {
+    pub fn fill<const N: usize>(self, frame: [f32; N]) {
+        debug_assert_eq!(self.channels, frame.len());
+
+        for (sample, value) in self.zip(frame.into_iter()) {
+            *sample = value;
+        }
+    }
+}
