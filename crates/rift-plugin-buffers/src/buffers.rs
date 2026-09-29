@@ -32,7 +32,7 @@ impl<'a> Buffers<'a> {
     }
 
     /// Get the (not shifted by main port) input at `index`.
-    fn get_input(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
+    fn get_input(&self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let data = self
             .audio
             .input_port(index)
@@ -134,7 +134,7 @@ impl<'a> Buffers<'a> {
     /// # Errors
     ///
     /// Returns [`PluginError`] if `index` is out of bounds.
-    pub fn try_input_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
+    pub fn try_input_aux(&self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::OutputOnly(_) => 0,
             _ => 1,
@@ -145,7 +145,7 @@ impl<'a> Buffers<'a> {
 
     /// Like [`Buffers::try_input_aux`], but panics on failure.
     #[inline(always)]
-    pub fn input_aux(&mut self, index: usize) -> Buffer<'_> {
+    pub fn input_aux(&self, index: usize) -> Buffer<'_> {
         self.try_input_aux(index)
             .unwrap_or_else(|_| panic!("Failed to get input aux at index {index}"))
     }
