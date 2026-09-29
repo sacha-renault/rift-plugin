@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
-use clack_plugin::events::event_types::{MidiEvent, TransportFlags};
+use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
+use rift_plugin_params::ParamCollection;
+use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
 
-use rift_plugin_types::MidiMessage;
 use crate::SharedQueues;
+use rift_plugin_types::MidiMessage;
 
 pub struct ProcessContext<'a, 'e> {
     pub host: &'a HostAudioProcessorHandle<'a>,
@@ -21,6 +23,7 @@ pub struct ProcessContext<'a, 'e> {
     /// triggers a callback request to the host via the destructor.
     pub num_events: usize,
     pub outputs_events: &'e mut OutputEvents<'e>,
+    pub host_params: Arc<ParamsWrapper>,
 }
 
 impl<'a, 'e> ProcessContext<'a, 'e> {
@@ -47,6 +50,12 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
     /// Add a midi message as output event
     pub fn add_output_midi_event(&mut self, event: MidiMessage) {
         let _ = self.outputs_events.try_push::<MidiEvent>(event.into());
+    }
+
+    pub fn set_parameter(&self, param_event: ParamValueEvent) {
+        if let Some(id) = param_event.param_id() {
+            self.host_params.set_value(id, param_event.value() as f32);
+        }
     }
 }
 

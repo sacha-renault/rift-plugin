@@ -105,7 +105,7 @@ impl ClapPlugin for FunDspPlugin {
     fn process(
         &mut self,
         mut buffers: Buffers,
-        _context: ProcessContext,
+        _ctx: ProcessContext,
         events: &InputEvents,
         params: &Self::Params,
         _data: &Self::SharedData,

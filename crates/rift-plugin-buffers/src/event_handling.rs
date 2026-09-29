@@ -5,8 +5,3 @@ pub enum InputEvent {
     MidiEvent(MidiMessage),
     ParamEvent(ParamValueEvent),
 }
-
-pub trait ZipEventConfig {
-    const MIDI_EVENT_AUTO_HANDLING: bool;
-    const PARAM_EVENT_AUTO_HANDLING: bool;
-}

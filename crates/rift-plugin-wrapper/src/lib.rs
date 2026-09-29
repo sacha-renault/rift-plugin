@@ -40,13 +40,21 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// This flag only controls whether the *value* is applied automatically.
     /// [`Self::param_changed`] is notified for host parameter events regardless of this
     /// setting (see its documentation).
+    ///
+    /// Auto-handling and the `zip_events` iterator are two ways to consume the *same*
+    /// events; pick one per event type. Enabling this *and* applying host parameter
+    /// values yourself from `zip_events` applies each value twice.
     const PARAM_EVENT_AUTO_HANDLING: bool;
 
     /// If `true`, the wrapper automatically calls [`Self::on_midi_message`] for every MIDI
     /// event before [`Self::process`] is called.
     ///
-    /// If `false`, MIDI events must be handled manually (sample-accurately)
-    /// via the [`ProcessContext`] events iterator.
+    /// If `false`, MIDI events must be handled manually (sample-accurately) via the
+    /// iterator returned by `zip_events`.
+    ///
+    /// Auto-handling and the `zip_events` iterator are two ways to consume the *same*
+    /// events; pick one per event type. Enabling this *and* handling MIDI from
+    /// `zip_events` delivers each MIDI message twice.
     const MIDI_EVENT_AUTO_HANDLING: bool;
 
     /// Define the maximum number of task the plugin can hold at the same time, before dropping
@@ -71,7 +79,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// This is the "Hot Path." **Strictly avoid any operations that can block**,
     /// such as memory allocation, file I/O, or acquiring non-recursive mutexes.
     ///
-    /// To handle events sample-accurately, use `context.zipped_events()`.
+    /// To handle events sample-accurately, zip the input events with the audio frames:
+    /// `buffers.main().iter_samples().zip_events(events)`.
     fn process(
         &mut self,
         buffers: Buffers,
@@ -85,12 +94,14 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// This is only triggered if [`Self::MIDI_EVENT_AUTO_HANDLING`] is set to `true`.
     /// Messages are delivered once per block, before the call to [`Self::process`].
-    #[allow(unused)]
+    ///
+    /// This is the auto-handling path and is mutually exclusive with reading MIDI events
+    /// from `zip_events`: handling them there as well delivers every message twice.
     fn on_midi_message(
         &mut self,
-        midi: MidiMessage,
-        params: &Self::Params,
-        shared: &Self::SharedData,
+        _midi: MidiMessage,
+        _params: &Self::Params,
+        _shared: &Self::SharedData,
     ) {
     }
 
@@ -105,15 +116,15 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///   not apply the value itself, it only tells you it changed).
     ///
     /// Host notifications are skipped only when both [`Self::PARAM_EVENT_AUTO_HANDLING`]
-    /// and [`Self::MIDI_EVENT_AUTO_HANDLING`] are `false`, since the wrapper then leaves
-    /// all incoming events to the plugin.
-    #[allow(unused)]
+    /// and [`Self::MIDI_EVENT_AUTO_HANDLING`] are `false`: the wrapper then performs no
+    /// auto-handling at all and the plugin is expected to consume every event itself, for
+    /// example through `zip_events`.
     fn param_changed(
         &mut self,
-        id: ClapId,
-        params: &Self::Params,
-        shared: &Self::SharedData,
-        source: EventSource,
+        _id: ClapId,
+        _params: &Self::Params,
+        _shared: &Self::SharedData,
+        _source: EventSource,
     ) {
     }
 

@@ -8,4 +8,6 @@ mod zip_event;
 
 pub use buffer::Buffer;
 pub use buffers::Buffers;
+pub use event_handling::InputEvent;
 pub use frame::{Frame, SampleFrames};
+pub use zip_event::FrameEvents;

@@ -54,6 +54,11 @@ impl<'a> SampleFrames<'a> {
     /// `FrameEvents` contains only the events whose timestamp matches that frame's
     /// position.
     ///
+    /// Every MIDI and parameter event of the block is yielded here, independently of the
+    /// wrapper's auto-handling. If the plugin also opts into auto-handling for a given
+    /// event type, that type is consumed twice (once automatically, once here): choose one
+    /// path per event type.
+    ///
     /// # Example
     ///
     /// ```ignore

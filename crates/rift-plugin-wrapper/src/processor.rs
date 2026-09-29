@@ -174,6 +174,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 num_events: 0,
                 outputs_events: events.output,
                 block_index: self.block_index.increment(),
+                host_params: self.shared.host_params.clone(),
             };
 
             self.plugin.process(
