@@ -9,7 +9,9 @@ use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{InitContext, ProcessContext};
 use rift_plugin_gui::GuiFactory;
 use rift_plugin_params::UserParams;
-use rift_plugin_types::{AudioPort, EventSource, MainAudioPort, MidiMessage, MidiPort};
+use rift_plugin_types::{
+    AudioPort, EventPreProcess, EventSource, MainAudioPort, MidiMessage, MidiPort,
+};
 
 pub mod factory;
 pub mod main_thread;
@@ -29,33 +31,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Shared data (non param) between audio thread and gui thread.
     type SharedData: Default + Send + Sync + 'static;
 
-    /// If `true`, the wrapper automatically writes incoming host parameter values into
-    /// the parameter store during the pre-[`Self::process`] flush, so the parameters
-    /// already hold the new value when [`Self::process`] runs.
-    ///
-    /// If `false`, the wrapper leaves the values untouched: the plugin is responsible for
-    /// applying them itself, typically sample-accurately via the events yielded by
-    /// `zip_events`.
-    ///
-    /// This flag only controls whether the *value* is applied automatically.
-    /// [`Self::param_changed`] is notified for host parameter events regardless of this
-    /// setting (see its documentation).
-    ///
-    /// Auto-handling and the `zip_events` iterator are two ways to consume the *same*
-    /// events; pick one per event type. Enabling this *and* applying host parameter
-    /// values yourself from `zip_events` applies each value twice.
-    const PARAM_EVENT_AUTO_HANDLING: bool;
-
-    /// If `true`, the wrapper automatically calls [`Self::on_midi_message`] for every MIDI
-    /// event before [`Self::process`] is called.
-    ///
-    /// If `false`, MIDI events must be handled manually (sample-accurately) via the
-    /// iterator returned by `zip_events`.
-    ///
-    /// Auto-handling and the `zip_events` iterator are two ways to consume the *same*
-    /// events; pick one per event type. Enabling this *and* handling MIDI from
-    /// `zip_events` delivers each MIDI message twice.
-    const MIDI_EVENT_AUTO_HANDLING: bool;
+    const EVENT_PRE_PROCESS: EventPreProcess;
 
     /// Define the maximum number of task the plugin can hold at the same time, before dropping
     /// events. See [`MainThreadTask`] and [`AudioThreadTask`].

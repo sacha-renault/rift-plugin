@@ -47,8 +47,8 @@ impl ClapPlugin for MinimalGain {
     type Params = MinimalGainParams;
     type SharedData = SharedData<Self>;
 
-    const PARAM_EVENT_AUTO_HANDLING: bool = true;
-    const MIDI_EVENT_AUTO_HANDLING: bool = false;
+    const EVENT_PRE_PROCESS: EventPreProcess =
+        EventPreProcess::PARAM_APPLY.union(EventPreProcess::PARAM_NOTIFY);
 
     fn create(
         _params: &Self::Params,

@@ -13,7 +13,7 @@ use rift_plugin_types::transport::BlockIndex;
 use crate::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
 use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{AudioThreadTask, InitContext, ProcessContext};
-use rift_plugin_types::EventSource;
+use rift_plugin_types::{EventPreProcess, EventSource};
 
 /// Runs the audio callback under `assert_no_alloc` when the debug-only
 /// `assert-no-alloc` feature is enabled, and calls it directly otherwise.
@@ -58,18 +58,28 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     }
 
     fn handle_event_auto(&mut self, events: &InputEvents) {
-        if !P::MIDI_EVENT_AUTO_HANDLING && !P::PARAM_EVENT_AUTO_HANDLING {
+        let flags = P::EVENT_PRE_PROCESS;
+        if flags.is_empty() {
             return;
         }
 
         for event in events.iter() {
-            if let Some(event) = event.as_event::<ParamValueEvent>() {
-                if let Some(id) = event.param_id() {
-                    if P::PARAM_EVENT_AUTO_HANDLING {
-                        let value = event.value();
-                        self.shared.host_params.set_value(id, value as f32);
-                    }
+            const ANY_PARAM: EventPreProcess =
+                EventPreProcess::PARAM_APPLY.union(EventPreProcess::PARAM_NOTIFY);
 
+            if flags.intersects(ANY_PARAM)
+                && let Some(event) = event.as_event::<ParamValueEvent>()
+            {
+                let Some(id) = event.param_id() else {
+                    continue;
+                };
+
+                if flags.contains(EventPreProcess::PARAM_APPLY) {
+                    let value = event.value();
+                    self.shared.host_params.set_value(id, value as f32);
+                }
+
+                if flags.contains(EventPreProcess::PARAM_NOTIFY) {
                     self.plugin.param_changed(
                         id,
                         &self.shared.params,
@@ -77,14 +87,14 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                         EventSource::Host,
                     );
                 }
-            } else if let Some(event) = event.as_event::<MidiEvent>() {
-                if P::MIDI_EVENT_AUTO_HANDLING {
-                    self.plugin.on_midi_message(
-                        (*event).into(),
-                        &self.shared.params,
-                        &self.shared.data,
-                    );
-                }
+            } else if flags.contains(EventPreProcess::MIDI_CALLBACK)
+                && let Some(event) = event.as_event::<MidiEvent>()
+            {
+                self.plugin.on_midi_message(
+                    (*event).into(),
+                    &self.shared.params,
+                    &self.shared.data,
+                );
             } else if let Some(event) = event.as_event::<TransportEvent>() {
                 log::info!("{event:?}");
             }

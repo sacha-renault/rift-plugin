@@ -49,8 +49,7 @@ impl ClapPlugin for FunDspPlugin {
     type Params = FunDspParams;
     type SharedData = ();
 
-    const PARAM_EVENT_AUTO_HANDLING: bool = true;
-    const MIDI_EVENT_AUTO_HANDLING: bool = true;
+    const EVENT_PRE_PROCESS: EventPreProcess = EventPreProcess::all();
 
     fn create(
         _params: &Self::Params,

@@ -16,4 +16,4 @@ rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-buffers = { workspace = true }
 rift-plugin-context = { workspace = true }
-assert_no_alloc = { version = "1.1.2", optional=true}
+assert_no_alloc = { version = "1.1.2", optional=true }
