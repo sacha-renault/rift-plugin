@@ -48,7 +48,7 @@ impl ClapPlugin for MinimalGain {
     type SharedData = SharedData<Self>;
 
     const EVENT_PRE_PROCESS: EventPreProcess =
-        EventPreProcess::PARAM_APPLY.union(EventPreProcess::PARAM_NOTIFY);
+        EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
 
     fn create(
         _params: &Self::Params,

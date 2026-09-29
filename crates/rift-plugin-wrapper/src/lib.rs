@@ -31,6 +31,42 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Shared data (non param) between audio thread and gui thread.
     type SharedData: Default + Send + Sync + 'static;
 
+    /// The automatic actions the wrapper performs on incoming events once per block,
+    /// before [`Self::process`] is called.
+    ///
+    /// This is the single switch that decides how events reach the plugin:
+    ///
+    /// - [`EventPreProcess::PARAM_APPLY_CHANGE`] - incoming host parameter values are written
+    ///   into the parameter store, so [`Self::Params`] already hold the new value inside
+    ///   [`Self::process`].
+    /// - [`EventPreProcess::PARAM_NOTIFY_CHANGE`] - [`Self::on_param_change`] is called for
+    ///   incoming host parameter events. (GUI edits always notify, independently of this
+    ///   flag.)
+    /// - [`EventPreProcess::MIDI_NOTIFY_EVENT`] - [`Self::on_midi_message`] is called for
+    ///   incoming MIDI events.
+    ///
+    /// Use `EventPreProcess::empty()` to opt out entirely: the plugin then consumes every
+    /// event itself, for example through
+    /// `buffers.main().iter_samples().zip_events(events)`.
+    ///
+    /// # Auto-handling vs. `zip_events`
+    ///
+    /// `zip_events` always yields every MIDI and parameter event, regardless of this
+    /// value. A set flag means the wrapper has *already* acted on that event type, so
+    /// handling the same type from `zip_events` as well acts on it twice. Pick one path
+    /// per event type: set the flag to have the wrapper do it block-level, or leave it
+    /// unset and read it sample-accurately from `zip_events`.
+    ///
+    /// [`EventPreProcess::PARAM_NOTIFY_CHANGE`] without [`EventPreProcess::PARAM_APPLY_CHANGE`] notifies
+    /// you of a change *without* updating the store, apply the new value yourself from
+    /// the event yielded by `zip_events`.
+    ///
+    /// ```ignore
+    /// // Apply host automation and receive a `param_changed` notification, but handle
+    /// // MIDI sample-accurately via `zip_events`.
+    /// const EVENT_PRE_PROCESS: EventPreProcess =
+    ///     EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
+    /// ```
     const EVENT_PRE_PROCESS: EventPreProcess;
 
     /// Define the maximum number of task the plugin can hold at the same time, before dropping
@@ -68,8 +104,9 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
 
     /// Called when a MIDI message is received.
     ///
-    /// This is only triggered if [`Self::MIDI_EVENT_AUTO_HANDLING`] is set to `true`.
-    /// Messages are delivered once per block, before the call to [`Self::process`].
+    /// This is only triggered when [`EventPreProcess::MIDI_NOTIFY_EVENT`] is set in
+    /// [`Self::EVENT_PRE_PROCESS`]. Messages are delivered once per block, before the
+    /// call to [`Self::process`].
     ///
     /// This is the auto-handling path and is mutually exclusive with reading MIDI events
     /// from `zip_events`: handling them there as well delivers every message twice.
@@ -85,17 +122,16 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// - Changes coming from the GUI always notify, with [`EventSource::GUI`]. GUI edits
     ///   are not sample-accurate, so this fires independently of
-    ///   [`Self::PARAM_EVENT_AUTO_HANDLING`].
+    ///   [`EventPreProcess::PARAM_NOTIFY_CHANGE`].
     /// - Changes coming from the host/automation notify once per block, before
-    ///   [`Self::process`], with [`EventSource::Host`] - even when
-    ///   [`Self::PARAM_EVENT_AUTO_HANDLING`] is `false` (in which case the wrapper does
-    ///   not apply the value itself, it only tells you it changed).
+    ///   [`Self::process`], with [`EventSource::Host`] - but only when
+    ///   [`EventPreProcess::PARAM_NOTIFY_CHANGE`] is set in [`Self::EVENT_PRE_PROCESS`].
     ///
-    /// Host notifications are skipped only when both [`Self::PARAM_EVENT_AUTO_HANDLING`]
-    /// and [`Self::MIDI_EVENT_AUTO_HANDLING`] are `false`: the wrapper then performs no
-    /// auto-handling at all and the plugin is expected to consume every event itself, for
-    /// example through `zip_events`.
-    fn param_changed(
+    /// This flag controls only the *notification*: the value is written into the
+    /// parameter store only when [`EventPreProcess::PARAM_APPLY_CHANGE`] is also set. With
+    /// `PARAM_NOTIFY_CHANGE` but not `PARAM_APPLY_CHANGE`, read the new value from the event yielded by
+    /// `zip_events`.
+    fn on_param_change(
         &mut self,
         _id: ClapId,
         _params: &Self::Params,

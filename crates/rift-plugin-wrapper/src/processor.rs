@@ -65,7 +65,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
         for event in events.iter() {
             const ANY_PARAM: EventPreProcess =
-                EventPreProcess::PARAM_APPLY.union(EventPreProcess::PARAM_NOTIFY);
+                EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
 
             if flags.intersects(ANY_PARAM)
                 && let Some(event) = event.as_event::<ParamValueEvent>()
@@ -74,20 +74,20 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     continue;
                 };
 
-                if flags.contains(EventPreProcess::PARAM_APPLY) {
+                if flags.contains(EventPreProcess::PARAM_APPLY_CHANGE) {
                     let value = event.value();
                     self.shared.host_params.set_value(id, value as f32);
                 }
 
-                if flags.contains(EventPreProcess::PARAM_NOTIFY) {
-                    self.plugin.param_changed(
+                if flags.contains(EventPreProcess::PARAM_NOTIFY_CHANGE) {
+                    self.plugin.on_param_change(
                         id,
                         &self.shared.params,
                         &self.shared.data,
                         EventSource::Host,
                     );
                 }
-            } else if flags.contains(EventPreProcess::MIDI_CALLBACK)
+            } else if flags.contains(EventPreProcess::MIDI_NOTIFY_EVENT)
                 && let Some(event) = event.as_event::<MidiEvent>()
             {
                 self.plugin.on_midi_message(
@@ -112,14 +112,14 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
             GuiParamEventKind::Value(_) => {
-                self.plugin.param_changed(
+                self.plugin.on_param_change(
                     event.param_id,
                     &self.shared.params,
                     &self.shared.data,
                     EventSource::GUI,
                 );
             }
-            GuiParamEventKind::ValueLess => self.plugin.param_changed(
+            GuiParamEventKind::ValueLess => self.plugin.on_param_change(
                 event.param_id,
                 &self.shared.params,
                 &self.shared.data,
