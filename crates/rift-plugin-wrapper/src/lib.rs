@@ -85,7 +85,14 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// This is only triggered if [`Self::MIDI_EVENT_AUTO_HANDLING`] is set to `true`.
     /// Messages are delivered once per block, before the call to [`Self::process`].
-    fn on_midi_message(&mut self, midi: MidiMessage);
+    #[allow(unused)]
+    fn on_midi_message(
+        &mut self,
+        midi: MidiMessage,
+        params: &Self::Params,
+        shared: &Self::SharedData,
+    ) {
+    }
 
     /// Called when a parameter value changes.
     ///
@@ -101,7 +108,14 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// and [`Self::MIDI_EVENT_AUTO_HANDLING`] are `false`, since the wrapper then leaves
     /// all incoming events to the plugin.
     #[allow(unused)]
-    fn param_changed(&mut self, id: ClapId, params: &Self::Params, source: EventSource) {}
+    fn param_changed(
+        &mut self,
+        id: ClapId,
+        params: &Self::Params,
+        shared: &Self::SharedData,
+        source: EventSource,
+    ) {
+    }
 
     /// Creates the GUI factory for this plugin.
     ///

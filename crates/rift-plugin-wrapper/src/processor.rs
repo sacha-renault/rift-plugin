@@ -70,12 +70,20 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                         self.shared.host_params.set_value(id, value as f32);
                     }
 
-                    self.plugin
-                        .param_changed(id, &&self.shared.params, EventSource::Host);
+                    self.plugin.param_changed(
+                        id,
+                        &self.shared.params,
+                        &self.shared.data,
+                        EventSource::Host,
+                    );
                 }
             } else if let Some(event) = event.as_event::<MidiEvent>() {
                 if P::MIDI_EVENT_AUTO_HANDLING {
-                    self.plugin.on_midi_message((*event).into());
+                    self.plugin.on_midi_message(
+                        (*event).into(),
+                        &self.shared.params,
+                        &self.shared.data,
+                    );
                 }
             } else if let Some(event) = event.as_event::<TransportEvent>() {
                 log::info!("{event:?}");
@@ -94,13 +102,19 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
             GuiParamEventKind::Value(_) => {
-                self.plugin
-                    .param_changed(event.param_id, &self.shared.params, EventSource::GUI);
+                self.plugin.param_changed(
+                    event.param_id,
+                    &self.shared.params,
+                    &self.shared.data,
+                    EventSource::GUI,
+                );
             }
-            GuiParamEventKind::ValueLess => {
-                self.plugin
-                    .param_changed(event.param_id, &self.shared.params, EventSource::GUI)
-            }
+            GuiParamEventKind::ValueLess => self.plugin.param_changed(
+                event.param_id,
+                &self.shared.params,
+                &self.shared.data,
+                EventSource::GUI,
+            ),
         }
     }
 }

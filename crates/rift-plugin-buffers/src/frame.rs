@@ -1,6 +1,6 @@
 use clack_plugin::events::io::InputEvents;
 
-use crate::{event_handling::ZipEventConfig, zip_event::FramesEventZipped};
+use crate::zip_event::FramesEventZipped;
 
 /// Iterates over the buffer one sample frame at a time.
 ///
@@ -54,27 +54,10 @@ impl<'a> SampleFrames<'a> {
     /// `FrameEvents` contains only the events whose timestamp matches that frame's
     /// position.
     ///
-    /// Your plugin needs to implement [`ZipEventConfig`] so you can use `::<Self>` in the process function.
-    /// ```ignore
-    /// impl ZipEventConfig for YourPlugin {
-    ///     const MIDI_EVENT_AUTO_HANDLING: bool = <YourPlugin as ClapPlugin>::MIDI_EVENT_AUTO_HANDLING;
-    ///     const PARAM_EVENT_AUTO_HANDLING: bool = <YourPlugin as ClapPlugin>::PARAM_EVENT_AUTO_HANDLING;
-    /// }
-    /// ```
-    ///
-    /// Events the wrapper already applies on its own are silently skipped: host
-    /// parameters when `ClapPlugin::PARAM_EVENT_AUTO_HANDLING` is `true`, and MIDI when
-    /// `ClapPlugin::MIDI_EVENT_AUTO_HANDLING` is `true`.
-    ///
-    /// This iterator and `ClapPlugin::param_changed` are not mutually exclusive: when
-    /// `ClapPlugin::PARAM_EVENT_AUTO_HANDLING` is `false` the value is not applied
-    /// automatically, so the event is yielded here *and* `param_changed` has already been
-    /// called for it during the pre-process flush.
-    ///
     /// # Example
     ///
     /// ```ignore
-    /// for (events, frame) in sample_frames.zip_events::<Self>(&input_events) {
+    /// for (events, frame) in sample_frames.zip_events(&input_events) {
     ///     for event in events {
     ///         match event {
     ///             InputEvent::MidiEvent(msg) => { /* handle MIDI */ }
@@ -84,10 +67,7 @@ impl<'a> SampleFrames<'a> {
     ///     // process `frame` audio data
     /// }
     /// ```
-    pub fn zip_events<C: ZipEventConfig>(
-        self,
-        events: &'a InputEvents,
-    ) -> FramesEventZipped<'a, C> {
+    pub fn zip_events(self, events: &'a InputEvents) -> FramesEventZipped<'a> {
         FramesEventZipped::from_frame_iter(self, events)
     }
 }

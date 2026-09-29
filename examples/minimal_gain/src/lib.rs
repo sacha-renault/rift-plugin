@@ -78,7 +78,9 @@ impl ClapPlugin for MinimalGain {
         Ok(ProcessStatus::Continue)
     }
 
-    fn on_midi_message(&mut self, _midi: MidiMessage) {}
+    fn on_midi_message(&mut self, _: MidiMessage, _: &Self::Params, _: &Self::SharedData) {}
+    fn param_changed(&mut self, _: ClapId, _: &Self::Params, _: &Self::SharedData, _: EventSource) {
+    }
 
     fn gui(_params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
         Box::new(NoGuiFactory)

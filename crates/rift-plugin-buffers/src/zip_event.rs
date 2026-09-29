@@ -1,29 +1,25 @@
-use std::marker::PhantomData;
-
 use clack_plugin::{
     events::event_types::{MidiEvent, ParamValueEvent},
     prelude::InputEvents,
 };
 
 use crate::{
-    event_handling::{InputEvent, ZipEventConfig},
+    event_handling::InputEvent,
     frame::{Frame, SampleFrames},
 };
 
-pub struct FramesEventZipped<'a, C: ZipEventConfig> {
+pub struct FramesEventZipped<'a> {
     inner: SampleFrames<'a>,
     events: &'a InputEvents<'a>,
     events_position: usize,
-    _p: PhantomData<C>,
 }
 
-impl<'a, C: ZipEventConfig> FramesEventZipped<'a, C> {
+impl<'a> FramesEventZipped<'a> {
     pub(crate) fn from_frame_iter(frames: SampleFrames<'a>, events: &'a InputEvents) -> Self {
         Self {
             inner: frames,
             events,
             events_position: 0,
-            _p: PhantomData,
         }
     }
 
@@ -36,8 +32,8 @@ impl<'a, C: ZipEventConfig> FramesEventZipped<'a, C> {
     }
 }
 
-impl<'a, C: ZipEventConfig> Iterator for FramesEventZipped<'a, C> {
-    type Item = (FrameEvents<'a, C>, Frame<'a>);
+impl<'a> Iterator for FramesEventZipped<'a> {
+    type Item = (FrameEvents<'a>, Frame<'a>);
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -50,7 +46,6 @@ impl<'a, C: ZipEventConfig> Iterator for FramesEventZipped<'a, C> {
                 events: self.events,
                 position: start,
                 end: self.events_position,
-                _p: PhantomData,
             };
 
             Some((event_iter, frame))
@@ -60,14 +55,13 @@ impl<'a, C: ZipEventConfig> Iterator for FramesEventZipped<'a, C> {
     }
 }
 
-pub struct FrameEvents<'a, C: ZipEventConfig> {
+pub struct FrameEvents<'a> {
     events: &'a InputEvents<'a>,
     position: usize,
     end: usize,
-    _p: PhantomData<C>,
 }
 
-impl<'a, C: ZipEventConfig> Iterator for FrameEvents<'a, C> {
+impl<'a> Iterator for FrameEvents<'a> {
     type Item = InputEvent;
 
     #[inline]
@@ -76,26 +70,10 @@ impl<'a, C: ZipEventConfig> Iterator for FrameEvents<'a, C> {
             let event = &self.events[self.position];
             self.position += 1;
 
-            // We yield events here only when the wrapper didn't already apply them
-            // itself during the pre-process flush:
-            // - a param event is applied automatically only when
-            //   `PARAM_EVENT_AUTO_HANDLING` is set. When it isn't, `param_changed` was
-            //   still called during the flush, but applying the value is the plugin's
-            //   job, so we yield the event here.
-            // - a MIDI event is applied automatically only when
-            //   `MIDI_EVENT_AUTO_HANDLING` is set.
-            //
-            // We don't collapse the two branches: an event is at most one concrete type,
-            // so `as_event` can match only one of them.
-            #[allow(clippy::collapsible_if)]
             if let Some(&param_event) = event.as_event::<ParamValueEvent>() {
-                if !C::PARAM_EVENT_AUTO_HANDLING {
-                    return Some(InputEvent::ParamEvent(param_event));
-                }
+                return Some(InputEvent::ParamEvent(param_event));
             } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
-                if !C::MIDI_EVENT_AUTO_HANDLING {
-                    return Some(InputEvent::MidiEvent(midi_event.into()));
-                }
+                return Some(InputEvent::MidiEvent(midi_event.into()));
             }
             // Unknown event type, skip it, try next
         }

@@ -110,7 +110,7 @@ impl ClapPlugin for FunDspPlugin {
         params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        for (events, frame) in buffers.main().iter_samples().zip_events::<Self>(events) {
+        for (events, frame) in buffers.main().iter_samples().zip_events(events) {
             for _event in events {}
 
             let mut fr = [0f32; 2];
@@ -134,7 +134,7 @@ impl ClapPlugin for FunDspPlugin {
         Ok(ProcessStatus::Continue)
     }
 
-    fn on_midi_message(&mut self, midi: MidiMessage) {
+    fn on_midi_message(&mut self, midi: MidiMessage, _: &Self::Params, _: &Self::SharedData) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, .. } => {
                 for osc in &mut self.oscillators {
