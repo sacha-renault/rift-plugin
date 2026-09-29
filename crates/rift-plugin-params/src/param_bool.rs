@@ -41,11 +41,11 @@ impl TypedParam for BoolParam {
     type Type = bool;
 
     fn value(&self) -> Self::Type {
-        self.value.load(Ordering::SeqCst)
+        self.value.load(Ordering::Relaxed)
     }
 
     fn set_value(&self, value: Self::Type) {
-        self.value.store(value, Ordering::SeqCst);
+        self.value.store(value, Ordering::Relaxed);
     }
 }
 
@@ -69,11 +69,11 @@ impl Param for BoolParam {
     }
 
     fn set_plain(&self, value: f32) {
-        self.value.store(value >= 0.5, Ordering::SeqCst);
+        self.value.store(value >= 0.5, Ordering::Relaxed);
     }
 
     fn plain(&self) -> f32 {
-        if self.value.load(Ordering::SeqCst) {
+        if self.value.load(Ordering::Relaxed) {
             1.0
         } else {
             0.0

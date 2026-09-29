@@ -50,13 +50,13 @@ impl TypedParam for FloatParam {
     type Type = f32;
 
     fn value(&self) -> Self::Type {
-        self.value.load(Ordering::SeqCst)
+        self.value.load(Ordering::Relaxed)
     }
 
     fn set_value(&self, value: Self::Type) {
         self.value.store(
             value.clamp(self.min_value, self.max_value),
-            Ordering::SeqCst,
+            Ordering::Relaxed,
         );
     }
 }
@@ -81,11 +81,11 @@ impl Param for FloatParam {
     }
 
     fn set_plain(&self, value: f32) {
-        self.value.store(value, Ordering::SeqCst);
+        self.value.store(value, Ordering::Relaxed);
     }
 
     fn plain(&self) -> f32 {
-        self.value.load(Ordering::SeqCst)
+        self.value.load(Ordering::Relaxed)
     }
 
     fn default_plain(&self) -> f32 {
