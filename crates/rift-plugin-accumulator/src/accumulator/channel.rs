@@ -6,11 +6,6 @@ use crate::accumulator::WriteIdx;
 // use crate::prelude::TimedAudioBlock;
 
 /// A lock-free, single-channel audio block producer.
-///
-/// Slices of PCM samples pushed from the audio thread are chopped into
-/// fixed-size [`TimedAudioBlock<N>`] chunks and enqueued into an
-/// [`ArrayQueue`]. The consumer side (UI thread) pops blocks out of
-/// [`Self::buf`] directly.
 pub(crate) struct RingBuffer {
     /// Fixed size array that will be used as a rb
     buffer: UnsafeCell<Box<[f32]>>,
