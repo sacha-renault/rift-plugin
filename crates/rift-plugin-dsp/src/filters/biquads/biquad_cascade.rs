@@ -19,7 +19,7 @@ use super::biquad_filter::*;
 /// ```
 #[derive(Clone)]
 pub struct BiquadCascade {
-    stages: BoundedVec<BiquadFilter>,
+    stages: BoundedVec<BiquadFilter, CASCADE_MAX_DEPTH>,
     samplerate: f32,
     mode: Option<FilterMode>,
     order: Option<FilterOrder>,
@@ -28,7 +28,7 @@ pub struct BiquadCascade {
 impl BiquadCascade {
     /// Creates an inactive cascade. Call [`Self::set_mode`] to activate.
     pub fn new(samplerate: f32) -> Self {
-        let stages = BoundedVec::new(CASCADE_MAX_DEPTH);
+        let stages = BoundedVec::new();
 
         Self {
             samplerate,

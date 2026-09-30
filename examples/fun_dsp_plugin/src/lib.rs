@@ -88,7 +88,7 @@ impl ClapPlugin for FunDspPlugin {
             })
             .collect();
 
-        let mut oscillator = crate::oscillator::Oscillator::new(config.sample_rate, 256, 256);
+        let mut oscillator = crate::oscillator::Oscillator::new(config.sample_rate);
         oscillator.set_wavetables(wt);
 
         // let mono_filter = || (pass() | var(&params.filters[0].cutoff) | dc(0.5f32)) >> lowpass();

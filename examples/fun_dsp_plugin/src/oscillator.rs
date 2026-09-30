@@ -4,18 +4,21 @@ use fundsp::prelude32::*;
 use rift_plugin::prelude::utils::bounded_vec::BoundedVec;
 use rift_plugin_dsp::oscillator::OscillatorVoice;
 
+const VOICES_CAPACITY: usize = 256;
+const WAVETABLES_CAPACITY: usize = 256;
+
 pub struct Oscillator {
-    voices: BoundedVec<OscillatorVoice>,
-    wavetables: BoundedVec<Arc<Wavetable>>,
+    voices: BoundedVec<OscillatorVoice, VOICES_CAPACITY>,
+    wavetables: BoundedVec<Arc<Wavetable>, WAVETABLES_CAPACITY>,
     samplerate: f64,
 }
 
 impl Oscillator {
-    pub fn new(samplerate: f64, phases_cap: usize, wt_cap: usize) -> Self {
+    pub fn new(samplerate: f64) -> Self {
         Self {
             samplerate,
-            voices: BoundedVec::new(phases_cap),
-            wavetables: BoundedVec::new(wt_cap),
+            voices: BoundedVec::new(),
+            wavetables: BoundedVec::new(),
         }
     }
 
