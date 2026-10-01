@@ -155,9 +155,22 @@ pub trait Persistent {
 /// It exposes every leaf parameter reachable from the struct (walking nested
 /// structs and arrays) as a type-erased [`ParamPtr`], which the wrapper then
 /// collects into a [`ParamCollection`] map.
-pub trait UserParams {
+pub trait UserParams: Persistent {
     /// Every parameter reachable from this struct, in declaration order.
     fn all_params(&self) -> Vec<ParamPtr>;
+}
+
+impl<T> Persistent for T
+where
+    T: UserParams,
+{
+    fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError> {
+        todo!()
+    }
+
+    fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError> {
+        todo!()
+    }
 }
 
 /// Collection trait for accessing parameters in a plugin.
@@ -196,10 +209,6 @@ pub trait ParamCollection: Sync + Send + 'static {
         value: f32,
         writer: &mut ParamDisplayWriter,
     ) -> std::fmt::Result;
-
-    fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
-
-    fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
 }
 
 #[doc(hidden)]

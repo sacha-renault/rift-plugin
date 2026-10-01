@@ -29,7 +29,7 @@ pub use param_enum::{EnumParam, EnumParamBuilder, EnumValues};
 pub use param_float::{FloatParam, RangeMapping};
 pub use param_int::IntParam;
 pub use ptr::ParamPtr;
-pub use traits::{ParamCollection, Param, Persistent, TypedParam, UserParams};
+pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]
 pub use param_float_fun_dsp::SharedFloatParam;

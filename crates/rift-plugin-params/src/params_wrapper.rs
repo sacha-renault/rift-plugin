@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use clack_extensions::params::ParamInfo;
-use clack_plugin::{plugin::PluginError, utils::ClapId};
+use clack_plugin::utils::ClapId;
 
 use crate::{Param, ParamCollection, ParamPtr};
 
@@ -40,14 +40,6 @@ impl ParamsWrapper {
 impl ParamCollection for ParamsWrapper {
     fn count(&self) -> u32 {
         self.params.len() as u32
-    }
-
-    fn deserialize(&self, _: &mut dyn std::io::prelude::Read) -> Result<(), PluginError> {
-        unimplemented!()
-    }
-
-    fn serialize(&self, _: &mut dyn std::io::prelude::Write) -> Result<(), PluginError> {
-        unimplemented!()
     }
 
     fn get_param_info<'a>(&'a self, index: u32) -> Option<ParamInfo<'a>> {
