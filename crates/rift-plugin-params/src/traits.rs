@@ -165,11 +165,36 @@ where
     T: UserParams,
 {
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError> {
-        todo!()
+        let values: serde_json::Map<String, serde_json::Value> = serde_json::from_reader(reader)
+            .map_err(|_| PluginError::Message("Failed to deserialize params as JSON"))?;
+
+        for param in self.all_params() {
+            // Params are keyed by their stable `ClapId` rather than by name, so
+            // that renaming a label does not invalidate previously saved state.
+            let key = param.id().get().to_string();
+
+            // Unknown params and non-numeric values are ignored: this keeps
+            // state loadable across plugin updates that add or remove params.
+            if let Some(value) = values.get(&key).and_then(serde_json::Value::as_f64) {
+                param.set_plain(value as f32);
+            }
+        }
+
+        Ok(())
     }
 
     fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError> {
-        todo!()
+        let mut values = serde_json::Map::new();
+
+        for param in self.all_params() {
+            values.insert(
+                param.id().get().to_string(),
+                serde_json::Value::from(param.plain() as f64),
+            );
+        }
+
+        serde_json::to_writer(writer, &values)
+            .map_err(|_| PluginError::Message("Failed to serialize params as JSON"))
     }
 }
 
@@ -214,4 +239,69 @@ pub trait ParamCollection: Sync + Send + 'static {
 #[doc(hidden)]
 pub(crate) mod __private {
     pub trait Sealed {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::FloatParam;
+    use clack_plugin::utils::ClapId;
+
+    /// A hand-written stand-in for a `#[derive(Params)]` struct.
+    struct MockParams {
+        gain: FloatParam,
+        level: FloatParam,
+    }
+
+    impl UserParams for MockParams {
+        fn all_params(&self) -> Vec<ParamPtr> {
+            vec![self.gain.as_ptr(), self.level.as_ptr()]
+        }
+    }
+
+    fn mock() -> MockParams {
+        let build = |id: u32, name: &str| {
+            FloatParam::builder()
+                .id(ClapId::new(id))
+                .name(name.to_string())
+                .min_value(0.0)
+                .max_value(1.0)
+                .build()
+        };
+
+        MockParams {
+            gain: build(1, "gain"),
+            level: build(2, "level"),
+        }
+    }
+
+    #[test]
+    fn user_params_roundtrip() {
+        let params = mock();
+        params.gain.set_plain(0.25);
+        params.level.set_plain(0.75);
+
+        let mut buf = Vec::new();
+        params.serialize(&mut buf).unwrap();
+
+        let restored = mock();
+        restored.deserialize(&mut buf.as_slice()).unwrap();
+
+        assert_eq!(restored.gain.plain(), 0.25);
+        assert_eq!(restored.level.plain(), 0.75);
+    }
+
+    #[test]
+    fn missing_and_unknown_keys_are_tolerated() {
+        let params = mock();
+        params.level.set_plain(0.7);
+
+        let json = "{\"1\": 0.5, \"999\": 0.123}";
+        let mut reader = std::io::Cursor::new(json.as_bytes());
+        params.deserialize(&mut reader).unwrap();
+
+        assert_eq!(params.gain.plain(), 0.5);
+        // An absent key leaves the parameter untouched rather than resetting it.
+        assert_eq!(params.level.plain(), 0.7);
+    }
 }
