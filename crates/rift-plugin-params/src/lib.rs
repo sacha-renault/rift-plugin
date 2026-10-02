@@ -11,8 +11,8 @@ mod param_bool;
 mod param_enum;
 mod param_float;
 mod param_int;
+mod param_string;
 mod ptr;
-mod string_param;
 mod traits;
 
 #[doc(hidden)]
@@ -29,8 +29,8 @@ pub use param_bool::BoolParam;
 pub use param_enum::{EnumParam, EnumParamBuilder, EnumValues};
 pub use param_float::{FloatParam, RangeMapping};
 pub use param_int::IntParam;
+pub use param_string::{StringParam, StringParamValue};
 pub use ptr::ParamPtr;
-pub use string_param::{StringParam, StringParamValue};
 pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]
