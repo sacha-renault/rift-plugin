@@ -56,6 +56,10 @@ impl ParamCollection for ParamsWrapper {
         }
     }
 
+    fn value_normalized(&self, id: ClapId) -> Option<f32> {
+        self.get(id).map(|ptr| ptr.normalized())
+    }
+
     fn set_value_normalized(&self, id: ClapId, value: f32) {
         if let Some(param) = self.get(id) {
             param.set_normalized(value);

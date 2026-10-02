@@ -267,6 +267,9 @@ pub trait ParamCollection: Sync + Send + 'static {
     /// Set the normalized value (0.0–1.0).
     fn set_value_normalized(&self, id: ClapId, value: f32);
 
+    /// Get the value normalized (0.0-1.0).
+    fn value_normalized(&self, id: ClapId) -> Option<f32>;
+
     /// Parse text into a plain value for a specific parameter ID.
     fn text_to_value(&self, id: ClapId, text: &CStr) -> Option<f32>;
 
