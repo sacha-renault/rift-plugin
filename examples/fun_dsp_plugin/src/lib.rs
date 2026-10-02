@@ -208,6 +208,12 @@ impl ClapGui for NoGui {
     fn hide(&mut self) -> Result<(), PluginError> {
         Ok(())
     }
+
+    fn create(&mut self, _: clack_extensions::gui::GuiConfiguration) -> Result<(), PluginError> {
+        Ok(())
+    }
+
+    fn destroy(&mut self) {}
 }
 
 struct NoGuiFactory;

@@ -19,15 +19,14 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for super::WrapperMainThread<'a, P> {
         })
     }
 
-    fn create(&mut self, _configuration: gui::GuiConfiguration) -> Result<(), PluginError> {
-        //todo!()
+    fn create(&mut self, configuration: gui::GuiConfiguration) -> Result<(), PluginError> {
         log::debug!("PluginGuiImpl::create");
-        Ok(())
+        self.gui.create(configuration)
     }
 
     fn destroy(&mut self) {
-        // todo!()
         log::debug!("PluginGuiImpl::destroy");
+        self.gui.destroy();
     }
 
     fn set_scale(&mut self, scale: f64) -> Result<(), PluginError> {

@@ -54,6 +54,14 @@ pub trait ClapGui {
     ///
     /// This should not free the resources associated with the GUI, just hide it.
     fn hide(&mut self) -> Result<(), PluginError>;
+
+    /// allocates gui resources.
+    ///
+    /// After it the GUI may not be visible yet, show() is required.
+    fn create(&mut self, configuration: GuiConfiguration) -> Result<(), PluginError>;
+
+    /// Free all the resources of the GUI.
+    fn destroy(&mut self);
 }
 
 pub trait GuiFactory {
