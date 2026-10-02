@@ -93,8 +93,6 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     &self.shared.params,
                     &self.shared.data,
                 );
-            } else if let Some(event) = event.as_event::<TransportEvent>() {
-                log::info!("{event:?}");
             }
         }
     }
