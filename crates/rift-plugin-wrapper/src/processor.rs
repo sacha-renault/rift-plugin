@@ -192,4 +192,20 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             )
         })
     }
+
+    fn deactivate(self, _: &mut WrapperMainThread<'a, P>) {
+        self.plugin.deactivate();
+    }
+
+    fn reset(&mut self) {
+        self.plugin.reset();
+    }
+
+    fn start_processing(&mut self) -> Result<(), PluginError> {
+        self.plugin.start_processing()
+    }
+
+    fn stop_processing(&mut self) {
+        self.plugin.stop_processing();
+    }
 }

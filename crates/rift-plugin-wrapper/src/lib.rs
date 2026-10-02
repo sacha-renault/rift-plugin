@@ -146,6 +146,13 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// communication with the processor must happen via `params` or `shared`.
     fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory>;
 
+    fn deactivate(self) {}
+    fn reset(&mut self) {}
+    fn stop_processing(&mut self) {}
+    fn start_processing(&mut self) -> Result<(), PluginError> {
+        Ok(())
+    }
+
     // ... Later more methods :)
     const ID: &str;
     const NAME: &str;
