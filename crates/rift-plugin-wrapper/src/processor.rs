@@ -1,7 +1,5 @@
 use clack_extensions::params::*;
-use clack_plugin::events::event_types::{
-    MidiEvent, ParamValueEvent, TransportEvent, TransportFlags,
-};
+use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::prelude::*;
 
 use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind};
