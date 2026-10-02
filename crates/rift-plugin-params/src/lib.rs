@@ -2,8 +2,8 @@
 //!
 //! This crate owns the parameter model that used to live in `rift-plugin-core`:
 //! the [`Param`] / [`Persistent`] traits, the concrete parameter types
-//! ([`FloatParam`], [`IntParam`], [`BoolParam`], [`EnumParam`]) and the
-//! [`ParamCollection`] / [`UserParams`] collection traits.
+//! ([`FloatParam`], [`IntParam`], [`BoolParam`], [`EnumParam`], [`StringParam`])
+//! and the [`ParamCollection`] / [`UserParams`] collection traits.
 
 mod atomic_floats;
 mod id;
@@ -12,6 +12,7 @@ mod param_enum;
 mod param_float;
 mod param_int;
 mod ptr;
+mod string_param;
 mod traits;
 
 #[doc(hidden)]
@@ -29,6 +30,7 @@ pub use param_enum::{EnumParam, EnumParamBuilder, EnumValues};
 pub use param_float::{FloatParam, RangeMapping};
 pub use param_int::IntParam;
 pub use ptr::ParamPtr;
+pub use string_param::{StringParam, StringParamValue};
 pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]

@@ -9,6 +9,7 @@ fun-dsp = ["dep:fundsp"]
 [dependencies]
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
+arc-swap = { workspace = true }
 bon = { workspace = true }
 log = { workspace = true }
 serde_json = { workspace = true }
