@@ -6,7 +6,7 @@ use clack_plugin::utils::ClapId;
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
-use crate::atomic_f32::AtomicF32;
+use crate::atomic_floats::AtomicF32;
 
 #[derive(bon::Builder)]
 pub struct FloatParam {
