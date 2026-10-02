@@ -23,7 +23,7 @@ mod param_float_fun_dsp;
 
 mod test_macros;
 
-pub use atomic_floats::AtomicF32;
+pub use atomic_floats::{AtomicF32, AtomicF64};
 pub use id::param_id;
 pub use param_bool::BoolParam;
 pub use param_enum::{EnumParam, EnumParamBuilder, EnumValues};

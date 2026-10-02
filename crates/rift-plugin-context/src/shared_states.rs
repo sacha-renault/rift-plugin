@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
+use rift_plugin_params::AtomicF64;
 
 use crate::tasks::{AudioThreadTask, MainThreadTask};
 
@@ -12,7 +13,8 @@ use crate::tasks::{AudioThreadTask, MainThreadTask};
 /// the unposted task in an `Err`.
 pub struct SharedQueues {
     pub(crate) latency: AtomicU32,
-    pub is_playing: Arc<AtomicBool>,
+    pub(crate) is_playing: Arc<AtomicBool>,
+    pub(crate) samplerate: Arc<AtomicF64>,
 
     /// Queues that audio / main thread can read
     pub(crate) main_thread_tasks: ArrayQueue<MainThreadTask>,
@@ -26,6 +28,7 @@ impl SharedQueues {
             is_playing: Arc::new(AtomicBool::new(false)),
             main_thread_tasks: ArrayQueue::new(task_capacity),
             audio_thread_tasks: ArrayQueue::new(task_capacity),
+            samplerate: Arc::new(AtomicF64::new(44100.)),
         }
     }
 
@@ -62,5 +65,22 @@ impl SharedQueues {
 
     pub fn pop_audio_thread_tasks(&self) -> Option<AudioThreadTask> {
         self.audio_thread_tasks.pop()
+    }
+
+    pub fn is_playing(&self) -> bool {
+        self.is_playing.load(Ordering::Relaxed)
+    }
+
+    pub fn set_is_playing(&self, value: bool) {
+        self.is_playing.store(value, Ordering::Relaxed);
+    }
+
+    pub fn samplerate(&self) -> f64 {
+        self.samplerate.load(Ordering::Relaxed)
+    }
+
+    #[doc(hidden)]
+    pub fn set_samplerate(&self, value: f64) {
+        self.samplerate.store(value, Ordering::Relaxed);
     }
 }

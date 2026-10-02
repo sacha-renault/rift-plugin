@@ -1,5 +1,3 @@
-use std::sync::atomic::Ordering;
-
 use clack_extensions::params::*;
 use clack_plugin::events::event_types::{
     MidiEvent, ParamValueEvent, TransportEvent, TransportFlags,
@@ -148,6 +146,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         // Create the plugin instance & activate right away
         let init_context = InitContext::new(&main_thread.host, shared.states.clone());
         let plugin = P::create(shared.params.as_ref(), audio_config, init_context);
+        shared.states.set_samplerate(audio_config.sample_rate);
 
         // Allocate a scratch buffer ONCE
         Ok(Self {
@@ -170,10 +169,9 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
 
             if let Some(flags) = process.transport.map(|tr| tr.flags) {
-                self.shared.states.is_playing.store(
-                    flags.contains(TransportFlags::IS_PLAYING),
-                    Ordering::Relaxed,
-                );
+                self.shared
+                    .states
+                    .set_is_playing(flags.contains(TransportFlags::IS_PLAYING));
             }
 
             let context = ProcessContext {
