@@ -142,10 +142,23 @@ pub trait TypedParam {
     fn set_value(&self, value: Self::Type);
 }
 
-/// Trait for plugin state persistence (preset save/load).
+/// Trait for plugin state persistence (preset save/load). This represent any param that
+/// cannot be represented as a float. Host will never know about this parameter. This is all internal
+/// in this plugin.
 ///
 /// Each implementor is responsible for writing a single valid JSON value to the writer and reading it back.
 pub trait Persistent {
+    fn create(id: ClapId, name: String, module: Option<String>) -> Self;
+    fn name(&self) -> &str;
+    fn module(&self) -> Option<&str>;
+    fn path(&self) -> String {
+        if let Some(module) = self.module() {
+            format!("{}.{}", module, self.name())
+        } else {
+            self.name().to_string()
+        }
+    }
+    fn id(&self) -> ClapId;
     fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError>;
     fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError>;
 }
@@ -154,28 +167,50 @@ pub trait Persistent {
 ///
 /// It exposes every leaf parameter reachable from the struct (walking nested
 /// structs and arrays) as a type-erased [`ParamPtr`], which the wrapper then
-/// collects into a [`ParamCollection`] map.
-pub trait UserParams: Persistent {
+/// collects into a [`ParamCollection`] map. It also owns the (de)serialization
+/// of both the parameter values and any extra `#[persist]` state.
+///
+/// Only [`UserParams::all_params`] has to be implemented by the derive; the
+/// parameter methods below are provided from it. The persist methods are
+/// defaulted no-ops and get overridden once `#[persist]` fields exist.
+pub trait UserParams {
     /// Every parameter reachable from this struct, in declaration order.
     fn all_params(&self) -> Vec<ParamPtr>;
-}
 
-impl<T> Persistent for T
-where
-    T: UserParams,
-{
-    fn deserialize(&self, reader: &mut dyn Read) -> Result<(), PluginError> {
-        let values: serde_json::Map<String, serde_json::Value> = serde_json::from_reader(reader)
-            .map_err(|_| PluginError::Message("Failed to deserialize params as JSON"))?;
-
+    /// Write every reachable parameter into `out`, keyed by its stable
+    /// [`ClapId`], as its plain value.
+    ///
+    /// [`ClapId`]: clack_plugin::utils::ClapId
+    fn serialize_params(
+        &self,
+        out: &mut serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), PluginError> {
         for param in self.all_params() {
-            // Params are keyed by their stable `ClapId` rather than by name, so
-            // that renaming a label does not invalidate previously saved state.
+            // Keyed by the stable `ClapId` rather than by name, so that renaming
+            // a label does not invalidate previously saved state.
+            out.insert(
+                param.id().get().to_string(),
+                serde_json::Value::from(param.plain() as f64),
+            );
+        }
+
+        Ok(())
+    }
+
+    /// Read parameters from `section`, keyed by their stable [`ClapId`].
+    ///
+    /// Missing, unknown and non-numeric entries are ignored: this keeps state
+    /// loadable across plugin updates that add or remove parameters.
+    ///
+    /// [`ClapId`]: clack_plugin::utils::ClapId
+    fn deserialize_params(
+        &self,
+        section: &serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), PluginError> {
+        for param in self.all_params() {
             let key = param.id().get().to_string();
 
-            // Unknown params and non-numeric values are ignored: this keeps
-            // state loadable across plugin updates that add or remove params.
-            if let Some(value) = values.get(&key).and_then(serde_json::Value::as_f64) {
+            if let Some(value) = section.get(&key).and_then(serde_json::Value::as_f64) {
                 param.set_plain(value as f32);
             }
         }
@@ -183,18 +218,26 @@ where
         Ok(())
     }
 
-    fn serialize(&self, writer: &mut dyn Write) -> Result<(), PluginError> {
-        let mut values = serde_json::Map::new();
+    /// Write extra, non-parameter state into `out`.
+    ///
+    /// Defaulted to a no-op; `#[derive(Params)]` overrides it once `#[persist]`
+    /// fields are supported.
+    fn serialize_persist(
+        &self,
+        _out: &mut serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), PluginError> {
+        Ok(())
+    }
 
-        for param in self.all_params() {
-            values.insert(
-                param.id().get().to_string(),
-                serde_json::Value::from(param.plain() as f64),
-            );
-        }
-
-        serde_json::to_writer(writer, &values)
-            .map_err(|_| PluginError::Message("Failed to serialize params as JSON"))
+    /// Read extra, non-parameter state from `section`.
+    ///
+    /// Defaulted to a no-op; `#[derive(Params)]` overrides it once `#[persist]`
+    /// fields are supported.
+    fn deserialize_persist(
+        &self,
+        _section: &serde_json::Map<String, serde_json::Value>,
+    ) -> Result<(), PluginError> {
+        Ok(())
     }
 }
 
@@ -276,16 +319,16 @@ mod tests {
     }
 
     #[test]
-    fn user_params_roundtrip() {
+    fn params_roundtrip() {
         let params = mock();
         params.gain.set_plain(0.25);
         params.level.set_plain(0.75);
 
-        let mut buf = Vec::new();
-        params.serialize(&mut buf).unwrap();
+        let mut section = serde_json::Map::new();
+        params.serialize_params(&mut section).unwrap();
 
         let restored = mock();
-        restored.deserialize(&mut buf.as_slice()).unwrap();
+        restored.deserialize_params(&section).unwrap();
 
         assert_eq!(restored.gain.plain(), 0.25);
         assert_eq!(restored.level.plain(), 0.75);
@@ -296,12 +339,30 @@ mod tests {
         let params = mock();
         params.level.set_plain(0.7);
 
-        let json = "{\"1\": 0.5, \"999\": 0.123}";
-        let mut reader = std::io::Cursor::new(json.as_bytes());
-        params.deserialize(&mut reader).unwrap();
+        // Key "1" (gain) is present, key "2" (level) is absent, and "999" is unknown.
+        let section: serde_json::Map<String, serde_json::Value> =
+            serde_json::from_str(r#"{"1": 0.5, "999": 0.123}"#).unwrap();
+
+        params.deserialize_params(&section).unwrap();
 
         assert_eq!(params.gain.plain(), 0.5);
         // An absent key leaves the parameter untouched rather than resetting it.
         assert_eq!(params.level.plain(), 0.7);
+    }
+
+    #[test]
+    fn persist_sections_default_to_empty_noops() {
+        let params = mock();
+        params.gain.set_plain(0.42);
+
+        let mut section = serde_json::Map::new();
+        params.serialize_persist(&mut section).unwrap();
+        assert!(section.is_empty());
+
+        // Deserializing an unrelated section is a no-op and does not error.
+        let section: serde_json::Map<String, serde_json::Value> =
+            serde_json::from_str(r#"{"anything": 1}"#).unwrap();
+        params.deserialize_persist(&section).unwrap();
+        assert_eq!(params.gain.plain(), 0.42);
     }
 }

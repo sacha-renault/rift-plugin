@@ -1,10 +1,7 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use clack_extensions::params::*;
-use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
-
-use crate::Persistent;
 
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
@@ -123,24 +120,8 @@ impl Param for IntParam {
     }
 }
 
-impl Persistent for IntParam {
-    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
-        let value: i32 = serde_json::from_reader(reader)
-            .map_err(|_| PluginError::Message("deserialize error"))?;
-        self.set_value(value);
-        Ok(())
-    }
-
-    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
-        serde_json::to_writer(writer, &self.value())
-            .map_err(|_| PluginError::Message("serialize error"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
-
     use crate::assert_approx_eq;
 
     use super::*;
@@ -236,37 +217,5 @@ mod tests {
 
         ptr.set_normalized(0.0);
         assert_eq!(param.value(), 0);
-    }
-
-    #[test]
-    fn serialize_roundtrip() {
-        let param = IntParam::builder()
-            .default(0)
-            .min_value(-100)
-            .max_value(100)
-            .build();
-
-        param.set_value(42);
-
-        let mut buf = Vec::new();
-        param.serialize(&mut buf).unwrap();
-
-        let param2 = IntParam::builder()
-            .default(0)
-            .min_value(-100)
-            .max_value(100)
-            .build();
-
-        let mut reader = Cursor::new(&buf);
-        param2.deserialize(&mut reader).unwrap();
-
-        assert_eq!(param2.value(), 42);
-    }
-
-    #[test]
-    fn deserialize_invalid_data() {
-        let param = IntParam::builder().default(0).build();
-        let mut reader = Cursor::new(b"not a number");
-        assert!(param.deserialize(&mut reader).is_err());
     }
 }

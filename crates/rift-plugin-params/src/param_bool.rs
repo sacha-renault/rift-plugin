@@ -1,10 +1,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use clack_extensions::params::*;
-use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
-
-use crate::Persistent;
 
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
@@ -123,24 +120,8 @@ impl Param for BoolParam {
     }
 }
 
-impl Persistent for BoolParam {
-    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
-        let value: bool = serde_json::from_reader(reader)
-            .map_err(|_| PluginError::Message("deserialize error"))?;
-        self.set_value(value);
-        Ok(())
-    }
-
-    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
-        serde_json::to_writer(writer, &self.value())
-            .map_err(|_| PluginError::Message("serialize error"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
-
     use super::*;
 
     #[test]
@@ -207,41 +188,5 @@ mod tests {
 
         ptr.set_normalized(0.0);
         assert_eq!(param.value(), false);
-    }
-
-    #[test]
-    fn serialize_roundtrip() {
-        let param = BoolParam::builder().default(false).build();
-        param.set_value(true);
-
-        let mut buf = Vec::new();
-        param.serialize(&mut buf).unwrap();
-
-        let param2 = BoolParam::builder().default(false).build();
-        let mut reader = Cursor::new(&buf);
-        param2.deserialize(&mut reader).unwrap();
-
-        assert_eq!(param2.value(), true);
-    }
-
-    #[test]
-    fn serialize_default_value() {
-        let param = BoolParam::builder().default(true).build();
-
-        let mut buf = Vec::new();
-        param.serialize(&mut buf).unwrap();
-
-        let param2 = BoolParam::builder().default(false).build();
-        let mut reader = Cursor::new(&buf);
-        param2.deserialize(&mut reader).unwrap();
-
-        assert_eq!(param2.value(), true);
-    }
-
-    #[test]
-    fn deserialize_invalid_data() {
-        let param = BoolParam::builder().default(false).build();
-        let mut reader = Cursor::new(b"not a bool");
-        assert!(param.deserialize(&mut reader).is_err());
     }
 }

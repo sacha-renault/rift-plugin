@@ -1,10 +1,7 @@
 use std::marker::PhantomData;
 
 use clack_extensions::params::*;
-use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
-
-use crate::Persistent;
 
 use super::param_int::IntParam;
 use super::ptr::ParamPtr;
@@ -215,20 +212,9 @@ impl<E: EnumValues> Param for EnumParam<E> {
     }
 }
 
-impl<E: EnumValues> Persistent for EnumParam<E> {
-    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
-        self.inner.deserialize(reader)
-    }
-
-    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
-        self.inner.serialize(writer)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
 
     #[derive(Default, Debug, Clone, Copy, PartialEq)]
     enum TestEnum {
@@ -308,21 +294,6 @@ mod tests {
         let mut buf = String::new();
         param.value_to_text(2.0, &mut buf).unwrap();
         assert_eq!(buf, "C");
-    }
-
-    #[test]
-    fn serialize_roundtrip() {
-        let param = EnumParam::new(TestEnum::A);
-        param.set_value(TestEnum::C);
-
-        let mut buf = Vec::new();
-        param.serialize(&mut buf).unwrap();
-
-        let param2 = EnumParam::new(TestEnum::A);
-        let mut reader = Cursor::new(&buf);
-        param2.deserialize(&mut reader).unwrap();
-
-        assert_eq!(param2.value(), TestEnum::C);
     }
 
     #[test]

@@ -1,13 +1,11 @@
 use std::sync::atomic::Ordering;
 
 use clack_extensions::params::*;
-use clack_plugin::plugin::PluginError;
 use clack_plugin::utils::ClapId;
 
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
-use crate::Persistent;
 use crate::atomic_f32::AtomicF32;
 
 #[derive(bon::Builder)]
@@ -154,24 +152,8 @@ impl RangeMapping {
     }
 }
 
-impl Persistent for FloatParam {
-    fn deserialize(&self, reader: &mut dyn std::io::Read) -> Result<(), PluginError> {
-        let value: f32 = serde_json::from_reader(reader)
-            .map_err(|_| PluginError::Message("deserialize error"))?;
-        self.set_value(value);
-        Ok(())
-    }
-
-    fn serialize(&self, writer: &mut dyn std::io::Write) -> Result<(), PluginError> {
-        serde_json::to_writer(writer, &self.value())
-            .map_err(|_| PluginError::Message("serialize error"))
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::io::Cursor;
-
     use crate::assert_approx_eq;
 
     use super::*;
@@ -232,46 +214,6 @@ mod tests {
         assert_approx_eq!(param.value(), 0.5);
         param.set_value(1.5);
         assert_approx_eq!(param.value(), 1.);
-    }
-
-    #[test]
-    fn test_serialize_roundtrip() {
-        let param = FloatParam::builder().default(0.5).build();
-
-        param.set_value(0.75);
-
-        let mut buf = Vec::new();
-        param.serialize(&mut buf).unwrap();
-
-        let param2 = FloatParam::builder().default(0.0).build();
-
-        let mut reader = Cursor::new(&buf);
-        param2.deserialize(&mut reader).unwrap();
-
-        assert_approx_eq!(param2.value(), 0.75);
-    }
-
-    #[test]
-    fn test_serialize_default_value() {
-        let param = FloatParam::builder().default(0.42).build();
-
-        let mut buf = Vec::new();
-        param.serialize(&mut buf).unwrap();
-
-        let param2 = FloatParam::builder().default(0.0).build();
-
-        let mut reader = Cursor::new(&buf);
-        param2.deserialize(&mut reader).unwrap();
-
-        assert_approx_eq!(param2.value(), 0.42);
-    }
-
-    #[test]
-    fn test_deserialize_invalid_data() {
-        let param = FloatParam::builder().default(0.5).build();
-
-        let mut reader = Cursor::new(b"not a number");
-        assert!(param.deserialize(&mut reader).is_err());
     }
 
     #[test]
