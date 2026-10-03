@@ -35,7 +35,7 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     fn handle_audio_thread_tasks(&mut self, outputs: &mut OutputEvents) {
-        while let Some(task) = self.shared.states.pop_audio_thread_tasks() {
+        while let Some(task) = self.shared.states.pop_in_audio() {
             use AudioThreadTask::*;
 
             match task {
@@ -76,7 +76,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     );
                 }
 
-                _ = self.shared.states.push_gui_task(GuiTasks::ParamChanged {
+                _ = self.shared.states.post_to_gui(GuiTasks::ParamChanged {
                     id,
                     value: event.value() as f32,
                 });

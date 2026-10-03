@@ -3,12 +3,12 @@ use std::sync::atomic::AtomicBool;
 
 use rift_plugin_gui::{GuiContext, GuiParamEvent};
 
-use crate::SharedQueues;
+use crate::PluginSharedState;
 use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use rift_plugin_params::ParamCollection;
 
 pub struct GuiContextImpl {
-    pub states: Arc<SharedQueues>,
+    pub states: Arc<PluginSharedState>,
     pub params: Arc<dyn ParamCollection>,
 }
 
@@ -19,7 +19,7 @@ impl GuiContext for GuiContextImpl {
     /// If the queue is full, an error is logged but the event is dropped.
     fn param_event(&self, event: GuiParamEvent) {
         let task = AudioThreadTask::GuiParamEvent(event);
-        if self.states.push_audio_thread_task(task).is_err() {
+        if self.states.post_to_audio(task).is_err() {
             log::error!("Couldn't push new param event from gui");
         }
     }
@@ -42,13 +42,13 @@ impl GuiContext for GuiContextImpl {
             screen,
         };
         let task = MainThreadTask::ParamContextMenu(ctx);
-        if self.states.push_main_thread_task(task).is_err() {
+        if self.states.post_to_main(task).is_err() {
             log::error!("Couldn't push new param event from gui");
             return;
         }
         if self
             .states
-            .push_audio_thread_task(AudioThreadTask::RequestCallback)
+            .post_to_audio(AudioThreadTask::RequestCallback)
             .is_err()
         {
             log::error!("Couldn't push callback request");
@@ -59,7 +59,7 @@ impl GuiContext for GuiContextImpl {
         self.states.is_playing.clone()
     }
 
-    fn pop_gui_task(&self) -> Option<rift_plugin_gui::GuiTasks> {
-        self.states.gui_tasks.pop()
+    fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiTasks> {
+        self.states.pop_in_gui()
     }
 }

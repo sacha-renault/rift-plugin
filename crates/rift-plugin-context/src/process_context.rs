@@ -9,12 +9,12 @@ use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
 
-use crate::SharedQueues;
+use crate::PluginSharedState;
 use rift_plugin_types::MidiMessage;
 
 pub struct ProcessContext<'a, 'e> {
     pub host: &'a HostAudioProcessorHandle<'a>,
-    pub states: Arc<SharedQueues>,
+    pub states: Arc<PluginSharedState>,
     pub process: Process<'a>,
     pub samplerate: f64,
     pub block_index: BlockIndex,
@@ -66,7 +66,7 @@ impl<'a, 'e> super::HostStatesGetter for ProcessContext<'a, 'e> {
     }
 
     #[inline]
-    fn states(&self) -> Arc<SharedQueues> {
+    fn states(&self) -> Arc<PluginSharedState> {
         self.states.clone()
     }
 }

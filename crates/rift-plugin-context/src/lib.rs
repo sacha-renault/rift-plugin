@@ -18,7 +18,7 @@ pub use featured::ChangeLatencyImpl;
 pub use gui_context::GuiContextImpl;
 pub use init_context::InitContext;
 pub use process_context::ProcessContext;
-pub use shared_states::SharedQueues;
+pub use shared_states::PluginSharedState;
 
 pub use tasks::ParamContextMenu;
 pub use tasks::{AudioThreadTask, MainThreadTask};

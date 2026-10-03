@@ -3,7 +3,7 @@ use std::sync::Arc;
 use clack_plugin::plugin::PluginShared;
 
 use crate::ClapPlugin;
-use rift_plugin_context::SharedQueues;
+use rift_plugin_context::PluginSharedState;
 use rift_plugin_params::UserParams;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
 
@@ -18,7 +18,7 @@ pub struct WrapperShared<P: ClapPlugin> {
     /// Shared data, defined by the user.
     pub(crate) data: Arc<P::SharedData>,
     /// Internal messaging system between Audio and Main(GUI) thread
-    pub(crate) states: Arc<SharedQueues>,
+    pub(crate) states: Arc<PluginSharedState>,
 }
 
 impl<P: ClapPlugin> Clone for WrapperShared<P> {
@@ -44,7 +44,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
             params,
             host_params,
             data: Arc::new(data),
-            states: Arc::new(SharedQueues::new(P::TASKS_CAPACITY)),
+            states: Arc::new(PluginSharedState::new(P::TASKS_CAPACITY)),
         }
     }
 }

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use crate::SharedQueues;
+use crate::PluginSharedState;
 
 pub(crate) trait HostStatesGetter {
     /// Exposes the cloned Arc to external code requiring the shared state.
-    fn states(&self) -> Arc<SharedQueues>;
+    fn states(&self) -> Arc<PluginSharedState>;
 
     /// Increments the pending event count. Used to track interactions before drop.
     ///

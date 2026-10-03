@@ -158,7 +158,7 @@ impl ViziaGui {
             let pump = context.clone();
             let timer = cx.add_timer(Duration::from_millis(16), None, move |cx, _action| {
                 let signals = &cx.data::<ParamSignals>().signals;
-                while let Some(task) = pump.pop_gui_task() {
+                while let Some(task) = pump.pop_in_gui() {
                     match task {
                         GuiTasks::ParamChanged { id, value } => {
                             if let Some(sig) = signals.get(&id) {
