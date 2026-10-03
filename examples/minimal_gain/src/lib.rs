@@ -135,6 +135,10 @@ impl ClapGui for NoGui {
     }
 
     fn destroy(&mut self) {}
+
+    fn is_opened(&self) -> bool {
+        false
+    }
 }
 
 struct NoGuiFactory;

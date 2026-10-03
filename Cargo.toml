@@ -1,25 +1,6 @@
 [workspace]
 resolver = "2"
-members = [
-  "crates/rift-plugin",
-  "crates/rift-fun-dsp",
-  "crates/rift-plugin-accumulator",
-  "crates/rift-plugin-derive",
-  "crates/rift-plugin-utils",
-  "crates/rift-plugin-types",
-  "crates/rift-plugin-params",
-  "crates/rift-plugin-gui",
-  "crates/rift-plugin-buffers",
-  "crates/rift-plugin-context",
-  "crates/rift-plugin-wrapper",
-  "crates/rift-plugin-dsp",
-
-  "examples/buffer-iter-benchmark",
-  "examples/minimal_gain",
-  "examples/fun_dsp_plugin",
-
-  "xtask",
-]
+members = ["crates/*", "examples/*", "xtask" ]
 
 [workspace.dependencies]
 rift-plugin = { path = "crates/rift-plugin" }

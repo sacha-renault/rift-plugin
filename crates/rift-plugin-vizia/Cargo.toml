@@ -1,0 +1,9 @@
+[package]
+name = "rift-plugin-vizia"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+vizia = { git = "https://github.com/vizia/vizia", tag = "0.4.0", features=["baseview"], default-features = false}
+rift-plugin-gui = { workspace = true }
+raw-window-handle = "0.5"

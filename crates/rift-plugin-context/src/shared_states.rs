@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
+use rift_plugin_gui::GuiTasks;
 use rift_plugin_params::AtomicF64;
 
 use crate::tasks::{AudioThreadTask, MainThreadTask};
@@ -19,6 +20,7 @@ pub struct SharedQueues {
     /// Queues that audio / main thread can read
     pub(crate) main_thread_tasks: ArrayQueue<MainThreadTask>,
     pub(crate) audio_thread_tasks: ArrayQueue<AudioThreadTask>,
+    pub(crate) gui_tasks: ArrayQueue<GuiTasks>,
 }
 
 impl SharedQueues {
@@ -29,6 +31,7 @@ impl SharedQueues {
             main_thread_tasks: ArrayQueue::new(task_capacity),
             audio_thread_tasks: ArrayQueue::new(task_capacity),
             samplerate: Arc::new(AtomicF64::new(44100.)),
+            gui_tasks: ArrayQueue::new(task_capacity),
         }
     }
 

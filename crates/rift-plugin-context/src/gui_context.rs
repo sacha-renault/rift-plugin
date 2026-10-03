@@ -58,4 +58,8 @@ impl GuiContext for GuiContextImpl {
     fn is_playing(&self) -> Arc<AtomicBool> {
         self.states.is_playing.clone()
     }
+
+    fn pop_gui_task(&self) -> Option<rift_plugin_gui::GuiTasks> {
+        self.states.gui_tasks.pop()
+    }
 }

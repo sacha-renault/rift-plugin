@@ -6,6 +6,8 @@ use clack_plugin::{plugin::PluginError, utils::ClapId};
 
 use rift_plugin_params::ParamCollection;
 
+use crate::GuiTasks;
+
 use super::events::GuiParamEvent;
 
 pub trait GuiContext: Send + Sync {
@@ -13,6 +15,7 @@ pub trait GuiContext: Send + Sync {
     fn params(&self) -> Arc<dyn ParamCollection>;
     fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
     fn is_playing(&self) -> Arc<AtomicBool>;
+    fn pop_gui_task(&self) -> Option<GuiTasks>;
 }
 
 pub trait ClapGui {
@@ -62,8 +65,11 @@ pub trait ClapGui {
 
     /// Free all the resources of the GUI.
     fn destroy(&mut self);
+
+    /// Return true if the plugin gui is visible and opened.
+    fn is_opened(&self) -> bool;
 }
 
 pub trait GuiFactory {
-    fn build(self: Box<Self>, states: Arc<dyn GuiContext>) -> Box<dyn ClapGui>;
+    fn build(self: Box<Self>, ctx: Arc<dyn GuiContext>) -> Box<dyn ClapGui>;
 }

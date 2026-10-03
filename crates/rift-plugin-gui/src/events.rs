@@ -102,6 +102,10 @@ impl AsRef<UnknownEvent> for RawParamEvent {
     }
 }
 
+pub enum GuiTasks {
+    ParamChanged { id: ClapId, value: f32 },
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

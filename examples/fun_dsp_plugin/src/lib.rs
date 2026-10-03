@@ -2,9 +2,8 @@ use std::ffi::CStr;
 use std::sync::Arc;
 
 use fundsp::prelude32::*;
-use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
 use rift_plugin::prelude::*;
-use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
+use rift_plugin_vizia::prelude::*;
 
 pub mod oscillator;
 
@@ -150,7 +149,7 @@ impl ClapPlugin for FunDspPlugin {
     }
 
     fn gui(_params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        Box::new(NoGuiFactory)
+        vizia_gui(200, 200, move |cx, ctx| {})
     }
 
     const ID: &str = "com.rift.fun-dsp-generator";
@@ -167,61 +166,6 @@ impl ClapPlugin for FunDspPlugin {
         .supported_dialects(NoteDialects::MIDI)
         .preferred_dialect(NoteDialect::Midi)];
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
-}
-
-/// No-op GUI. Every CLAP GUI callback succeeds and does nothing.
-struct NoGui;
-
-impl ClapGui for NoGui {
-    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn get_size(&mut self) -> Option<GuiSize> {
-        None
-    }
-
-    fn can_resize(&mut self) -> bool {
-        false
-    }
-
-    fn adjust_size(&mut self, _size: GuiSize) -> Option<GuiSize> {
-        None
-    }
-
-    fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn set_parent(&mut self, _window: Window) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn set_transient(&mut self, _window: Window) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn show(&mut self) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn hide(&mut self) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn create(&mut self, _: clack_extensions::gui::GuiConfiguration) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn destroy(&mut self) {}
-}
-
-struct NoGuiFactory;
-
-impl GuiFactory for NoGuiFactory {
-    fn build(self: Box<Self>, _states: Arc<dyn GuiContext>) -> Box<dyn ClapGui> {
-        Box::new(NoGui)
-    }
 }
 
 export_clap_plugin!(FunDspPlugin);
