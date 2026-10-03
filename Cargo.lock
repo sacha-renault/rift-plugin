@@ -1685,6 +1685,7 @@ version = "0.1.0"
 dependencies = [
  "raw-window-handle",
  "rift-plugin-gui",
+ "rift-plugin-params",
  "vizia",
 ]
 

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use fundsp::prelude32::*;
 use rift_plugin::prelude::*;
 use rift_plugin_vizia::prelude::*;
+use rift_plugin_vizia::widgets::knob;
 
 pub mod oscillator;
 
@@ -148,8 +149,12 @@ impl ClapPlugin for FunDspPlugin {
         }
     }
 
-    fn gui(_params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        vizia_gui(200, 200, move |cx, ctx| {})
+    fn gui(params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
+        vizia_gui(200, 200, move |cx, ctx| {
+            VStack::new(cx, |cx| {
+                knob(cx, &params.oscillators[0].gain);
+            });
+        })
     }
 
     const ID: &str = "com.rift.fun-dsp-generator";

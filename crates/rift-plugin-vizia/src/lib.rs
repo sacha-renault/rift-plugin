@@ -11,6 +11,8 @@ use vizia::{
     prelude::{Context, WindowSize},
 };
 
+pub mod widgets;
+
 pub struct ViziaFactory<F>
 where
     F: Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static,
