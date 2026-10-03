@@ -2,7 +2,7 @@ use clack_extensions::params::*;
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::prelude::*;
 
-use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind};
+use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind, GuiTasks};
 use rift_plugin_params::ParamCollection;
 use rift_plugin_types::transport::BlockIndex;
 
@@ -53,19 +53,11 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         }
     }
 
-    fn handle_event_auto(&mut self, events: &InputEvents) {
+    fn handle_input_events(&mut self, events: &InputEvents) {
         let flags = P::EVENT_PRE_PROCESS;
-        if flags.is_empty() {
-            return;
-        }
 
         for event in events.iter() {
-            const ANY_PARAM: EventPreProcess =
-                EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
-
-            if flags.intersects(ANY_PARAM)
-                && let Some(event) = event.as_event::<ParamValueEvent>()
-            {
+            if let Some(event) = event.as_event::<ParamValueEvent>() {
                 let Some(id) = event.param_id() else {
                     continue;
                 };
@@ -83,6 +75,11 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                         EventSource::Host,
                     );
                 }
+
+                _ = self.shared.states.push_gui_task(GuiTasks::ParamChanged {
+                    id,
+                    value: event.value() as f32,
+                });
             } else if flags.contains(EventPreProcess::MIDI_NOTIFY_EVENT)
                 && let Some(event) = event.as_event::<MidiEvent>()
             {
@@ -126,7 +123,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
     fn flush(&mut self, inputs: &InputEvents, outputs: &mut OutputEvents) {
         self.handle_audio_thread_tasks(outputs);
-        self.handle_event_auto(inputs);
+        self.handle_input_events(inputs);
     }
 }
 

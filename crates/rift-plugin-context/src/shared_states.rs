@@ -70,6 +70,10 @@ impl SharedQueues {
         self.audio_thread_tasks.pop()
     }
 
+    pub fn push_gui_task(&self, task: GuiTasks) {
+        self.gui_tasks.force_push(task);
+    }
+
     pub fn is_playing(&self) -> bool {
         self.is_playing.load(Ordering::Relaxed)
     }

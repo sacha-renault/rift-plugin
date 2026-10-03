@@ -153,6 +153,8 @@ impl ClapPlugin for FunDspPlugin {
         vizia_gui(200, 200, move |cx, ctx| {
             VStack::new(cx, |cx| {
                 knob(cx, &params.oscillators[0].gain);
+
+                knob(cx, &params.filters[0].cutoff);
             });
         })
     }

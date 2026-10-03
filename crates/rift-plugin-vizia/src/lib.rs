@@ -1,14 +1,21 @@
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
 };
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
 use rift_plugin_gui::*;
+use rift_plugin_params::ClapId;
 use vizia::{
     Application, WindowHandle,
-    context::EmitContext,
-    prelude::{Context, WindowSize},
+    context::DataContext,
+    events::Event,
+    model::Model,
+    prelude::{Context, Signal, SignalUpdate, WindowSize},
 };
 
 pub mod widgets;
@@ -127,21 +134,43 @@ impl ViziaGui {
 
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
-        let idle_ctx = self.context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
 
         let application = Application::new(move |cx| {
+            let ctx2 = context.clone();
+            cx.add_global_listener(move |_, event| {
+                event.map(|e: &GuiParamEvent, meta| {
+                    ctx2.param_event(*e);
+                    meta.consume();
+                })
+            });
+
+            ParamSignals {
+                signals: HashMap::new(),
+            }
+            .build(cx);
+
             app_fn(cx, context.clone());
-        })
-        .inner_size(wsize)
-        .on_idle(move |cx| {
+
             // Here we have to pump param change bidirectionally
             // audio thread => GUI
             // GUI          => audio thread
-            while let Some(task) = idle_ctx.pop_gui_task() {
-                cx.emit(task);
-            }
-        });
+            let pump = context.clone();
+            let timer = cx.add_timer(Duration::from_millis(16), None, move |cx, _action| {
+                let signals = &cx.data::<ParamSignals>().signals;
+                while let Some(task) = pump.pop_gui_task() {
+                    match task {
+                        GuiTasks::ParamChanged { id, value } => {
+                            if let Some(sig) = signals.get(&id) {
+                                sig.update(|v| *v = value);
+                            }
+                        }
+                    }
+                }
+            });
+            cx.start_timer(timer);
+        })
+        .inner_size(wsize);
 
         self.handle = Some(application.open_parented(self));
         Ok(())
@@ -157,6 +186,21 @@ where
         height,
         app_fn,
     })
+}
+
+pub struct ParamSignals {
+    pub signals: HashMap<ClapId, Signal<f32>>,
+}
+
+pub struct NewSignal(ClapId, Signal<f32>);
+
+impl Model for ParamSignals {
+    fn event(&mut self, _: &mut vizia::prelude::EventContext, event: &mut Event) {
+        event.map(|&NewSignal(id, signal): &NewSignal, meta| {
+            self.signals.insert(id, signal);
+            meta.consume();
+        });
+    }
 }
 
 pub mod prelude {
