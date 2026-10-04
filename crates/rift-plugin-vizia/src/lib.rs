@@ -4,7 +4,6 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    time::Duration,
 };
 
 use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
@@ -134,9 +133,12 @@ impl ViziaGui {
 
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
+        let pump = context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
 
         let application = Application::new(move |cx| {
+            // Here we notify RT when param change
+            // GUI => audio thread
             let ctx2 = context.clone();
             cx.add_global_listener(move |_, event| {
                 event.map(|e: &GuiParamEvent, meta| {
@@ -151,24 +153,20 @@ impl ViziaGui {
             .build(cx);
 
             app_fn(cx, context.clone());
-
-            // Here we have to pump param change bidirectionally
+        })
+        .on_idle(move |cx| {
+            // Here we have to pump param change
             // audio thread => GUI
-            // GUI          => audio thread
-            let pump = context.clone();
-            let timer = cx.add_timer(Duration::from_millis(16), None, move |cx, _action| {
-                let signals = &cx.data::<ParamSignals>().signals;
-                while let Some(task) = pump.pop_in_gui() {
-                    match task {
-                        GuiTasks::ParamChanged { id, value } => {
-                            if let Some(sig) = signals.get(&id) {
-                                sig.update(|v| *v = value);
-                            }
+            let signals = &cx.data::<ParamSignals>().signals;
+            while let Some(task) = pump.pop_in_gui() {
+                match task {
+                    GuiTasks::ParamChanged { id, value } => {
+                        if let Some(sig) = signals.get(&id) {
+                            sig.update(|v| *v = value);
                         }
                     }
                 }
-            });
-            cx.start_timer(timer);
+            }
         })
         .inner_size(wsize);
 
