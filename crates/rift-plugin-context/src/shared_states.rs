@@ -113,12 +113,16 @@ impl PluginSharedState {
         self.samplerate.store(value, Ordering::Relaxed);
     }
 
+    /// Flags raised when a `post_to_*` had to drop a task.
     pub fn overflows(&self) -> &AtomicQueueOverflows {
         &self.overflows
     }
 }
 
 bitflags::bitflags! {
+    /// Which task queue(s) dropped a task because it was full.
+    ///
+    /// One bit per queue, so a single atomic can hold all of them at once.
     pub struct QueueOverflows: u8 {
         const MAIN  = 1 << 0;
         const AUDIO = 1 << 1;
@@ -126,6 +130,11 @@ bitflags::bitflags! {
     }
 }
 
+/// Atomic [`QueueOverflows`], set by the producer when a `post_to_*` fails.
+///
+/// Flags are sticky: `set_*` latches, `is_*` peeks, `take_*` reads and clears
+/// (returning whether it was set). The producer never clears, so it's on the
+/// consumer to `take_*` and react.
 pub struct AtomicQueueOverflows(AtomicU8);
 
 impl Default for AtomicQueueOverflows {
