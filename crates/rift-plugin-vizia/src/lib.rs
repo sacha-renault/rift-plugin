@@ -122,6 +122,10 @@ impl ClapGui for ViziaGui {
     fn is_opened(&self) -> bool {
         self.opened.load(Ordering::Relaxed)
     }
+
+    fn gui_type(&self) -> GuiType {
+        GuiType::Retained
+    }
 }
 
 impl HasWindowHandle for ViziaGui {

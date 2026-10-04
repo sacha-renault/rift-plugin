@@ -31,6 +31,11 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     host: HostAudioProcessorHandle<'a>,
     samplerate: f64,
     block_index: BlockIndex,
+
+    /// Simple flag that says if GUI needs notification
+    /// on param change (retained mode) or if it doesn't
+    /// (immediate mode will pull anyway)
+    notify_gui: bool,
 }
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
@@ -55,6 +60,9 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
     fn handle_input_events(&mut self, events: &InputEvents) {
         let flags = P::EVENT_PRE_PROCESS;
+        if flags.is_empty() && !self.notify_gui {
+            return;
+        }
 
         for event in events.iter() {
             if let Some(event) = event.as_event::<ParamValueEvent>() {
@@ -76,10 +84,12 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     );
                 }
 
-                _ = self.shared.states.post_to_gui(GuiTasks::ParamChanged {
-                    id,
-                    value: event.value() as f32,
-                });
+                if self.notify_gui {
+                    _ = self.shared.states.post_to_gui(GuiTasks::ParamChanged {
+                        id,
+                        value: event.value() as f32,
+                    });
+                }
             } else if flags.contains(EventPreProcess::MIDI_NOTIFY_EVENT)
                 && let Some(event) = event.as_event::<MidiEvent>()
             {
@@ -149,6 +159,14 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         let plugin = P::create(shared.params.as_ref(), audio_config, init_context);
         shared.states.set_samplerate(audio_config.sample_rate);
 
+        // Right now, we only notify the GUI if
+        // it is a retained mode. Some mixed mode might need
+        // some tuning but it should be sufficient for now.
+        let notify_gui = matches!(
+            main_thread.gui.gui_type(),
+            rift_plugin_gui::GuiType::Retained
+        );
+
         // Allocate a scratch buffer ONCE
         Ok(Self {
             shared: shared.clone(),
@@ -156,6 +174,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             host,
             samplerate: audio_config.sample_rate,
             block_index: BlockIndex(-1),
+            notify_gui,
         })
     }
 

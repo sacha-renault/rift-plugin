@@ -12,7 +12,7 @@ use std::sync::Arc;
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
 use rift_plugin::prelude::clack_plugin::plugin::features;
 use rift_plugin::prelude::*;
-use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory};
+use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory, GuiType};
 
 #[derive(Params)]
 pub struct MinimalGainParams {
@@ -138,6 +138,10 @@ impl ClapGui for NoGui {
 
     fn is_opened(&self) -> bool {
         false
+    }
+
+    fn gui_type(&self) -> GuiType {
+        GuiType::Immediate
     }
 }
 

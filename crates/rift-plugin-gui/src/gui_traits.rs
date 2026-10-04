@@ -6,7 +6,7 @@ use clack_plugin::{plugin::PluginError, utils::ClapId};
 
 use rift_plugin_params::ParamCollection;
 
-use crate::GuiTasks;
+use crate::{GuiTasks, GuiType};
 
 use super::events::GuiParamEvent;
 
@@ -68,6 +68,8 @@ pub trait ClapGui {
 
     /// Return true if the plugin gui is visible and opened.
     fn is_opened(&self) -> bool;
+
+    fn gui_type(&self) -> GuiType;
 }
 
 pub trait GuiFactory {
