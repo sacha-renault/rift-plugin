@@ -106,9 +106,9 @@ impl PluginSharedState {
 
 bitflags::bitflags! {
     pub struct QueueOverflow: u8 {
-        const MAIN_QUEUE  = 1 << 0;
-        const AUDIO_QUEUE = 1 << 1;
-        const GUI_QUEUE   = 1 << 2;
+        const MAIN  = 1 << 0;
+        const AUDIO = 1 << 1;
+        const GUI   = 1 << 2;
     }
 }
 
@@ -137,39 +137,39 @@ impl AtomicQueueOverflow {
     }
 
     pub fn set_main_overflow(&self) {
-        self.set(QueueOverflow::MAIN_QUEUE)
+        self.set(QueueOverflow::MAIN)
     }
 
     pub fn is_main_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflow::MAIN_QUEUE)
+        self.is_overflow(QueueOverflow::MAIN)
     }
 
     pub fn take_main_overflow(&self) -> bool {
-        self.take_overflow(QueueOverflow::MAIN_QUEUE)
+        self.take_overflow(QueueOverflow::MAIN)
     }
 
     pub fn set_audio_overflow(&self) {
-        self.set(QueueOverflow::AUDIO_QUEUE)
+        self.set(QueueOverflow::AUDIO)
     }
 
     pub fn is_audio_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflow::AUDIO_QUEUE)
+        self.is_overflow(QueueOverflow::AUDIO)
     }
 
     pub fn take_audio_overflow(&self) -> bool {
-        self.take_overflow(QueueOverflow::AUDIO_QUEUE)
+        self.take_overflow(QueueOverflow::AUDIO)
     }
 
     pub fn set_gui_overflow(&self) {
-        self.set(QueueOverflow::GUI_QUEUE)
+        self.set(QueueOverflow::GUI)
     }
 
     pub fn is_gui_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflow::GUI_QUEUE)
+        self.is_overflow(QueueOverflow::GUI)
     }
 
     pub fn take_gui_overflow(&self) -> bool {
-        self.take_overflow(QueueOverflow::GUI_QUEUE)
+        self.take_overflow(QueueOverflow::GUI)
     }
 }
 
