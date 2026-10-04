@@ -22,7 +22,7 @@ pub struct PluginSharedState {
     audio_tasks: ArrayQueue<AudioThreadTask>,
     gui_tasks: ArrayQueue<GuiTask>,
 
-    overflows: AtomicQueueOverflow,
+    overflows: AtomicQueueOverflows,
 }
 
 impl PluginSharedState {
@@ -35,7 +35,7 @@ impl PluginSharedState {
             main_tasks: ArrayQueue::new(task_capacity),
             audio_tasks: ArrayQueue::new(task_capacity),
             gui_tasks: ArrayQueue::new(task_capacity),
-            overflows: AtomicQueueOverflow::default(),
+            overflows: AtomicQueueOverflows::default(),
         }
     }
 
@@ -99,77 +99,77 @@ impl PluginSharedState {
         self.samplerate.store(value, Ordering::Relaxed);
     }
 
-    pub fn overflows(&self) -> &AtomicQueueOverflow {
+    pub fn overflows(&self) -> &AtomicQueueOverflows {
         &self.overflows
     }
 }
 
 bitflags::bitflags! {
-    pub struct QueueOverflow: u8 {
+    pub struct QueueOverflows: u8 {
         const MAIN  = 1 << 0;
         const AUDIO = 1 << 1;
         const GUI   = 1 << 2;
     }
 }
 
-pub struct AtomicQueueOverflow(AtomicU8);
+pub struct AtomicQueueOverflows(AtomicU8);
 
-impl Default for AtomicQueueOverflow {
+impl Default for AtomicQueueOverflows {
     fn default() -> Self {
         Self(AtomicU8::new(0))
     }
 }
 
-impl AtomicQueueOverflow {
-    fn set(&self, mask: QueueOverflow) {
+impl AtomicQueueOverflows {
+    fn set(&self, mask: QueueOverflows) {
         self.0.fetch_or(mask.bits(), Ordering::Relaxed);
     }
 
-    fn is_overflow(&self, mask: QueueOverflow) -> bool {
+    fn is_overflow(&self, mask: QueueOverflows) -> bool {
         let value = self.0.load(Ordering::Relaxed);
-        QueueOverflow::from_bits_retain(value).intersects(mask)
+        QueueOverflows::from_bits_retain(value).intersects(mask)
     }
 
-    fn take_overflow(&self, mask: QueueOverflow) -> bool {
+    fn take_overflow(&self, mask: QueueOverflows) -> bool {
         let bitmask = mask.bits();
         let previous = self.0.fetch_and(!bitmask, Ordering::Relaxed);
         previous & bitmask != 0
     }
 
     pub fn set_main_overflow(&self) {
-        self.set(QueueOverflow::MAIN)
+        self.set(QueueOverflows::MAIN)
     }
 
     pub fn is_main_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflow::MAIN)
+        self.is_overflow(QueueOverflows::MAIN)
     }
 
     pub fn take_main_overflow(&self) -> bool {
-        self.take_overflow(QueueOverflow::MAIN)
+        self.take_overflow(QueueOverflows::MAIN)
     }
 
     pub fn set_audio_overflow(&self) {
-        self.set(QueueOverflow::AUDIO)
+        self.set(QueueOverflows::AUDIO)
     }
 
     pub fn is_audio_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflow::AUDIO)
+        self.is_overflow(QueueOverflows::AUDIO)
     }
 
     pub fn take_audio_overflow(&self) -> bool {
-        self.take_overflow(QueueOverflow::AUDIO)
+        self.take_overflow(QueueOverflows::AUDIO)
     }
 
     pub fn set_gui_overflow(&self) {
-        self.set(QueueOverflow::GUI)
+        self.set(QueueOverflows::GUI)
     }
 
     pub fn is_gui_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflow::GUI)
+        self.is_overflow(QueueOverflows::GUI)
     }
 
     pub fn take_gui_overflow(&self) -> bool {
-        self.take_overflow(QueueOverflow::GUI)
+        self.take_overflow(QueueOverflows::GUI)
     }
 }
 
@@ -179,7 +179,7 @@ mod tests {
 
     #[test]
     fn set_then_is_overflow() {
-        let overflow = AtomicQueueOverflow::default();
+        let overflow = AtomicQueueOverflows::default();
         assert!(!overflow.is_main_overflow());
 
         overflow.set_main_overflow();
@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn flags_are_independent() {
-        let overflow = AtomicQueueOverflow::default();
+        let overflow = AtomicQueueOverflows::default();
         overflow.set_audio_overflow();
 
         assert!(overflow.is_audio_overflow());
@@ -203,7 +203,7 @@ mod tests {
 
     #[test]
     fn take_returns_previous_and_clears_only_its_bit() {
-        let overflow = AtomicQueueOverflow::default();
+        let overflow = AtomicQueueOverflows::default();
         overflow.set_main_overflow();
         overflow.set_gui_overflow();
 
