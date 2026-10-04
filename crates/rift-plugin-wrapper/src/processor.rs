@@ -102,7 +102,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
-            GuiParamEventKind::Value(_) => {
+            GuiParamEventKind::Value(_) | GuiParamEventKind::ValueLess => {
                 self.plugin.on_param_change(
                     event.param_id,
                     &self.shared.params,
@@ -110,12 +110,6 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     EventSource::GUI,
                 );
             }
-            GuiParamEventKind::ValueLess => self.plugin.on_param_change(
-                event.param_id,
-                &self.shared.params,
-                &self.shared.data,
-                EventSource::GUI,
-            ),
         }
     }
 }
