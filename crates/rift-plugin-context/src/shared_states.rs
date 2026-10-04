@@ -132,9 +132,13 @@ bitflags::bitflags! {
 
 /// Atomic [`QueueOverflows`], set by the producer when a `post_to_*` fails.
 ///
-/// Flags are sticky: `set_*` latches, `is_*` peeks, `take_*` reads and clears
-/// (returning whether it was set). The producer never clears, so it's on the
-/// consumer to `take_*` and react.
+/// Sticky by design: `set_*` latches, `take_*` reads and clears (returning
+/// whether it was set). The consumer polls `take_*` and resyncs on `true`.
+/// Dropped update means the UI can no longer trust its own state. Or the
+/// Main thread might need a flush / callback.
+///
+/// `set` is `Release` and `take` is `Acquire`, so a resync triggered by a
+/// `take` sees whatever the producer wrote before the drop.
 pub struct AtomicQueueOverflows(AtomicU8);
 
 impl Default for AtomicQueueOverflows {
@@ -145,26 +149,17 @@ impl Default for AtomicQueueOverflows {
 
 impl AtomicQueueOverflows {
     fn set(&self, mask: QueueOverflows) {
-        self.0.fetch_or(mask.bits(), Ordering::Relaxed);
-    }
-
-    fn is_overflow(&self, mask: QueueOverflows) -> bool {
-        let value = self.0.load(Ordering::Relaxed);
-        QueueOverflows::from_bits_retain(value).intersects(mask)
+        self.0.fetch_or(mask.bits(), Ordering::Release);
     }
 
     fn take_overflow(&self, mask: QueueOverflows) -> bool {
         let bitmask = mask.bits();
-        let previous = self.0.fetch_and(!bitmask, Ordering::Relaxed);
+        let previous = self.0.fetch_and(!bitmask, Ordering::Acquire);
         previous & bitmask != 0
     }
 
     pub fn set_main_overflow(&self) {
         self.set(QueueOverflows::MAIN)
-    }
-
-    pub fn is_main_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflows::MAIN)
     }
 
     pub fn take_main_overflow(&self) -> bool {
@@ -175,20 +170,12 @@ impl AtomicQueueOverflows {
         self.set(QueueOverflows::AUDIO)
     }
 
-    pub fn is_audio_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflows::AUDIO)
-    }
-
     pub fn take_audio_overflow(&self) -> bool {
         self.take_overflow(QueueOverflows::AUDIO)
     }
 
     pub fn set_gui_overflow(&self) {
         self.set(QueueOverflows::GUI)
-    }
-
-    pub fn is_gui_overflow(&self) -> bool {
-        self.is_overflow(QueueOverflows::GUI)
     }
 
     pub fn take_gui_overflow(&self) -> bool {
@@ -202,12 +189,17 @@ mod tests {
     use clack_plugin::utils::ClapId;
 
     #[test]
-    fn set_then_is_overflow() {
+    fn set_then_take() {
         let overflow = AtomicQueueOverflows::default();
-        assert!(!overflow.is_main_overflow());
+
+        // Nothing pending yet.
+        assert!(!overflow.take_main_overflow());
 
         overflow.set_main_overflow();
-        assert!(overflow.is_main_overflow());
+        assert!(overflow.take_main_overflow());
+
+        // Taking already cleared it.
+        assert!(!overflow.take_main_overflow());
     }
 
     #[test]
@@ -215,41 +207,38 @@ mod tests {
         let overflow = AtomicQueueOverflows::default();
         overflow.set_audio_overflow();
 
-        assert!(overflow.is_audio_overflow());
-        assert!(!overflow.is_main_overflow());
-        assert!(!overflow.is_gui_overflow());
+        // Only the audio bit got latched.
+        assert!(overflow.take_audio_overflow());
+        assert!(!overflow.take_main_overflow());
+        assert!(!overflow.take_gui_overflow());
 
+        // Setting the others leaves a fresh audio bit alone.
+        overflow.set_main_overflow();
         overflow.set_gui_overflow();
-        assert!(overflow.is_audio_overflow());
-        assert!(overflow.is_gui_overflow());
-        assert!(!overflow.is_main_overflow());
+        assert!(!overflow.take_audio_overflow());
+        assert!(overflow.take_main_overflow());
+        assert!(overflow.take_gui_overflow());
     }
 
     #[test]
-    fn take_returns_previous_and_clears_only_its_bit() {
+    fn take_clears_only_its_own_bit() {
         let overflow = AtomicQueueOverflows::default();
         overflow.set_main_overflow();
         overflow.set_gui_overflow();
 
-        // First take observes and clears the main flag...
+        // Taking main doesn't consume gui...
         assert!(overflow.take_main_overflow());
-        assert!(!overflow.is_main_overflow());
-        // ...without disturbing the gui flag.
-        assert!(overflow.is_gui_overflow());
+        assert!(overflow.take_gui_overflow());
 
-        // Taking an unset flag returns false and is idempotent.
+        // ...so now both are cleared.
         assert!(!overflow.take_main_overflow());
-        assert!(!overflow.take_main_overflow());
-        assert!(overflow.is_gui_overflow());
+        assert!(!overflow.take_gui_overflow());
 
-        // The audio and gui variants behave the same way.
+        // Audio behaves the same.
         assert!(!overflow.take_audio_overflow());
         overflow.set_audio_overflow();
         assert!(overflow.take_audio_overflow());
-        assert!(!overflow.is_audio_overflow());
-
-        assert!(overflow.take_gui_overflow());
-        assert!(!overflow.is_gui_overflow());
+        assert!(!overflow.take_audio_overflow());
     }
 
     #[test]
@@ -260,9 +249,9 @@ mod tests {
         // Main queue only.
         assert!(state.post_to_main(MainThreadTask::RequestRestart).is_ok());
         assert!(state.post_to_main(MainThreadTask::RequestRestart).is_err());
-        assert!(state.overflows().is_main_overflow());
-        assert!(!state.overflows().is_audio_overflow());
-        assert!(!state.overflows().is_gui_overflow());
+        assert!(state.overflows().take_main_overflow());
+        assert!(!state.overflows().take_audio_overflow());
+        assert!(!state.overflows().take_gui_overflow());
 
         // Audio queue only.
         assert!(
@@ -275,8 +264,8 @@ mod tests {
                 .post_to_audio(AudioThreadTask::RequestCallback)
                 .is_err()
         );
-        assert!(state.overflows().is_audio_overflow());
-        assert!(!state.overflows().is_gui_overflow());
+        assert!(state.overflows().take_audio_overflow());
+        assert!(!state.overflows().take_gui_overflow());
 
         // Gui queue only.
         let gui = GuiTask::ParamChanged {
@@ -292,6 +281,6 @@ mod tests {
                 })
                 .is_err()
         );
-        assert!(state.overflows().is_gui_overflow());
+        assert!(state.overflows().take_gui_overflow());
     }
 }
