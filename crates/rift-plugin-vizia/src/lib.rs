@@ -6,7 +6,8 @@ use std::{
     },
 };
 
-use raw_window_handle::{HasRawWindowHandle, RawWindowHandle};
+#[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
+use raw_window_handle::{HandleError, HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
 use rift_plugin_gui::*;
 use rift_plugin_params::ClapId;
 use vizia::{
@@ -67,8 +68,12 @@ impl ClapGui for ViziaGui {
         Ok(())
     }
 
+    #[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
     fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
-        self.parent = Some(window.raw_window_handle());
+        let raw = window
+            .raw_window_handle()
+            .map_err(|_| PluginError::Message("Unsupported parent window API"))?;
+        self.parent = Some(raw);
         Ok(())
     }
 
@@ -119,9 +124,12 @@ impl ClapGui for ViziaGui {
     }
 }
 
-unsafe impl HasRawWindowHandle for ViziaGui {
-    fn raw_window_handle(&self) -> RawWindowHandle {
-        self.parent.expect("Window Handle isn't available")
+impl HasWindowHandle for ViziaGui {
+    fn window_handle(&self) -> Result<raw_window_handle::WindowHandle<'_>, HandleError> {
+        let raw = self.parent.ok_or(HandleError::Unavailable)?;
+        // SAFETY: The handle comes from the host, which guarantees the parent window
+        // outlives the plugin's GUI as required by the CLAP GUI contract.
+        Ok(unsafe { raw_window_handle::WindowHandle::borrow_raw(raw) })
     }
 }
 
