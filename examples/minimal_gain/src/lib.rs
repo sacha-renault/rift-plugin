@@ -8,7 +8,6 @@
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
 use rift_plugin::prelude::clack_plugin::plugin::features;

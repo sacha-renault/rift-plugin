@@ -27,6 +27,7 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for super::WrapperMainThread<'a, P> {
     fn destroy(&mut self) {
         log::debug!("PluginGuiImpl::destroy");
         self.gui.destroy();
+        self.shared.states.set_gui_opened(false); // Very defensive
     }
 
     fn set_scale(&mut self, scale: f64) -> Result<(), PluginError> {
@@ -64,7 +65,9 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for super::WrapperMainThread<'a, P> {
     fn hide(&mut self) -> Result<(), PluginError> {
         log::debug!("PluginGuiImpl::hide");
         let result = self.gui.hide();
-        self.shared.states.set_gui_opened(!result.is_ok());
+        if result.is_ok() {
+            self.shared.states.set_gui_opened(false);
+        }
         result
     }
 }
