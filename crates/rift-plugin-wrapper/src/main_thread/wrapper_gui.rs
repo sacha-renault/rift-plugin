@@ -56,11 +56,15 @@ impl<'a, P: ClapPlugin> PluginGuiImpl for super::WrapperMainThread<'a, P> {
 
     fn show(&mut self) -> Result<(), PluginError> {
         log::debug!("PluginGuiImpl::show");
-        self.gui.show()
+        let result = self.gui.show();
+        self.shared.states.set_gui_opened(result.is_ok());
+        result
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
         log::debug!("PluginGuiImpl::hide");
-        self.gui.hide()
+        let result = self.gui.hide();
+        self.shared.states.set_gui_opened(!result.is_ok());
+        result
     }
 }

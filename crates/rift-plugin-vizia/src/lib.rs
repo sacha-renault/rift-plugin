@@ -1,10 +1,4 @@
-use std::{
-    collections::HashMap,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-    },
-};
+use std::{collections::HashMap, sync::Arc};
 
 #[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
 use raw_window_handle::{HandleError, HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
@@ -37,7 +31,6 @@ where
         Box::new(ViziaGui {
             parent: None,
             handle: None,
-            opened: Arc::new(AtomicBool::new(false)),
             app_fn: Arc::new(self.app_fn),
             size: GuiSize {
                 width: self.width,
@@ -53,8 +46,6 @@ pub struct ViziaGui {
     parent: Option<RawWindowHandle>,
     /// Holds handle to plugin window.
     handle: Option<WindowHandle>,
-    /// Know if it's opened or not
-    opened: Arc<AtomicBool>,
     /// the fn that will be used for mainloop in ViziaApp
     app_fn: Arc<dyn Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static>,
     /// (width, height)
@@ -78,13 +69,10 @@ impl ClapGui for ViziaGui {
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
-        let result = self.spawn();
-        self.opened.store(result.is_ok(), Ordering::Relaxed);
-        result
+        self.spawn()
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
-        self.opened.store(false, Ordering::Relaxed);
         Ok(())
     }
 
@@ -117,10 +105,6 @@ impl ClapGui for ViziaGui {
         Err(PluginError::Message(
             "Baseview doesn't support floating windows ...",
         ))
-    }
-
-    fn is_opened(&self) -> bool {
-        self.opened.load(Ordering::Relaxed)
     }
 
     fn param_sync(&self) -> ParamSync {

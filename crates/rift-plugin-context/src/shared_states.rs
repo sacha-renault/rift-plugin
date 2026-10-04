@@ -23,6 +23,7 @@ pub struct PluginSharedState {
     gui_tasks: ArrayQueue<GuiTask>,
 
     overflows: AtomicQueueOverflows,
+    gui_opened: AtomicBool,
 }
 
 impl PluginSharedState {
@@ -36,6 +37,7 @@ impl PluginSharedState {
             audio_tasks: ArrayQueue::new(task_capacity),
             gui_tasks: ArrayQueue::new(task_capacity),
             overflows: AtomicQueueOverflows::default(),
+            gui_opened: AtomicBool::new(false),
         }
     }
 
@@ -116,6 +118,14 @@ impl PluginSharedState {
     /// Flags raised when a `post_to_*` had to drop a task.
     pub fn overflows(&self) -> &AtomicQueueOverflows {
         &self.overflows
+    }
+
+    pub fn is_gui_opened(&self) -> bool {
+        self.gui_opened.load(Ordering::Acquire)
+    }
+
+    pub fn set_gui_opened(&self, is_opened: bool) {
+        self.gui_opened.store(is_opened, Ordering::Release);
     }
 }
 

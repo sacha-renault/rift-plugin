@@ -66,9 +66,6 @@ pub trait ClapGui {
     /// Free all the resources of the GUI.
     fn destroy(&mut self);
 
-    /// Return true if the plugin gui is visible and opened.
-    fn is_opened(&self) -> bool;
-
     /// How this GUI wants param updates delivered.
     fn param_sync(&self) -> ParamSync;
 }

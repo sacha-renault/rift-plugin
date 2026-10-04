@@ -8,6 +8,7 @@
 use std::ffi::CStr;
 use std::marker::PhantomData;
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 
 use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
 use rift_plugin::prelude::clack_plugin::plugin::features;
@@ -135,10 +136,6 @@ impl ClapGui for NoGui {
     }
 
     fn destroy(&mut self) {}
-
-    fn is_opened(&self) -> bool {
-        false
-    }
 
     fn param_sync(&self) -> ParamSync {
         ParamSync::Pull

@@ -60,7 +60,9 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
     fn handle_input_events(&mut self, events: &InputEvents) {
         let flags = P::EVENT_PRE_PROCESS;
-        if flags.is_empty() && !self.notify_gui {
+        let should_notify_gui = self.notify_gui && self.shared.states.is_gui_opened();
+
+        if flags.is_empty() && !should_notify_gui {
             return;
         }
 
@@ -84,7 +86,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     );
                 }
 
-                if self.notify_gui {
+                if should_notify_gui {
                     _ = self.shared.states.post_to_gui(GuiTasks::ParamChanged {
                         id,
                         value: event.value() as f32,
