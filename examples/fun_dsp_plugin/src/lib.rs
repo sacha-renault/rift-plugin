@@ -150,7 +150,7 @@ impl ClapPlugin for FunDspPlugin {
     }
 
     fn gui(params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        vizia_gui(200, 200, move |cx, ctx| {
+        vizia_gui(200, 200, move |cx, _| {
             VStack::new(cx, |cx| {
                 knob(cx, &params.oscillators[0].gain);
 

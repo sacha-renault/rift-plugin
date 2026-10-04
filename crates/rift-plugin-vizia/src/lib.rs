@@ -9,10 +9,10 @@ use std::{
 #[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
 use raw_window_handle::{HandleError, HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
 use rift_plugin_gui::*;
-use rift_plugin_params::ClapId;
+use rift_plugin_params::{ClapId, Param, ParamPtr};
 use vizia::{
     Application, WindowHandle,
-    context::DataContext,
+    context::{DataContext, EmitContext},
     events::Event,
     model::Model,
     prelude::{Context, Signal, SignalUpdate, WindowSize},
@@ -169,8 +169,9 @@ impl ViziaGui {
             while let Some(task) = pump.pop_in_gui() {
                 match task {
                     GuiTasks::ParamChanged { id, value } => {
-                        if let Some(sig) = signals.get(&id) {
-                            sig.update(|v| *v = value);
+                        if let Some(data) = signals.get(&id) {
+                            let normalized = data.ptr.normalize(value);
+                            data.signal.update(|v| *v = normalized);
                         }
                     }
                 }
@@ -194,16 +195,30 @@ where
     })
 }
 
-pub struct ParamSignals {
-    pub signals: HashMap<ClapId, Signal<f32>>,
+#[derive(Clone)]
+pub struct ParamData {
+    ptr: ParamPtr,
+    signal: Signal<f32>,
 }
 
-pub struct NewSignal(ClapId, Signal<f32>);
+pub struct ParamSignals {
+    pub signals: HashMap<ClapId, ParamData>,
+}
+
+pub struct NewSignal(ParamPtr, Signal<f32>);
+
+/// TODO, this doesn't currently work, since all registeration occures in a single frame
+/// reg doesn't contain the clap id yet when a second widget is trying to register.
+pub fn register_param<P: Param>(cx: &mut Context, param: &P) -> Signal<f32> {
+    let signal = Signal::new(param.normalized());
+    cx.emit(NewSignal(param.as_ptr(), signal));
+    signal
+}
 
 impl Model for ParamSignals {
     fn event(&mut self, _: &mut vizia::prelude::EventContext, event: &mut Event) {
-        event.map(|&NewSignal(id, signal): &NewSignal, meta| {
-            self.signals.insert(id, signal);
+        event.map(|&NewSignal(ptr, signal): &NewSignal, meta| {
+            self.signals.insert(ptr.id(), ParamData { ptr, signal });
             meta.consume();
         });
     }

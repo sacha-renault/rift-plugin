@@ -31,6 +31,7 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
   "context-menu",
 ] }
 
+raw-window-handle = "0.6"
 crossbeam-queue = "0.3.12"
 parking_lot = "0.12.5"
 arc-swap = "1"
@@ -39,3 +40,9 @@ log = "0.4"
 bon = "3.8.2"
 serde_json = { version = "1" }
 fundsp = { version = "0.23.0" }
+
+# baseview 0.2.2 registers its macOS frame timer in kCFRunLoopDefaultMode, which
+# starves when a host runs the run loop in another mode (e.g. event tracking).
+# This fork switches it to kCFRunLoopCommonModes so on_frame ticks every frame.
+[patch.crates-io]
+baseview = { git = "https://github.com/sacha-renault/baseview", rev = "239f944aa089bc15e241b92212530768e5b219bf" }

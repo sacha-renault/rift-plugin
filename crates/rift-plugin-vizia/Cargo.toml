@@ -7,4 +7,4 @@ edition = "2024"
 vizia = { git = "https://github.com/vizia/vizia", rev = "426d2e7b8533d485e78ab7f07f9f81d8324c256d", features=["baseview"], default-features = false}
 rift-plugin-gui = { workspace = true }
 rift-plugin-params = { workspace = true }
-raw-window-handle = "0.6"
+raw-window-handle = { workspace = true }
