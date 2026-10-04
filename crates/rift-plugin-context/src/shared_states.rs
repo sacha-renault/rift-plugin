@@ -52,10 +52,15 @@ impl PluginSharedState {
 
     /// Posts a task to be executed by the main thread from the audio thread.
     ///
-    /// Returns an error if the [`Self::main_thread_tasks`] queue is full.
+    /// Returns an error if the [`Self::main_thread_tasks`] queue is full, and
+    /// records the overflow so the consumer can observe that a task was dropped.
     #[inline]
     pub fn post_to_main(&self, task: MainThreadTask) -> Result<(), MainThreadTask> {
-        self.main_tasks.push(task)
+        let result = self.main_tasks.push(task);
+        if result.is_err() {
+            self.overflows.set_main_overflow();
+        }
+        result
     }
 
     pub fn pop_in_main(&self) -> Option<MainThreadTask> {
@@ -64,10 +69,15 @@ impl PluginSharedState {
 
     /// Posts a task to be executed by the audio thread from the audio thread.
     ///
-    /// Returns an error if the [`Self::audio_thread_tasks`] queue is full.
+    /// Returns an error if the [`Self::audio_thread_tasks`] queue is full, and
+    /// records the overflow so the consumer can observe that a task was dropped.
     #[inline]
     pub fn post_to_audio(&self, task: AudioThreadTask) -> Result<(), AudioThreadTask> {
-        self.audio_tasks.push(task)
+        let result = self.audio_tasks.push(task);
+        if result.is_err() {
+            self.overflows.set_audio_overflow();
+        }
+        result
     }
 
     pub fn pop_in_audio(&self) -> Option<AudioThreadTask> {
@@ -75,7 +85,11 @@ impl PluginSharedState {
     }
 
     pub fn post_to_gui(&self, task: GuiTask) -> Result<(), GuiTask> {
-        self.gui_tasks.push(task)
+        let result = self.gui_tasks.push(task);
+        if result.is_err() {
+            self.overflows.set_gui_overflow();
+        }
+        result
     }
 
     pub fn pop_in_gui(&self) -> Option<GuiTask> {
@@ -176,6 +190,7 @@ impl AtomicQueueOverflows {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use clack_plugin::utils::ClapId;
 
     #[test]
     fn set_then_is_overflow() {
@@ -226,5 +241,48 @@ mod tests {
 
         assert!(overflow.take_gui_overflow());
         assert!(!overflow.is_gui_overflow());
+    }
+
+    #[test]
+    fn posting_to_a_full_queue_sets_its_overflow_flag() {
+        // Capacity of one, so the second push into any queue must fail.
+        let state = PluginSharedState::new(1);
+
+        // Main queue only.
+        assert!(state.post_to_main(MainThreadTask::RequestRestart).is_ok());
+        assert!(state.post_to_main(MainThreadTask::RequestRestart).is_err());
+        assert!(state.overflows().is_main_overflow());
+        assert!(!state.overflows().is_audio_overflow());
+        assert!(!state.overflows().is_gui_overflow());
+
+        // Audio queue only.
+        assert!(
+            state
+                .post_to_audio(AudioThreadTask::RequestCallback)
+                .is_ok()
+        );
+        assert!(
+            state
+                .post_to_audio(AudioThreadTask::RequestCallback)
+                .is_err()
+        );
+        assert!(state.overflows().is_audio_overflow());
+        assert!(!state.overflows().is_gui_overflow());
+
+        // Gui queue only.
+        let gui = GuiTask::ParamChanged {
+            id: ClapId::new(0),
+            value: 1.0,
+        };
+        assert!(state.post_to_gui(gui).is_ok());
+        assert!(
+            state
+                .post_to_gui(GuiTask::ParamChanged {
+                    id: ClapId::new(0),
+                    value: 1.0,
+                })
+                .is_err()
+        );
+        assert!(state.overflows().is_gui_overflow());
     }
 }
