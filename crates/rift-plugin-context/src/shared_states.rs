@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
 use rift_plugin_gui::GuiTasks as GuiTask;
@@ -18,9 +18,11 @@ pub struct PluginSharedState {
     pub(crate) samplerate: Arc<AtomicF64>,
 
     /// Queues that audio / main thread can read
-    main_thread_tasks: ArrayQueue<MainThreadTask>,
-    audio_thread_tasks: ArrayQueue<AudioThreadTask>,
+    main_tasks: ArrayQueue<MainThreadTask>,
+    audio_tasks: ArrayQueue<AudioThreadTask>,
     gui_tasks: ArrayQueue<GuiTask>,
+
+    overflows: AtomicQueueOverflow,
 }
 
 impl PluginSharedState {
@@ -28,10 +30,12 @@ impl PluginSharedState {
         Self {
             latency: AtomicU32::new(0),
             is_playing: Arc::new(AtomicBool::new(false)),
-            main_thread_tasks: ArrayQueue::new(task_capacity),
-            audio_thread_tasks: ArrayQueue::new(task_capacity),
             samplerate: Arc::new(AtomicF64::new(44100.)),
+
+            main_tasks: ArrayQueue::new(task_capacity),
+            audio_tasks: ArrayQueue::new(task_capacity),
             gui_tasks: ArrayQueue::new(task_capacity),
+            overflows: AtomicQueueOverflow::default(),
         }
     }
 
@@ -51,11 +55,11 @@ impl PluginSharedState {
     /// Returns an error if the [`Self::main_thread_tasks`] queue is full.
     #[inline]
     pub fn post_to_main(&self, task: MainThreadTask) -> Result<(), MainThreadTask> {
-        self.main_thread_tasks.push(task)
+        self.main_tasks.push(task)
     }
 
     pub fn pop_in_main(&self) -> Option<MainThreadTask> {
-        self.main_thread_tasks.pop()
+        self.main_tasks.pop()
     }
 
     /// Posts a task to be executed by the audio thread from the audio thread.
@@ -63,11 +67,11 @@ impl PluginSharedState {
     /// Returns an error if the [`Self::audio_thread_tasks`] queue is full.
     #[inline]
     pub fn post_to_audio(&self, task: AudioThreadTask) -> Result<(), AudioThreadTask> {
-        self.audio_thread_tasks.push(task)
+        self.audio_tasks.push(task)
     }
 
     pub fn pop_in_audio(&self) -> Option<AudioThreadTask> {
-        self.audio_thread_tasks.pop()
+        self.audio_tasks.pop()
     }
 
     pub fn post_to_gui(&self, task: GuiTask) -> Result<(), GuiTask> {
@@ -93,5 +97,134 @@ impl PluginSharedState {
     #[doc(hidden)]
     pub fn set_samplerate(&self, value: f64) {
         self.samplerate.store(value, Ordering::Relaxed);
+    }
+
+    pub fn overflows(&self) -> &AtomicQueueOverflow {
+        &self.overflows
+    }
+}
+
+bitflags::bitflags! {
+    pub struct QueueOverflow: u8 {
+        const MAIN_QUEUE  = 1 << 0;
+        const AUDIO_QUEUE = 1 << 1;
+        const GUI_QUEUE   = 1 << 2;
+    }
+}
+
+pub struct AtomicQueueOverflow(AtomicU8);
+
+impl Default for AtomicQueueOverflow {
+    fn default() -> Self {
+        Self(AtomicU8::new(0))
+    }
+}
+
+impl AtomicQueueOverflow {
+    fn set(&self, mask: QueueOverflow) {
+        self.0.fetch_or(mask.bits(), Ordering::Relaxed);
+    }
+
+    fn is_overflow(&self, mask: QueueOverflow) -> bool {
+        let value = self.0.load(Ordering::Relaxed);
+        QueueOverflow::from_bits_retain(value).intersects(mask)
+    }
+
+    fn take_overflow(&self, mask: QueueOverflow) -> bool {
+        let bitmask = mask.bits();
+        let previous = self.0.fetch_and(!bitmask, Ordering::Relaxed);
+        previous & bitmask != 0
+    }
+
+    pub fn set_main_overflow(&self) {
+        self.set(QueueOverflow::MAIN_QUEUE)
+    }
+
+    pub fn is_main_overflow(&self) -> bool {
+        self.is_overflow(QueueOverflow::MAIN_QUEUE)
+    }
+
+    pub fn take_main_overflow(&self) -> bool {
+        self.take_overflow(QueueOverflow::MAIN_QUEUE)
+    }
+
+    pub fn set_audio_overflow(&self) {
+        self.set(QueueOverflow::AUDIO_QUEUE)
+    }
+
+    pub fn is_audio_overflow(&self) -> bool {
+        self.is_overflow(QueueOverflow::AUDIO_QUEUE)
+    }
+
+    pub fn take_audio_overflow(&self) -> bool {
+        self.take_overflow(QueueOverflow::AUDIO_QUEUE)
+    }
+
+    pub fn set_gui_overflow(&self) {
+        self.set(QueueOverflow::GUI_QUEUE)
+    }
+
+    pub fn is_gui_overflow(&self) -> bool {
+        self.is_overflow(QueueOverflow::GUI_QUEUE)
+    }
+
+    pub fn take_gui_overflow(&self) -> bool {
+        self.take_overflow(QueueOverflow::GUI_QUEUE)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn set_then_is_overflow() {
+        let overflow = AtomicQueueOverflow::default();
+        assert!(!overflow.is_main_overflow());
+
+        overflow.set_main_overflow();
+        assert!(overflow.is_main_overflow());
+    }
+
+    #[test]
+    fn flags_are_independent() {
+        let overflow = AtomicQueueOverflow::default();
+        overflow.set_audio_overflow();
+
+        assert!(overflow.is_audio_overflow());
+        assert!(!overflow.is_main_overflow());
+        assert!(!overflow.is_gui_overflow());
+
+        overflow.set_gui_overflow();
+        assert!(overflow.is_audio_overflow());
+        assert!(overflow.is_gui_overflow());
+        assert!(!overflow.is_main_overflow());
+    }
+
+    #[test]
+    fn take_returns_previous_and_clears_only_its_bit() {
+        let overflow = AtomicQueueOverflow::default();
+        overflow.set_main_overflow();
+        overflow.set_gui_overflow();
+
+        // First take observes and clears the main flag...
+        assert!(overflow.take_main_overflow());
+        assert!(!overflow.is_main_overflow());
+        // ...without disturbing the gui flag.
+        assert!(overflow.is_gui_overflow());
+
+        // Taking an unset flag returns false and is idempotent.
+        assert!(!overflow.take_main_overflow());
+        assert!(!overflow.take_main_overflow());
+        assert!(overflow.is_gui_overflow());
+
+        // The audio and gui variants behave the same way.
+        assert!(!overflow.take_audio_overflow());
+        overflow.set_audio_overflow();
+        assert!(overflow.take_audio_overflow());
+        assert!(!overflow.is_audio_overflow());
+
+        assert!(overflow.take_gui_overflow());
+        assert!(!overflow.is_gui_overflow());
     }
 }

@@ -11,3 +11,4 @@ log = { workspace = true }
 rift-plugin-gui = { workspace = true }
 rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
+bitflags = { workspace = true }
