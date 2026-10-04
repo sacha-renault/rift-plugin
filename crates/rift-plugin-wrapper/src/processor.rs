@@ -102,7 +102,21 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
-            GuiParamEventKind::Value(_) | GuiParamEventKind::ValueLess => {
+            GuiParamEventKind::Value(value) => {
+                let id = event.param_id;
+
+                // TODO
+                // here i have to think if i shouldn't have a condition (like GUI tells if
+                // he modify param in place or not.) instead of setting it all the time.
+                self.shared.host_params.set_value(id, value);
+                self.plugin.on_param_change(
+                    id,
+                    &self.shared.params,
+                    &self.shared.data,
+                    EventSource::GUI,
+                );
+            }
+            GuiParamEventKind::ValueLess => {
                 self.plugin.on_param_change(
                     event.param_id,
                     &self.shared.params,
