@@ -110,6 +110,12 @@ impl Param for IntParam {
         (value - self.min_value as f32) / range
     }
 
+    fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32> {
+        let min = self.min_value as f32;
+        let max = self.max_value as f32;
+        Box::new(move |value| (value - min) / (max - min))
+    }
+
     fn denormalize(&self, normalized: f32) -> f32 {
         let range = (self.max_value - self.min_value) as f32;
         normalized * range + self.min_value as f32

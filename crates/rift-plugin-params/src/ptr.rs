@@ -91,6 +91,11 @@ impl Param for ParamPtr {
     }
 
     #[inline]
+    fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32> {
+        unsafe { (*self.ptr).normalize_fn() }
+    }
+
+    #[inline]
     fn denormalize(&self, normalized: f32) -> f32 {
         unsafe { (*self.ptr).denormalize(normalized) }
     }
@@ -160,6 +165,9 @@ mod tests {
         }
         fn normalize(&self, value: f32) -> f32 {
             value / 100.0
+        }
+        fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32> {
+            Box::new(|value| value / 100.0)
         }
         fn denormalize(&self, normalized: f32) -> f32 {
             normalized * 100.0

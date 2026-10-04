@@ -116,6 +116,13 @@ impl Param for FloatParam {
             .normalize(value, self.min_value, self.max_value)
     }
 
+    fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32> {
+        let mapping = self.mapping;
+        let min = self.min_value;
+        let max = self.max_value;
+        Box::new(move |value| mapping.normalize(value, min, max))
+    }
+
     fn denormalize(&self, normalized: f32) -> f32 {
         self.mapping
             .denormalize(normalized, self.min_value, self.max_value)

@@ -7,11 +7,12 @@ use crate::register_param;
 pub fn knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Knob<Signal<f32>>> {
     let signal = register_param(cx, param);
     let id = param.id();
-    let default = param.normalize(param.default_plain());
+    let norm_fn = param.normalize_fn();
+    let default = norm_fn(param.default_plain());
 
     Knob::new(cx, default, signal, false)
         .on_mouse_down(param_widget_mouse_left_down(id))
-        .on_change(emit_param_change(id, signal))
+        .on_change(emit_param_change(id, norm_fn, signal))
         .on_mouse_up(param_widget_mouse_left_up(id))
 }
 
@@ -35,9 +36,13 @@ pub fn param_widget_mouse_left_up(id: ClapId) -> impl Fn(&mut EventContext, Mous
     }
 }
 
-pub fn emit_param_change(id: ClapId, value: Signal<f32>) -> impl Fn(&mut EventContext, f32) {
+pub fn emit_param_change(
+    id: ClapId,
+    norm_fn: impl Fn(f32) -> f32,
+    value: Signal<f32>,
+) -> impl Fn(&mut EventContext, f32) {
     move |cx, new| {
         value.update(|v| *v = new);
-        cx.emit_to(Entity::root(), GuiParamEvent::value(id, new));
+        cx.emit_to(Entity::root(), GuiParamEvent::value(id, norm_fn(new)));
     }
 }

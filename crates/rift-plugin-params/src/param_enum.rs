@@ -182,6 +182,10 @@ impl<E: EnumValues> Param for EnumParam<E> {
         self.inner.normalize(value)
     }
 
+    fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32> {
+        self.inner.normalize_fn()
+    }
+
     fn denormalize(&self, normalized: f32) -> f32 {
         self.inner.denormalize(normalized)
     }
