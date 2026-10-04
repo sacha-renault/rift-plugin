@@ -2,7 +2,7 @@
 
 mod events;
 mod gui_traits;
-mod gui_type;
+mod param_sync;
 
 pub use events::{GuiParamEvent, GuiParamEventKind, GuiTasks};
 pub use gui_traits::{ClapGui, GuiContext, GuiFactory};
@@ -10,4 +10,4 @@ pub use gui_traits::{ClapGui, GuiContext, GuiFactory};
 // Reexport some clack stuff
 pub use clack_extensions::gui::{GuiConfiguration, GuiSize, Window};
 pub use clack_plugin::plugin::PluginError;
-pub use gui_type::GuiType;
+pub use param_sync::ParamSync;

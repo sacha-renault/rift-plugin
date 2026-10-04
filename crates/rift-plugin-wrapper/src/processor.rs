@@ -32,9 +32,9 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     samplerate: f64,
     block_index: BlockIndex,
 
-    /// Simple flag that says if GUI needs notification
-    /// on param change (retained mode) or if it doesn't
-    /// (immediate mode will pull anyway)
+    /// Whether the audio thread pushes param changes into the GUI queue.
+    /// True for `ParamSync::Push` (retained GUIs); false for `Pull`, where the
+    /// GUI re-reads the values itself.
     notify_gui: bool,
 }
 
@@ -159,12 +159,11 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         let plugin = P::create(shared.params.as_ref(), audio_config, init_context);
         shared.states.set_samplerate(audio_config.sample_rate);
 
-        // Right now, we only notify the GUI if
-        // it is a retained mode. Some mixed mode might need
-        // some tuning but it should be sufficient for now.
+        // Only push param changes to GUIs that ask for it; pull-mode GUIs read
+        // the values themselves.
         let notify_gui = matches!(
-            main_thread.gui.gui_type(),
-            rift_plugin_gui::GuiType::Retained
+            main_thread.gui.param_sync(),
+            rift_plugin_gui::ParamSync::Push
         );
 
         // Allocate a scratch buffer ONCE

@@ -123,8 +123,8 @@ impl ClapGui for ViziaGui {
         self.opened.load(Ordering::Relaxed)
     }
 
-    fn gui_type(&self) -> GuiType {
-        GuiType::Retained
+    fn param_sync(&self) -> ParamSync {
+        ParamSync::Push
     }
 }
 
