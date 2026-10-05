@@ -134,7 +134,7 @@ mod tests {
             .build();
 
         assert_eq!(param.unit(), "on/off");
-        assert_eq!(param.value(), true);
+        assert!(param.value());
         assert_eq!(param.default_plain(), 1.0);
         assert_eq!(param.min_value(), 0.0);
         assert_eq!(param.max_value(), 1.0);
@@ -148,9 +148,9 @@ mod tests {
     fn set_value_typed() {
         let param = BoolParam::builder().default(false).build();
 
-        assert_eq!(param.value(), false);
+        assert!(!param.value());
         param.set_value(true);
-        assert_eq!(param.value(), true);
+        assert!(param.value());
     }
 
     #[test]
@@ -158,16 +158,16 @@ mod tests {
         let param = BoolParam::builder().default(false).build();
 
         param.set_plain(0.49);
-        assert_eq!(param.value(), false);
+        assert!(!param.value());
 
         param.set_plain(0.5);
-        assert_eq!(param.value(), true);
+        assert!(param.value());
 
         param.set_plain(1.0);
-        assert_eq!(param.value(), true);
+        assert!(param.value());
 
         param.set_plain(0.0);
-        assert_eq!(param.value(), false);
+        assert!(!param.value());
     }
 
     #[test]
@@ -185,9 +185,9 @@ mod tests {
         let ptr = param.as_ptr();
 
         ptr.set_normalized(1.0);
-        assert_eq!(param.value(), true);
+        assert!(param.value());
 
         ptr.set_normalized(0.0);
-        assert_eq!(param.value(), false);
+        assert!(!param.value());
     }
 }

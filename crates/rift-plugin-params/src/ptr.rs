@@ -112,6 +112,8 @@ impl Param for ParamPtr {
 
 #[cfg(test)]
 mod tests {
+    use core::f32;
+
     use super::*;
     use clack_plugin::prelude::ClapId;
 
@@ -220,8 +222,9 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)] // We actually don't wanna set the constant
     fn test_value_to_text() {
-        let mock = MockParam::new(3.14f32);
+        let mock = MockParam::new(3.14);
         let ptr = make_ptr(&mock);
         let text = ptr.to_text();
         assert_eq!(&text, "3.14dB");

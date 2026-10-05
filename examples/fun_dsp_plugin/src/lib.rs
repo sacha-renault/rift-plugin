@@ -51,7 +51,7 @@ impl ClapPlugin for FunDspPlugin {
     const EVENT_PRE_PROCESS: EventPreProcess = EventPreProcess::all();
 
     fn create(
-        params: &Self::Params,
+        _params: &Self::Params,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {

@@ -85,8 +85,6 @@ impl From<MidiMessage> for MidiEvent {
 
 #[cfg(test)]
 mod tests {
-    use std::u8;
-
     use super::*;
 
     #[test]
