@@ -20,7 +20,9 @@
 
 - [ ] **Redesign the persist API.** `Persistent::create`/identity (`name`/`module`/`path`/`id`) is inconsistent with the params `bon` builders and duplicate `Param`; it needs a rework that lets users shape their own construction API (and share identity with `Param` instead of copying it).
 
-- [ ] **Richer `RangeMapping`.** Only `Linear` and `Skew` exist today; add the bread-and-butter mappings so plugins stop hand-rolling them: dB/exponential, bipolar, and reversed ranges, plus matching `value_to_text` formatting.
+- [ ] **Richer `Scale`.** Only `Linear` and `Skew` exist today; add the bread-and-butter mappings so plugins stop hand-rolling them: dB/exponential, bipolar, and reversed ranges, plus matching `value_to_text` formatting. Consider a derive DSL alongside it (`scale = linear(0, 1)` / `scale = log(-60, 6, 2)` / `scale = skew(0, 1, factor)`) so users declare the range and curve in one attribute.
+
+- [ ] **Validate `Scale` at construction.** `Scale::Skew(f32)` is a public enum variant, so `Scale::Skew(0.0)`, negative or NaN factors all compile and make `normalize`/`denormalize` return `inf`/`NaN` (`crates/rift-plugin-params/src/scale.rs`). Make an invalid `Skew` unrepresentable: turn `Scale` into a struct with a private field plus `const fn linear()` / `const fn skew(f32)` that `assert!`s the factor is finite and `> 0.0` (or wrap the exponent in a validated newtype). The assert catches a bad factor but not `min == max` (divide-by-zero in `normalize`), so guard the range separately. Const float arithmetic needs a recent toolchain (≥1.82).
 
 - [ ] **`BlobParam` (bytes).** Host-invisible `Persistent` sibling of `StringParam` for arbitrary binary data (wavetables, impulse responses, serialized graphs): id-keyed, saved in the `persist` section, likely backed by `ArcSwap<Arc<[u8]>>` so audio-thread reads stay lock-free and allocation-free.
 

@@ -6,6 +6,7 @@ use clack_plugin::utils::ClapId;
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
+use crate::Scale;
 use crate::atomic_floats::AtomicF32;
 
 #[derive(bon::Builder)]
@@ -35,7 +36,7 @@ pub struct FloatParam {
     pub(crate) max_value: f32,
 
     #[builder(default)]
-    pub(crate) mapping: RangeMapping,
+    pub(crate) mapping: Scale,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
@@ -127,32 +128,6 @@ impl Param for FloatParam {
     }
 }
 
-#[derive(Debug, Default, Clone, Copy)]
-pub enum RangeMapping {
-    #[default]
-    Linear,
-
-    /// Power curve: more resolution at bottom (skew > 1) or top (skew < 1)
-    Skew(f32),
-}
-
-impl RangeMapping {
-    pub fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32 {
-        let t = match self {
-            Self::Linear => normalized,
-            Self::Skew(s) => normalized.powf(*s),
-        };
-        min + t * (max - min)
-    }
-
-    pub fn normalize(&self, value: f32, min: f32, max: f32) -> f32 {
-        match self {
-            Self::Linear => (value - min) / (max - min),
-            Self::Skew(s) => ((value - min) / (max - min)).powf(1.0 / s),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use crate::assert_approx_eq;
@@ -167,7 +142,7 @@ mod tests {
             .min_value(-1.)
             .max_value(1.)
             .flags(ParamInfoFlags::IS_AUTOMATABLE)
-            .mapping(RangeMapping::Linear)
+            .mapping(Scale::Linear)
             .build();
 
         assert_eq!(param.unit(), "dB");
@@ -220,13 +195,13 @@ mod tests {
     #[test]
     fn skew_range_mapping() {
         // Linear sanity check
-        let linear = RangeMapping::Linear;
+        let linear = Scale::Linear;
         assert_approx_eq!(linear.denormalize(0.0, 0.0, 100.0), 0.0);
         assert_approx_eq!(linear.denormalize(0.5, 0.0, 100.0), 50.0);
         assert_approx_eq!(linear.denormalize(1.0, 0.0, 100.0), 100.0);
 
         // Skew: endpoints should always map exactly
-        let skew = RangeMapping::Skew(3.0);
+        let skew = Scale::Skew(3.0);
         assert_approx_eq!(skew.denormalize(0.0, 20.0, 20000.0), 20.0);
         assert_approx_eq!(skew.denormalize(1.0, 20.0, 20000.0), 20000.0);
 
@@ -235,13 +210,13 @@ mod tests {
         assert!(mid < 500.0);
 
         // Skew < 1: midpoint should map above the linear midpoint
-        let skew_inv = RangeMapping::Skew(0.3);
+        let skew_inv = Scale::Skew(0.3);
         let mid_inv = skew_inv.denormalize(0.5, 0.0, 1000.0);
         assert!(mid_inv > 500.0);
 
         // Roundtrip: normalize(denormalize(x)) == x
         for &s in &[0.3_f32, 1.0, 2.0, 3.0] {
-            let mapping = RangeMapping::Skew(s);
+            let mapping = Scale::Skew(s);
             for &n in &[0.0_f32, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
                 let value = mapping.denormalize(n, 20.0, 20000.0);
                 let back = mapping.normalize(value, 20.0, 20000.0);

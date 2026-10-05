@@ -7,7 +7,7 @@ use fundsp::shared::Var;
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
-use crate::RangeMapping;
+use crate::Scale;
 
 #[derive(bon::Builder)]
 pub struct SharedFloatParam {
@@ -35,7 +35,7 @@ pub struct SharedFloatParam {
     pub(crate) max_value: f32,
 
     #[builder(default)]
-    pub(crate) mapping: RangeMapping,
+    pub(crate) mapping: Scale,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,

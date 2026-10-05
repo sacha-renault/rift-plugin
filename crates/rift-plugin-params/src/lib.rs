@@ -13,6 +13,7 @@ mod param_float;
 mod param_int;
 mod param_string;
 mod ptr;
+mod scale;
 mod traits;
 
 #[doc(hidden)]
@@ -28,10 +29,11 @@ pub use clack_plugin::utils::ClapId;
 pub use id::param_id;
 pub use param_bool::BoolParam;
 pub use param_enum::{EnumParam, EnumParamBuilder, EnumValues};
-pub use param_float::{FloatParam, RangeMapping};
+pub use param_float::FloatParam;
 pub use param_int::IntParam;
 pub use param_string::{StringParam, StringParamValue};
 pub use ptr::ParamPtr;
+pub use scale::Scale;
 pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]
