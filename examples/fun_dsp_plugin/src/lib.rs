@@ -1,7 +1,6 @@
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use fundsp::prelude32::*;
 use rift_plugin::prelude::*;
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::knob;
@@ -91,7 +90,9 @@ impl ClapPlugin for FunDspPlugin {
         let mut oscillator = crate::oscillator::Oscillator::new(config.sample_rate);
         oscillator.set_wavetables(wt);
 
-        let mono_filter = || (pass() | params.filters[0].cutoff.var() | dc(0.5f32)) >> lowpass();
+        use fundsp::prelude32::*;
+
+        // let mono_filter = || (pass() | params.filters[0].cutoff.var() | dc(0.5f32)) >> lowpass();
         // let mut filter = mono_filter() | mono_filter();
 
         // AudioUnit::set_sample_rate(&mut filter, config.sample_rate);
