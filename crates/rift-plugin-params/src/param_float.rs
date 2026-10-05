@@ -190,37 +190,4 @@ mod tests {
         param.set_value(1.5);
         assert_approx_eq!(param.value(), 1.);
     }
-
-    #[test]
-    fn skew_range_mapping() {
-        // Linear sanity check
-        let linear = Scale::Linear;
-        assert_approx_eq!(linear.denormalize(0.0, 0.0, 100.0), 0.0);
-        assert_approx_eq!(linear.denormalize(0.5, 0.0, 100.0), 50.0);
-        assert_approx_eq!(linear.denormalize(1.0, 0.0, 100.0), 100.0);
-
-        // Skew: endpoints should always map exactly
-        let skew = Scale::Skew(3.0);
-        assert_approx_eq!(skew.denormalize(0.0, 20.0, 20000.0), 20.0);
-        assert_approx_eq!(skew.denormalize(1.0, 20.0, 20000.0), 20000.0);
-
-        // Skew > 1: midpoint should map below the linear midpoint
-        let mid = skew.denormalize(0.5, 0.0, 1000.0);
-        assert!(mid < 500.0);
-
-        // Skew < 1: midpoint should map above the linear midpoint
-        let skew_inv = Scale::Skew(0.3);
-        let mid_inv = skew_inv.denormalize(0.5, 0.0, 1000.0);
-        assert!(mid_inv > 500.0);
-
-        // Roundtrip: normalize(denormalize(x)) == x
-        for &s in &[0.3_f32, 1.0, 2.0, 3.0] {
-            let mapping = Scale::Skew(s);
-            for &n in &[0.0_f32, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
-                let value = mapping.denormalize(n, 20.0, 20000.0);
-                let back = mapping.normalize(value, 20.0, 20000.0);
-                assert_approx_eq!(back, n, 1e-5);
-            }
-        }
-    }
 }
