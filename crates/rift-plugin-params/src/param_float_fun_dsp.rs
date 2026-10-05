@@ -35,7 +35,7 @@ pub struct SharedFloatParam {
     pub(crate) max_value: f32,
 
     #[builder(default)]
-    pub(crate) mapping: Scale,
+    pub(crate) scale: Scale,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
@@ -110,12 +110,11 @@ impl Param for SharedFloatParam {
     }
 
     fn normalize(&self, value: f32) -> f32 {
-        self.mapping
-            .normalize(value, self.min_value, self.max_value)
+        self.scale.normalize(value, self.min_value, self.max_value)
     }
 
     fn denormalize(&self, normalized: f32) -> f32 {
-        self.mapping
+        self.scale
             .denormalize(normalized, self.min_value, self.max_value)
     }
 

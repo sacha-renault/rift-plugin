@@ -36,7 +36,7 @@ pub struct FloatParam {
     pub(crate) max_value: f32,
 
     #[builder(default)]
-    pub(crate) mapping: Scale,
+    pub(crate) scale: Scale,
 
     #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
     pub(crate) flags: ParamInfoFlags,
@@ -114,12 +114,11 @@ impl Param for FloatParam {
     }
 
     fn normalize(&self, value: f32) -> f32 {
-        self.mapping
-            .normalize(value, self.min_value, self.max_value)
+        self.scale.normalize(value, self.min_value, self.max_value)
     }
 
     fn denormalize(&self, normalized: f32) -> f32 {
-        self.mapping
+        self.scale
             .denormalize(normalized, self.min_value, self.max_value)
     }
 
@@ -142,7 +141,7 @@ mod tests {
             .min_value(-1.)
             .max_value(1.)
             .flags(ParamInfoFlags::IS_AUTOMATABLE)
-            .mapping(Scale::Linear)
+            .scale(Scale::Linear)
             .build();
 
         assert_eq!(param.unit(), "dB");
