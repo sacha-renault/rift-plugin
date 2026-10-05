@@ -16,7 +16,7 @@ use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory, ParamSync};
 
 #[derive(Params)]
 pub struct MinimalGainParams {
-    #[param(name = "Gain", range = 0..2, default = 1.0)]
+    #[param(name = "Gain", range = linear(0, 2), default = 1.0)]
     pub gain: FloatParam,
 }
 

@@ -4,7 +4,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{Expr, ExprLit, ExprUnary, Lit, LitFloat, LitStr, PathArguments, Type, UnOp};
 
-use super::parse::{Field, Leaf, Nested, ParamKind, Params};
+use super::parse::{Field, Leaf, Nested, ParamKind, Params, ScaleArg};
 
 /// Entry point: render the `new`/`Default`/`UserParams` implementations.
 pub(crate) fn expand(params: Params) -> TokenStream2 {
@@ -91,7 +91,11 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
         quote! { .min_value(#start).max_value(#end) }
     });
 
-    let mapping = leaf.mapping.as_ref().map(|expr| quote! { .mapping(#expr) });
+    let scale = leaf.scale.as_ref().map(|scale| {
+        let ScaleArg::Skew(factor) = scale;
+        let factor = coerce_float(factor, leaf.kind);
+        quote! { .scale(::rift_plugin::prelude::Scale::Skew(#factor)) }
+    });
     let unit = leaf.unit.as_ref().map(|unit| {
         let lit = LitStr::new(unit, leaf.ident.span());
         quote! { .unit(#lit) }
@@ -108,7 +112,7 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
             .maybe_module(__module.clone())
             .default(#default)
             #range
-            #mapping
+            #scale
             #unit
             #flags
             .build()
@@ -185,7 +189,7 @@ fn expand_all_params(fields: &[Field]) -> TokenStream2 {
 }
 
 /// Coerce an integer literal to a float literal for float parameters, so
-/// `default = 1` and `range = -60..6` work without an explicit `.0`.
+/// `default = 1` and `range = linear(-60, 6)` work without an explicit `.0`.
 fn coerce_float(expr: &Expr, kind: ParamKind) -> TokenStream2 {
     if kind != ParamKind::Float {
         return quote! { #expr };

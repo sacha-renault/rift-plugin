@@ -151,7 +151,7 @@ impl SharedFloatParam {
     ///
     /// #[derive(Params)]
     /// struct Params {
-    ///     #[param(name = "Cutoff", range = 20..20000, default = 440.0)]
+    ///     #[param(name = "Cutoff", range = linear(20, 20000), default = 440.0)]
     ///     cutoff: SharedFloatParam,
     /// }
     ///

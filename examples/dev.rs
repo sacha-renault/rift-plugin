@@ -10,7 +10,7 @@ enum WaveType {
 
 #[derive(Params)]
 pub struct OscillatorParam {
-    #[param(name = "Frequency", range = 0..1, default = 20.0)]
+    #[param(name = "Frequency", range = linear(0, 1), default = 20.0)]
     pub frequency: FloatParam,
 
     #[param(name = "Wave", default = WaveType::Square)]
@@ -22,28 +22,28 @@ pub struct OscillatorParam {
 
 #[derive(Params)]
 pub struct NestedParams {
-    #[param(name = "Gain", range = 0..2, default = 1.0)]
+    #[param(name = "Gain", range = linear(0, 2), default = 1.0)]
     pub gain: FloatParam,
 
-    #[param(name = "Pan", range = -1..1)]
+    #[param(name = "Pan", range = linear(-1, 1))]
     pub pan: FloatParam,
 }
 
 #[derive(Params)]
 pub struct ChannelParam {
-    #[param(name = "Gain", range = 0..1, default = 1.0)]
+    #[param(name = "Gain", range = linear(0, 1), default = 1.0)]
     pub gain: FloatParam,
 }
 
 #[derive(Params)]
 pub struct StageParams {
-    #[param(name = "Level", range = 0..1, default = 1.0)]
+    #[param(name = "Level", range = linear(0, 1), default = 1.0)]
     pub level: FloatParam,
 }
 
 #[derive(Params)]
 pub struct EnvelopeParam {
-    #[param(name = "Attack", range = 0..1, default = 0.1)]
+    #[param(name = "Attack", range = linear(0, 1), default = 0.1)]
     pub attack: FloatParam,
 
     /// An array of nested structs (`[T; N]`), each element getting its own

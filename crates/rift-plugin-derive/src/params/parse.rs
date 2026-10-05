@@ -20,7 +20,6 @@ struct ParamArgs {
     unit: Option<String>,
     default: Option<Expr>,
     range: Option<Expr>,
-    mapping: Option<Expr>,
     flags: Option<Expr>,
 }
 
@@ -70,8 +69,19 @@ pub(crate) struct Leaf {
     pub unit: Option<String>,
     pub default: Option<Expr>,
     pub range: Option<(Expr, Expr)>,
-    pub mapping: Option<Expr>,
+    pub scale: Option<ScaleArg>,
     pub flags: Option<Expr>,
+}
+
+/// The curve encoded in a `range` declaration for a float param.
+///
+/// `range = linear(...)` carries no curve; `range = skew(min, max, factor)` is a
+/// power curve whose exponent is stored as written and coerced to `f32` at
+/// expansion.
+#[derive(Debug)]
+pub(crate) enum ScaleArg {
+    /// The `factor` of `range = skew(min, max, factor)`.
+    Skew(Expr),
 }
 
 /// A `#[nested]` field: either a struct or an array of structs.
@@ -152,9 +162,16 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
         unit,
         default,
         range,
-        mapping,
         flags,
     } = ParamArgs::from_field(field)?;
+
+    let (range, scale) = match range.as_ref() {
+        Some(expr) => {
+            let (bounds, scale) = parse_range(expr)?;
+            (Some(bounds), scale)
+        }
+        None => (None, None),
+    };
 
     let leaf = Leaf {
         ident,
@@ -164,8 +181,8 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
         id,
         unit,
         default,
-        range: range.as_ref().map(parse_range).transpose()?,
-        mapping,
+        range,
+        scale,
         flags,
     };
 
@@ -197,22 +214,88 @@ fn parse_nested(field: &syn::Field) -> syn::Result<Field> {
     }))
 }
 
-/// A `range = a..b` value, destructured into its two bounds.
-fn parse_range(expr: &Expr) -> syn::Result<(Expr, Expr)> {
-    let Expr::Range(range) = expr else {
-        return Err(syn::Error::new_spanned(
-            expr,
-            "`range` expects a range like `0.0..1.0`",
-        ));
+/// One accepted `range = ...` form.
+///
+/// Adding a curve means adding one entry to [`RANGE_VARIANTS`]: the name match,
+/// the arity check and the "expected" error text are all derived from the table.
+struct RangeVariant {
+    /// The DSL keyword, e.g. `skew`.
+    name: &'static str,
+    /// Argument names *after* the implicit `min, max`; used for arity and errors.
+    extra_args: &'static [&'static str],
+    /// Builds the curve from `extra_args`, or `None` for a linear range.
+    build: fn(&[Expr]) -> Option<ScaleArg>,
+}
+
+/// Every accepted `range` form. `min` and `max` are implicit and always the
+/// first two arguments, so they are not listed in `extra_args`.
+///
+/// To add a form, follow the "Adding a new curve" procedure in the `scale`
+/// module of `rift-plugin-params`.
+const RANGE_VARIANTS: &[RangeVariant] = &[
+    RangeVariant {
+        name: "linear",
+        extra_args: &[],
+        build: |_| None,
+    },
+    RangeVariant {
+        name: "skew",
+        extra_args: &["factor"],
+        build: |extra| Some(ScaleArg::Skew(extra[0].clone())),
+    },
+];
+
+/// A `range = ...` value, parsed against [`RANGE_VARIANTS`].
+///
+/// `linear(min, max)` yields the plain bounds with no curve; `skew(min, max,
+/// factor)` additionally carries a power curve. Float params may use any form;
+/// int, bool and enum params may only use `linear` (see [`validate_leaf`]).
+fn parse_range(expr: &Expr) -> syn::Result<((Expr, Expr), Option<ScaleArg>)> {
+    let Expr::Call(call) = expr else {
+        return Err(syn::Error::new_spanned(expr, expected_range_message()));
+    };
+    let Expr::Path(func) = &*call.func else {
+        return Err(syn::Error::new_spanned(expr, expected_range_message()));
     };
 
-    match (&range.start, &range.end) {
-        (Some(start), Some(end)) => Ok(((**start).clone(), (**end).clone())),
-        _ => Err(syn::Error::new_spanned(
-            expr,
-            "`range` needs both bounds, e.g. `-60.0..6.0`",
-        )),
+    let Some(variant) = RANGE_VARIANTS
+        .iter()
+        .find(|variant| func.path.is_ident(variant.name))
+    else {
+        return Err(syn::Error::new_spanned(func, expected_range_message()));
+    };
+
+    // `min` and `max` are always present; the rest is `extra_args`.
+    if call.args.len() != 2 + variant.extra_args.len() {
+        return Err(syn::Error::new_spanned(
+            &call.args,
+            expected_range_message(),
+        ));
     }
+
+    let min = call.args[0].clone();
+    let max = call.args[1].clone();
+    let extra: Vec<Expr> = call.args.iter().skip(2).cloned().collect();
+
+    Ok(((min, max), (variant.build)(&extra)))
+}
+
+/// The shared "expected" error text, generated from [`RANGE_VARIANTS`] so it can
+/// never drift from the accepted forms.
+fn expected_range_message() -> String {
+    let forms: Vec<String> = RANGE_VARIANTS
+        .iter()
+        .map(|variant| {
+            let args = std::iter::once("min")
+                .chain(std::iter::once("max"))
+                .chain(variant.extra_args.iter().copied())
+                .collect::<Vec<_>>()
+                .join(", ");
+            format!("`{}({args})`", variant.name)
+        })
+        .collect();
+
+    format!("`range` expects {}", forms.join(" or "))
 }
 
 fn validate_leaf(leaf: &Leaf) -> syn::Result<()> {
@@ -223,10 +306,11 @@ fn validate_leaf(leaf: &Leaf) -> syn::Result<()> {
         ));
     }
 
-    if leaf.mapping.is_some() && leaf.kind != ParamKind::Float {
+    if leaf.scale.is_some() && leaf.kind != ParamKind::Float {
         return Err(syn::Error::new_spanned(
             &leaf.ty,
-            "`mapping` is only supported for float parameters",
+            "a `skew` range is only supported for float params \
+             (int, bool and enum params are always linear)",
         ));
     }
 

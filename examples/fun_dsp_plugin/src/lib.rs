@@ -12,10 +12,10 @@ pub struct OscillatorParams {
     #[param(id = "Wt Position", default = 0)]
     pub wt_position: FloatParam,
 
-    #[param(id = "Pan", default = 0, range=-0.5..0.5)]
+    #[param(id = "Pan", default = 0, range = skew(-0.5, 0.5, 1))]
     pub pan: FloatParam,
 
-    #[param(id = "Gain", default = 1, range=0..2)]
+    #[param(id = "Gain", default = 1, range = linear(0, 2))]
     pub gain: FloatParam,
 }
 
@@ -23,7 +23,7 @@ pub struct OscillatorParams {
 pub struct FilterParams {
     #[param(
         id = "Cutoff",
-        range = 20..2000,
+        range = linear(20, 2000),
         default = 440.0,
     )]
     pub cutoff: SharedFloatParam,

@@ -15,7 +15,7 @@ fn strip(s: &str) -> String {
 
 const NESTED: &str = r#"
     struct MyNestedParams {
-        #[param(name = "Pan", range = -1..1, unit = "pan")]
+        #[param(name = "Pan", range = linear(-1, 1), unit = "pan")]
         pub pan: FloatParam,
 
         #[nested]
@@ -25,7 +25,7 @@ const NESTED: &str = r#"
 
 const ROOT: &str = r#"
     struct MyParams {
-        #[param(name = "Gain", range = -60..6, unit = "dB")]
+        #[param(name = "Gain", range = linear(-60, 6), unit = "dB")]
         pub gain: FloatParam,
 
         #[param(default = true, flags = ParamInfoFlags::IS_AUTOMATABLE)]
@@ -181,8 +181,10 @@ fn rejects_leaf_arrays() {
 #[test]
 fn rejects_range_on_bool() {
     let err = super::parse::Params::from_derive_input(
-        &syn::parse_str::<DeriveInput>("struct P { #[param(range = 0..1)] pub bypass: BoolParam }")
-            .unwrap(),
+        &syn::parse_str::<DeriveInput>(
+            "struct P { #[param(range = linear(0, 1))] pub bypass: BoolParam }",
+        )
+        .unwrap(),
     )
     .unwrap_err();
 
@@ -190,6 +192,93 @@ fn rejects_range_on_bool() {
         err.to_string().contains("`range` is only supported"),
         "{err}"
     );
+}
+
+#[test]
+fn range_linear_has_no_scale_call() {
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = linear(0, 1))]
+            pub a: FloatParam,
+        }
+        "#,
+    );
+
+    assert!(out.contains("min_value(0.0).max_value(1.0)"), "{out}");
+    // Linear is the builder default, so no `.scale(...)` call is emitted.
+    assert!(!out.contains(".scale("), "{out}");
+}
+
+#[test]
+fn range_skew_expands_bounds_and_curve() {
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = skew(20, 20000, 3))]
+            pub cutoff: FloatParam,
+        }
+        "#,
+    );
+
+    assert!(out.contains("min_value(20.0).max_value(20000.0)"), "{out}");
+    // Integer factor literals are coerced to floats for float params.
+    assert!(
+        out.contains(".scale(::rift_plugin::prelude::Scale::Skew(3.0))"),
+        "{out}"
+    );
+}
+
+#[test]
+fn int_range_is_linear_only() {
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = linear(0, 16))]
+            pub steps: IntParam,
+        }
+        "#,
+    );
+    // Int bounds are not float-coerced, and no curve is attached.
+    assert!(out.contains("min_value(0).max_value(16)"), "{out}");
+    assert!(!out.contains(".scale("), "{out}");
+
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            "struct P { #[param(range = skew(0, 16, 2.0))] pub steps: IntParam }",
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(
+        err.to_string().contains("`skew` range is only supported"),
+        "{err}"
+    );
+}
+
+#[test]
+fn rejects_bare_range_syntax() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>("struct P { #[param(range = 0..1)] pub gain: FloatParam }")
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("`range` expects"), "{err}");
+}
+
+#[test]
+fn rejects_unknown_range() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            "struct P { #[param(range = log(0, 1, 2))] pub cutoff: FloatParam }",
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("`range` expects"), "{err}");
 }
 
 #[test]
