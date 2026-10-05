@@ -105,9 +105,6 @@ pub trait Param: __private::Sealed {
     /// Generally equivalent to `normalized()` but allows manual conversion.
     fn normalize(&self, value: f32) -> f32;
 
-    /// Get a closure that can normalize any f32
-    fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32>;
-
     /// Inverse of `normalize()`. Converts [0.0, 1.0] back to the plain scale.
     fn denormalize(&self, normalized: f32) -> f32;
 

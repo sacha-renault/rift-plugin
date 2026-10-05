@@ -109,13 +109,6 @@ impl Param for BoolParam {
     }
 
     #[inline]
-    fn normalize_fn(&self) -> Box<dyn Fn(f32) -> f32> {
-        // bool param already have
-        // normalized value (0.0 or 1.0)
-        Box::new(|value| value)
-    }
-
-    #[inline]
     fn denormalize(&self, normalized: f32) -> f32 {
         // bool param already have
         // normalized value (0.0 or 1.0)
