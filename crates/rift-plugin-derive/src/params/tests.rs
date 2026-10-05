@@ -230,6 +230,35 @@ fn range_skew_expands_bounds_and_curve() {
 }
 
 #[test]
+fn rejects_non_positive_skew_literal() {
+    for source in [
+        "struct P { #[param(range = skew(0, 1, 0))] pub a: FloatParam }",
+        "struct P { #[param(range = skew(0, 1, 0.0))] pub a: FloatParam }",
+        "struct P { #[param(range = skew(0, 1, -2.0))] pub a: FloatParam }",
+    ] {
+        let err = super::parse::Params::from_derive_input(
+            &syn::parse_str::<DeriveInput>(source).unwrap(),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("greater than 0"), "{err}");
+    }
+}
+
+#[test]
+fn allows_non_literal_skew_factor() {
+    // Not a literal, so the macro cannot check it; validation is left to runtime.
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = skew(0, 1, SKEW))]
+            pub a: FloatParam,
+        }
+        "#,
+    );
+    assert!(out.contains("Scale::Skew("), "{out}");
+}
+
+#[test]
 fn int_range_is_linear_only() {
     let out = expand(
         r#"

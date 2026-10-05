@@ -9,7 +9,7 @@
 //! that itself derives `Params`).
 
 use darling::FromField;
-use syn::{Data, DeriveInput, Expr, Fields, Generics, Ident, Type};
+use syn::{Data, DeriveInput, Expr, ExprLit, ExprUnary, Fields, Generics, Ident, Lit, Type, UnOp};
 
 /// Receiver for `#[param(...)]` on a leaf field.
 #[derive(FromField)]
@@ -223,8 +223,12 @@ struct RangeVariant {
     name: &'static str,
     /// Argument names *after* the implicit `min, max`; used for arity and errors.
     extra_args: &'static [&'static str],
-    /// Builds the curve from `extra_args`, or `None` for a linear range.
-    build: fn(&[Expr]) -> Option<ScaleArg>,
+    /// Builds (and validates) the curve from `extra_args`, or `Ok(None)` for a
+    /// linear range.
+    ///
+    /// Validation only sees literals; anything the macro cannot evaluate is left
+    /// to `Scale` at runtime.
+    build: fn(&[Expr]) -> syn::Result<Option<ScaleArg>>,
 }
 
 /// Every accepted `range` form. `min` and `max` are implicit and always the
@@ -236,12 +240,21 @@ const RANGE_VARIANTS: &[RangeVariant] = &[
     RangeVariant {
         name: "linear",
         extra_args: &[],
-        build: |_| None,
+        build: |_| Ok(None),
     },
     RangeVariant {
         name: "skew",
         extra_args: &["factor"],
-        build: |extra| Some(ScaleArg::Skew(extra[0].clone())),
+        build: |extra| {
+            let factor = &extra[0];
+            if literal_f32(factor).is_some_and(|value| !(value.is_finite() && value > 0.0)) {
+                return Err(syn::Error::new_spanned(
+                    factor,
+                    "`skew` factor must be finite and greater than 0",
+                ));
+            }
+            Ok(Some(ScaleArg::Skew(factor.clone())))
+        },
     },
 ];
 
@@ -277,7 +290,29 @@ fn parse_range(expr: &Expr) -> syn::Result<((Expr, Expr), Option<ScaleArg>)> {
     let max = call.args[1].clone();
     let extra: Vec<Expr> = call.args.iter().skip(2).cloned().collect();
 
-    Ok(((min, max), (variant.build)(&extra)))
+    Ok(((min, max), (variant.build)(&extra)?))
+}
+
+/// The value of `expr` when it is a numeric literal (optionally negated).
+///
+/// Returns `None` for anything the macro cannot evaluate, so callers can only
+/// validate what is statically known.
+fn literal_f32(expr: &Expr) -> Option<f32> {
+    match expr {
+        Expr::Lit(ExprLit {
+            lit: Lit::Float(float),
+            ..
+        }) => float.base10_digits().parse::<f32>().ok(),
+        Expr::Lit(ExprLit {
+            lit: Lit::Int(int), ..
+        }) => int.base10_digits().parse::<f32>().ok(),
+        Expr::Unary(ExprUnary {
+            op: UnOp::Neg(_),
+            expr,
+            ..
+        }) => literal_f32(expr).map(|value| -value),
+        _ => None,
+    }
 }
 
 /// The shared "expected" error text, generated from [`RANGE_VARIANTS`] so it can
