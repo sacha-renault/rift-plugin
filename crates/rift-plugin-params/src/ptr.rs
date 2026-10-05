@@ -221,7 +221,7 @@ mod tests {
 
     #[test]
     fn test_value_to_text() {
-        let mock = MockParam::new(3.14);
+        let mock = MockParam::new(3.14f32);
         let ptr = make_ptr(&mock);
         let text = ptr.to_text();
         assert_eq!(&text, "3.14dB");

@@ -47,8 +47,12 @@ impl TypedParam for IntParam {
         self.value.load(Ordering::Relaxed)
     }
 
+    #[inline]
     fn set_value(&self, value: Self::Type) {
-        self.value.store(value, Ordering::Relaxed);
+        self.value.store(
+            value.clamp(self.min_value, self.max_value),
+            Ordering::Relaxed,
+        );
     }
 }
 
@@ -72,8 +76,7 @@ impl Param for IntParam {
     }
 
     fn set_plain(&self, value: f32) {
-        let int_value = (value as i32).clamp(self.min_value, self.max_value);
-        self.value.store(int_value, Ordering::Relaxed);
+        self.set_value(value as i32);
     }
 
     fn plain(&self) -> f32 {

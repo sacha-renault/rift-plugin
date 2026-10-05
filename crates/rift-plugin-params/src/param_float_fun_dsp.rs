@@ -51,6 +51,7 @@ impl TypedParam for SharedFloatParam {
         self.value.value()
     }
 
+    #[inline]
     fn set_value(&self, value: Self::Type) {
         self.value.set(value.clamp(self.min_value, self.max_value));
     }
@@ -76,7 +77,7 @@ impl Param for SharedFloatParam {
     }
 
     fn set_plain(&self, value: f32) {
-        self.value.set(value);
+        self.set_value(value);
     }
 
     fn plain(&self) -> f32 {

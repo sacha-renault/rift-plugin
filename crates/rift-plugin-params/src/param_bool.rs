@@ -41,6 +41,7 @@ impl TypedParam for BoolParam {
         self.value.load(Ordering::Relaxed)
     }
 
+    #[inline]
     fn set_value(&self, value: Self::Type) {
         self.value.store(value, Ordering::Relaxed);
     }
@@ -66,7 +67,7 @@ impl Param for BoolParam {
     }
 
     fn set_plain(&self, value: f32) {
-        self.value.store(value >= 0.5, Ordering::Relaxed);
+        self.set_value(value >= 0.5);
     }
 
     fn plain(&self) -> f32 {
