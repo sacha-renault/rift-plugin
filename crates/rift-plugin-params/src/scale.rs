@@ -12,8 +12,8 @@
 //! 1. In this file (`scale.rs`), add the variant to [`Scale`] and handle it in
 //!    [`Scale::denormalize`] and [`Scale::normalize`]. Keep them exact inverses
 //!    (`normalize(denormalize(t)) == t`) and pin the endpoints
-//!    (`denormalize(0.0) == min`, `denormalize(1.0) == max`). Add a math test
-//!    (round trip plus endpoints).
+//!    (`denormalize(0.0) == min`, `denormalize(1.0) == max`). Cover it with
+//!    `assert_scale_invariants` in the tests module, plus any shape specific check.
 //! 2. In `rift-plugin-derive/src/params/parse.rs`, mirror the variant in
 //!    `ScaleArg`, same shape but carrying the parsed argument as an `Expr`.
 //! 3. In that same file, add one row to `RANGE_VARIANTS`: `name` (the DSL keyword,
@@ -74,36 +74,49 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn skew_range_mapping() {
-        // Linear sanity check
-        let linear = Scale::Linear;
-        assert_approx_eq!(linear.denormalize(0.0, 0.0, 100.0), 0.0);
-        assert_approx_eq!(linear.denormalize(0.5, 0.0, 100.0), 50.0);
-        assert_approx_eq!(linear.denormalize(1.0, 0.0, 100.0), 100.0);
+    fn assert_scale_invariants(scale: Scale, min: f32, max: f32) {
+        let endpoint_tolerance = (max - min).abs() * 1e-6;
+        let round_trip_tolerance = 1e-4;
 
-        // Skew: endpoints should always map exactly
-        let skew = Scale::Skew(3.0);
-        assert_approx_eq!(skew.denormalize(0.0, 20.0, 20000.0), 20.0);
-        assert_approx_eq!(skew.denormalize(1.0, 20.0, 20000.0), 20000.0);
+        assert_approx_eq!(scale.denormalize(0.0, min, max), min, endpoint_tolerance);
+        assert_approx_eq!(scale.denormalize(1.0, min, max), max, endpoint_tolerance);
 
-        // Skew > 1: midpoint should map below the linear midpoint
-        let mid = skew.denormalize(0.5, 0.0, 1000.0);
-        assert!(mid < 500.0);
+        let mut previous = f32::NEG_INFINITY;
+        for &normalized in &[0.0_f32, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
+            let value = scale.denormalize(normalized, min, max);
+            assert!(
+                value >= previous,
+                "curve is not increasing at {normalized}: {value} < {previous}"
+            );
+            previous = value;
 
-        // Skew < 1: midpoint should map above the linear midpoint
-        let skew_inv = Scale::Skew(0.3);
-        let mid_inv = skew_inv.denormalize(0.5, 0.0, 1000.0);
-        assert!(mid_inv > 500.0);
-
-        // Roundtrip: normalize(denormalize(x)) == x
-        for &s in &[0.3_f32, 1.0, 2.0, 3.0] {
-            let mapping = Scale::Skew(s);
-            for &n in &[0.0_f32, 0.1, 0.25, 0.5, 0.75, 0.9, 1.0] {
-                let value = mapping.denormalize(n, 20.0, 20000.0);
-                let back = mapping.normalize(value, 20.0, 20000.0);
-                assert_approx_eq!(back, n, 1e-5);
-            }
+            assert_approx_eq!(
+                scale.normalize(value, min, max),
+                normalized,
+                round_trip_tolerance
+            );
         }
+    }
+
+    #[test]
+    fn linear_invariants() {
+        assert_scale_invariants(Scale::Linear, 0.0, 100.0);
+        assert_scale_invariants(Scale::Linear, -1.0, 1.0);
+
+        // A linear scale is a straight line.
+        assert_approx_eq!(Scale::Linear.denormalize(0.5, 0.0, 100.0), 50.0);
+        assert_approx_eq!(Scale::Linear.normalize(25.0, 0.0, 100.0), 0.25);
+    }
+
+    #[test]
+    fn skew_invariants() {
+        for &factor in &[0.3_f32, 1.0, 2.0, 3.0] {
+            assert_scale_invariants(Scale::Skew(factor), 20.0, 20000.0);
+        }
+
+        // A factor above 1 pushes the midpoint below the linear midpoint.
+        assert!(Scale::Skew(3.0).denormalize(0.5, 0.0, 1000.0) < 500.0);
+        // A factor below 1 pushes it above.
+        assert!(Scale::Skew(0.3).denormalize(0.5, 0.0, 1000.0) > 500.0);
     }
 }
