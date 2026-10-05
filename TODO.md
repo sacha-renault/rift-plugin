@@ -22,7 +22,9 @@
 
 - [ ] **Richer `Scale`.** Only `Linear` and `Skew` exist today (reachable via the derive DSL `range = linear(min, max)` / `range = skew(min, max, factor)`); add the bread-and-butter mappings so plugins stop hand-rolling them: dB/exponential (`range = log(min, max, base)`), bipolar, and reversed ranges, plus matching `value_to_text` formatting.
 
-- [x] **Validate `Scale` at construction.** `Scale::Skew(f32)` is a public enum variant, so `Scale::Skew(0.0)`, negative or NaN factors all compile and make `normalize`/`denormalize` return `inf`/`NaN` (`crates/rift-plugin-params/src/scale.rs`). Make an invalid `Skew` unrepresentable: turn `Scale` into a struct with a private field plus `const fn linear()` / `const fn skew(f32)` that `assert!`s the factor is finite and `> 0.0` (or wrap the exponent in a validated newtype). The assert catches a bad factor but not `min == max` (divide-by-zero in `normalize`), so guard the range separately. Const float arithmetic needs a recent toolchain (≥1.82). Fixed with derive checks and compile errors).
+- [ ] **Validate `Scale` at construction.** `Scale::Skew(f32)` is a public enum variant, so `Scale::Skew(0.0)`, negative or NaN factors all compile and make `normalize`/`denormalize` return `inf`/`NaN` (`crates/rift-plugin-params/src/scale.rs`). Make an invalid `Skew` unrepresentable: turn `Scale` into a struct with a private field plus `const fn linear()` / `const fn skew(f32)` that `assert!`s the factor is finite and `> 0.0` (or wrap the exponent in a validated newtype). The assert catches a bad factor but not `min == max` (divide-by-zero in `normalize`), so guard the range separately. Const float arithmetic needs a recent toolchain (≥1.82). 
+  - Fixed with derive checks and compile errors). 
+    - This actually doesn't work for things like `const VALUE: f32 = ...;`
 
 - [ ] **`BlobParam` (bytes).** Host-invisible `Persistent` sibling of `StringParam` for arbitrary binary data (wavetables, impulse responses, serialized graphs): id-keyed, saved in the `persist` section, likely backed by `ArcSwap<Arc<[u8]>>` so audio-thread reads stay lock-free and allocation-free.
 
