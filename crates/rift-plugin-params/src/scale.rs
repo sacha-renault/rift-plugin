@@ -39,19 +39,26 @@ pub enum Scale {
 
     /// Power curve: more resolution at bottom (skew > 1) or top (skew < 1)
     Skew(f32),
+
+    /// Exponential curve: `t = (factor^normalized - 1) / (factor - 1)` for
+    /// `factor > 0` and `factor != 1`. More resolution at bottom (factor > 1) or
+    /// top (factor < 1), and it accepts any range, including one that crosses
+    /// zero (unlike a plain log curve).
+    Exponential(f32),
 }
 
 impl Scale {
     pub fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32 {
-        let value = if normalized.is_nan() {
+        let normalized = if normalized.is_nan() {
             0f32 // fallback in case the value is nan ...
         } else {
             normalized.clamp(0f32, 1f32)
         };
 
         let t = match self {
-            Self::Linear => value,
-            Self::Skew(s) => value.powf(*s),
+            Self::Linear => normalized,
+            Self::Skew(s) => normalized.powf(*s),
+            Self::Exponential(f) => (f.powf(normalized) - 1f32) / (f - 1f32),
         };
         min + t * (max - min)
     }
@@ -61,9 +68,12 @@ impl Scale {
             return 0f32; // fallback ...
         }
 
+        let t = (value - min) / (max - min);
+
         match self {
-            Self::Linear => (value - min) / (max - min),
-            Self::Skew(s) => ((value - min) / (max - min)).powf(1.0 / s),
+            Self::Linear => t,
+            Self::Skew(s) => t.powf(1.0 / s),
+            Self::Exponential(f) => (1f32 + t * (f - 1f32)).ln() / f.ln(),
         }
     }
 }
@@ -110,7 +120,7 @@ mod tests {
 
     #[test]
     fn skew_invariants() {
-        for &factor in &[0.3_f32, 1.0, 2.0, 3.0] {
+        for &factor in &[1.0 / 3.0, 1.0 / 2.0, 1.0, 2.0, 3.0] {
             assert_scale_invariants(Scale::Skew(factor), 20.0, 20000.0);
         }
 
@@ -118,5 +128,19 @@ mod tests {
         assert!(Scale::Skew(3.0).denormalize(0.5, 0.0, 1000.0) < 500.0);
         // A factor below 1 pushes it above.
         assert!(Scale::Skew(0.3).denormalize(0.5, 0.0, 1000.0) > 500.0);
+    }
+
+    #[test]
+    fn exponential_invariants() {
+        for &factor in &[1.0 / 3.0, 1.0 / 2.0, 2.0, 3.0] {
+            assert_scale_invariants(Scale::Exponential(factor), 20.0, 20000.0);
+            // Unlike a plain log curve, it also works for a range that crosses zero.
+            assert_scale_invariants(Scale::Exponential(factor), -60.0, 6.0);
+        }
+
+        // A factor above 1 pushes the midpoint below the linear midpoint.
+        assert!(Scale::Exponential(3.0).denormalize(0.5, 0.0, 1000.0) < 500.0);
+        // A factor below 1 pushes it above.
+        assert!(Scale::Exponential(0.3).denormalize(0.5, 0.0, 1000.0) > 500.0);
     }
 }

@@ -230,6 +230,24 @@ fn range_skew_expands_bounds_and_curve() {
 }
 
 #[test]
+fn range_exp_expands_bounds_and_curve() {
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = exp(20, 20000, 3))]
+            pub cutoff: FloatParam,
+        }
+        "#,
+    );
+
+    assert!(out.contains("min_value(20.0).max_value(20000.0)"), "{out}");
+    assert!(
+        out.contains(".scale(::rift_plugin::prelude::Scale::Exponential(3.0))"),
+        "{out}"
+    );
+}
+
+#[test]
 fn rejects_non_positive_skew_literal() {
     for source in [
         "struct P { #[param(range = skew(0, 1, 0))] pub a: FloatParam }",
@@ -241,6 +259,21 @@ fn rejects_non_positive_skew_literal() {
         )
         .unwrap_err();
         assert!(err.to_string().contains("greater than 0"), "{err}");
+    }
+}
+
+#[test]
+fn rejects_bad_exp_literal() {
+    for source in [
+        "struct P { #[param(range = exp(0, 1, 0))] pub a: FloatParam }",
+        "struct P { #[param(range = exp(0, 1, 1.0))] pub a: FloatParam }",
+        "struct P { #[param(range = exp(0, 1, -2.0))] pub a: FloatParam }",
+    ] {
+        let err = super::parse::Params::from_derive_input(
+            &syn::parse_str::<DeriveInput>(source).unwrap(),
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("`exp` factor"), "{err}");
     }
 }
 
@@ -272,18 +305,20 @@ fn int_range_is_linear_only() {
     assert!(out.contains("min_value(0).max_value(16)"), "{out}");
     assert!(!out.contains(".scale("), "{out}");
 
-    let err = super::parse::Params::from_derive_input(
-        &syn::parse_str::<DeriveInput>(
-            "struct P { #[param(range = skew(0, 16, 2.0))] pub steps: IntParam }",
+    for source in [
+        "struct P { #[param(range = skew(0, 16, 2.0))] pub steps: IntParam }",
+        "struct P { #[param(range = exp(0, 16, 2.0))] pub steps: IntParam }",
+    ] {
+        let err = super::parse::Params::from_derive_input(
+            &syn::parse_str::<DeriveInput>(source).unwrap(),
         )
-        .unwrap(),
-    )
-    .unwrap_err();
+        .unwrap_err();
 
-    assert!(
-        err.to_string().contains("`skew` range is only supported"),
-        "{err}"
-    );
+        assert!(
+            err.to_string().contains("only supported for float params"),
+            "{err}"
+        );
+    }
 }
 
 #[test]

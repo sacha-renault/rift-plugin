@@ -91,10 +91,15 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
         quote! { .min_value(#start).max_value(#end) }
     });
 
-    let scale = leaf.scale.as_ref().map(|scale| {
-        let ScaleArg::Skew(factor) = scale;
-        let factor = coerce_float(factor, leaf.kind);
-        quote! { .scale(::rift_plugin::prelude::Scale::Skew(#factor)) }
+    let scale = leaf.scale.as_ref().map(|scale| match scale {
+        ScaleArg::Skew(factor) => {
+            let factor = coerce_float(factor, leaf.kind);
+            quote! { .scale(::rift_plugin::prelude::Scale::Skew(#factor)) }
+        }
+        ScaleArg::Exponential(factor) => {
+            let factor = coerce_float(factor, leaf.kind);
+            quote! { .scale(::rift_plugin::prelude::Scale::Exponential(#factor)) }
+        }
     });
     let unit = leaf.unit.as_ref().map(|unit| {
         let lit = LitStr::new(unit, leaf.ident.span());

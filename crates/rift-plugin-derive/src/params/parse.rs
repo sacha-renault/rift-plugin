@@ -76,12 +76,14 @@ pub(crate) struct Leaf {
 /// The curve encoded in a `range` declaration for a float param.
 ///
 /// `range = linear(...)` carries no curve; `range = skew(min, max, factor)` is a
-/// power curve whose exponent is stored as written and coerced to `f32` at
-/// expansion.
+/// power curve and `range = exp(min, max, factor)` an exponential curve. The
+/// factor is stored as written and coerced to `f32` at expansion.
 #[derive(Debug)]
 pub(crate) enum ScaleArg {
     /// The `factor` of `range = skew(min, max, factor)`.
     Skew(Expr),
+    /// The `factor` of `range = exp(min, max, factor)`.
+    Exponential(Expr),
 }
 
 /// A `#[nested]` field: either a struct or an array of structs.
@@ -256,6 +258,22 @@ const RANGE_VARIANTS: &[RangeVariant] = &[
             Ok(Some(ScaleArg::Skew(factor.clone())))
         },
     },
+    RangeVariant {
+        name: "exp",
+        extra_args: &["factor"],
+        build: |extra| {
+            let factor = &extra[0];
+            if literal_f32(factor)
+                .is_some_and(|value| !(value.is_finite() && value > 0.0 && value != 1.0))
+            {
+                return Err(syn::Error::new_spanned(
+                    factor,
+                    "`exp` factor must be finite and greater than 0, and different to 1",
+                ));
+            }
+            Ok(Some(ScaleArg::Exponential(factor.clone())))
+        },
+    },
 ];
 
 /// A `range = ...` value, parsed against [`RANGE_VARIANTS`].
@@ -344,7 +362,7 @@ fn validate_leaf(leaf: &Leaf) -> syn::Result<()> {
     if leaf.scale.is_some() && leaf.kind != ParamKind::Float {
         return Err(syn::Error::new_spanned(
             &leaf.ty,
-            "a `skew` range is only supported for float params \
+            "a curved range (`skew` or `exp`) is only supported for float params \
              (int, bool and enum params are always linear)",
         ));
     }
