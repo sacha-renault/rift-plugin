@@ -38,6 +38,7 @@ arc-swap = "1"
 rustfft = "6.4.1"
 log = "0.4"
 bon = "3.8.2"
+serde = { version = "1" }
 serde_json = { version = "1" }
 fundsp = { version = "0.23.0" }
 bitflags = "2.13.2"
