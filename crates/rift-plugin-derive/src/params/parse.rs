@@ -8,6 +8,8 @@
 //! `#[nested]` / `#[nested(module = "...")]` (a struct, or an array of structs,
 //! that itself derives `Params`).
 
+use std::collections::HashSet;
+
 use darling::FromField;
 use syn::{Data, DeriveInput, Expr, ExprLit, ExprUnary, Fields, Generics, Ident, Lit, Type, UnOp};
 
@@ -73,6 +75,12 @@ pub(crate) struct Leaf {
     pub flags: Option<Expr>,
 }
 
+impl Leaf {
+    pub fn resolve_string_id(&self) -> String {
+        self.id.clone().unwrap_or(self.ident.to_string())
+    }
+}
+
 /// The curve encoded in a `range` declaration for a float param.
 ///
 /// `range = linear(...)` carries no curve; `range = skew(min, max, factor)` is a
@@ -97,6 +105,12 @@ pub(crate) struct Nested {
     pub module: Option<String>,
 }
 
+impl Nested {
+    pub fn resolve_string_id(&self) -> String {
+        self.module.clone().unwrap_or(self.ident.to_string())
+    }
+}
+
 impl Params {
     pub(crate) fn from_derive_input(input: &DeriveInput) -> syn::Result<Self> {
         let Data::Struct(data) = &input.data else {
@@ -118,6 +132,8 @@ impl Params {
             .iter()
             .map(parse_field)
             .collect::<syn::Result<Vec<_>>>()?;
+
+        ensure_no_string_id_duplicates(&fields)?;
 
         Ok(Self {
             ident: input.ident.clone(),
@@ -405,4 +421,36 @@ fn param_kind(ty: &Type) -> syn::Result<ParamKind> {
             ));
         }
     })
+}
+
+/// This ensure that two params / persists field / module
+/// doesn't have the same resolved string id IN THE STRUCT.
+/// This doesn't prevent same id in different Param to have the
+/// same resolved string id
+///
+/// This should prevent most of ID collision, maybe would be good also
+/// to add a test that runs on plugin compilation that takes ClapPlugin::Params::new()
+/// and ensure there is no collision in all id there.
+fn ensure_no_string_id_duplicates(fields: &[Field]) -> syn::Result<()> {
+    let mut map = HashSet::new();
+
+    for field in fields.iter() {
+        let resolved_id = match field {
+            Field::Leaf(leaf) => leaf.resolve_string_id(),
+            Field::Nested(nested) => nested.resolve_string_id(),
+        };
+        let ident = match field {
+            Field::Leaf(leaf) => &leaf.ident,
+            Field::Nested(nested) => &nested.ident,
+        };
+
+        if !map.insert(resolved_id.clone()) {
+            return Err(syn::Error::new_spanned(
+                ident,
+                format!("Duplicate id: `{resolved_id}`"),
+            ));
+        }
+    }
+
+    Ok(())
 }

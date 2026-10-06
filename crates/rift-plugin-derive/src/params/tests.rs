@@ -357,3 +357,42 @@ fn rejects_unknown_param_key() {
 
     assert!(err.to_string().contains("Unknown field: `smooth`"), "{err}");
 }
+
+#[test]
+fn reject_duplicate_id() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P {
+                #[param] pub gain: FloatParam,
+                #[param(id="gain")] pub gain2: FloatParam,
+            }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("Duplicate id: `gain`"), "{err}");
+
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P {
+                #[param] pub gain: FloatParam,
+                #[nested(module="gain")] pub osc: OscillatorParams,
+            }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("Duplicate id: `gain`"), "{err}");
+
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P {
+                #[param(id = "osc")] pub gain: FloatParam,
+                #[nested] pub osc: OscillatorParams,
+            }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("Duplicate id: `osc`"), "{err}");
+}

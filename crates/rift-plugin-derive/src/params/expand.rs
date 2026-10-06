@@ -75,7 +75,7 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
     let name = leaf.name.clone().unwrap_or_else(|| field.clone());
     // The id defaults to the *field* identifier, not the display name, so that
     // renaming a label does not silently change the id (and thus saved state).
-    let id = leaf.id.clone().unwrap_or(field);
+    let id = leaf.resolve_string_id();
 
     let name_lit = LitStr::new(&name, leaf.ident.span());
     let id_lit = LitStr::new(&id, leaf.ident.span());
