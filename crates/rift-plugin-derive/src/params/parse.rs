@@ -133,7 +133,7 @@ impl Params {
             .map(parse_field)
             .collect::<syn::Result<Vec<_>>>()?;
 
-        ensure_no_string_id_duplicates(&fields)?;
+        validate_resolved_ids(&fields)?;
 
         Ok(Self {
             ident: input.ident.clone(),
@@ -423,33 +423,50 @@ fn param_kind(ty: &Type) -> syn::Result<ParamKind> {
     })
 }
 
-/// This ensure that two params / persists field / module
-/// doesn't have the same resolved string id IN THE STRUCT.
-/// This doesn't prevent same id in different Param to have the
-/// same resolved string id
+/// The characters allowed in a parameter id or a nested module segment.
 ///
-/// This should prevent most of ID collision, maybe would be good also
-/// to add a test that runs on plugin compilation that takes ClapPlugin::Params::new()
-/// and ensure there is no collision in all id there.
-fn ensure_no_string_id_duplicates(fields: &[Field]) -> syn::Result<()> {
-    let mut map = HashSet::new();
+/// Character allowed are `is_alphanumeric` & `_`
+fn is_id_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_'
+}
+
+/// Validates the resolved id of every field: `#[param(id = "...")]` for a leaf,
+/// `#[nested(module = "...")]` for a module, each defaulting to the field name.
+///
+/// Within one struct, a resolved id must be non-empty, made only of
+/// [`is_id_char`] characters, and unique.
+fn validate_resolved_ids(fields: &[Field]) -> syn::Result<()> {
+    let mut seen = HashSet::new();
 
     for field in fields.iter() {
-        let resolved_id = match field {
-            Field::Leaf(leaf) => leaf.resolve_string_id(),
-            Field::Nested(nested) => nested.resolve_string_id(),
-        };
-        let ident = match field {
-            Field::Leaf(leaf) => &leaf.ident,
-            Field::Nested(nested) => &nested.ident,
+        let (resolved_id, ident) = match field {
+            Field::Leaf(leaf) => (leaf.resolve_string_id(), &leaf.ident),
+            Field::Nested(nested) => (nested.resolve_string_id(), &nested.ident),
         };
 
-        if !map.insert(resolved_id.clone()) {
+        if resolved_id.is_empty() {
+            return Err(syn::Error::new_spanned(
+                ident,
+                "a param id or module must not be empty",
+            ));
+        }
+
+        if let Some(bad) = resolved_id.chars().find(|c| !is_id_char(*c)) {
+            return Err(syn::Error::new_spanned(
+                ident,
+                format!(
+                    "`{bad}` is not allowed in a param id or module; use only letters, digits and `_`"
+                ),
+            ));
+        }
+
+        if seen.contains(&resolved_id) {
             return Err(syn::Error::new_spanned(
                 ident,
                 format!("Duplicate id: `{resolved_id}`"),
             ));
         }
+        seen.insert(resolved_id);
     }
 
     Ok(())

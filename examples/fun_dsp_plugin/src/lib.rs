@@ -9,7 +9,7 @@ pub mod oscillator;
 
 #[derive(Params)]
 pub struct OscillatorParams {
-    #[param(id = "Wt Position", default = 0)]
+    #[param(id = "WtPosition", default = 0)]
     pub wt_position: FloatParam,
 
     #[param(id = "Pan", default = 0, range = skew(-0.5, 0.5, 1))]
