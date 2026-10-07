@@ -396,3 +396,54 @@ fn reject_duplicate_id() {
     .unwrap_err();
     assert!(err.to_string().contains("Duplicate id: `osc`"), "{err}");
 }
+
+#[test]
+fn snake_case_default_ids_are_allowed() {
+    // The default id is the field name, so `snake_case` has to stay valid.
+    super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P {
+                #[param] pub wt_position: FloatParam,
+                #[nested] pub nested_params: OscillatorParams,
+            }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap();
+}
+
+#[test]
+fn reject_non_word_character_in_id() {
+    for input in [
+        r#"struct P { #[param(id = "a.b")] pub gain: FloatParam }"#,
+        r#"struct P { #[param(id = "a b")] pub gain: FloatParam }"#,
+        r#"struct P { #[param(id = "a-b")] pub gain: FloatParam }"#,
+    ] {
+        let err =
+            super::parse::Params::from_derive_input(&syn::parse_str::<DeriveInput>(input).unwrap())
+                .unwrap_err();
+        assert!(err.to_string().contains("is not allowed"), "{err}");
+    }
+}
+
+#[test]
+fn reject_non_word_character_in_module() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P { #[nested(module = "a[0]")] pub osc: OscillatorParams }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("is not allowed"), "{err}");
+}
+
+#[test]
+fn reject_empty_id() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(r#"struct P { #[param(id = "")] pub gain: FloatParam }"#)
+            .unwrap(),
+    )
+    .unwrap_err();
+    assert!(err.to_string().contains("must not be empty"), "{err}");
+}
