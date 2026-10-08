@@ -1,0 +1,12 @@
+:root,
+.dark {
+    --rift-bg: #0b0d12;
+
+    --rift-text: #e9ecf5;
+}
+
+:root {
+    background-color: var(--rift-bg);
+    color: var(--rift-text);
+    font-size: 12px;
+}
