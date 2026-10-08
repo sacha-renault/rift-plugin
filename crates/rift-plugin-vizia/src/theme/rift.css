@@ -148,7 +148,8 @@ SELECVTOR
 --------------
 */
 
-selector {
+selector,
+selector popup{
     layout-type: row;
     size: auto;
     gap: 2px;
@@ -159,10 +160,16 @@ selector {
     border-color: #222838;
 }
 
-selector.vertical {
+selector > dropdown {
+    height: auto;
+}
+
+selector.vertical,
+selector.vertical popup {
     layout-type: column;
 }
 
+selector .dropdown-trigger,
 selector .segment,
 selector .step,
 selector .current {
@@ -174,6 +181,7 @@ selector .current {
     corner-radius: 7px;
 }
 
+selector .dropdown-trigger,
 selector .segment {
     padding-top: 6px;
     padding-bottom: 6px;
@@ -187,6 +195,7 @@ selector.vertical .segment {
     width: auto; /** TODO, this doesn't really takes all width rn ...*/
 }
 
+selector .dropdown-trigger:hover,
 selector .segment:hover {
     color: #e9ecf5;
     background-color: #1a1f2c;
