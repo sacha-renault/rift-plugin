@@ -1,5 +1,9 @@
 use crate::dev_prelude::*;
 
+/// Total sweep of the arc, in degrees. The gap sits at the bottom.
+const SWEEP: f32 = 270.0;
+/// Where the arc starts, in degrees clockwise from 3 o'clock (7:30 on a clock).
+const START: f32 = 135.0;
 /// Pixels of vertical travel needed to sweep the whole range.
 const DRAG_RANGE: f32 = 220.0;
 
@@ -117,14 +121,13 @@ impl Dial {
                 .value(value)
                 .class("dial-track");
 
-                HStack::new(cx, |cx| {
-                    Element::new(cx).class("dial-tick");
+                Element::new(cx).class("dial-cap").hoverable(false);
+                HStack::new(cx, move |cx| {
+                    Element::new(cx).class("dial-tick").hoverable(false);
                 })
-                .bind(value, move |handle| {
-                    let value = value.get();
-                    handle.rotate(Angle::Deg(value * 300.0 - 150.0));
-                })
-                .class("dial-head");
+                .class("dial-pointer")
+                .hoverable(false)
+                .rotate(value.map(|v| Angle::Deg(-SWEEP / 2.0 + SWEEP * v.clamp(0.0, 1.0))));
             })
             .class("dial-face");
 
