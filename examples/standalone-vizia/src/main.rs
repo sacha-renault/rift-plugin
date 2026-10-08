@@ -10,10 +10,26 @@ use rift_plugin_gui::{
     Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::{DialModifiers, Panel, param_knob};
+use rift_plugin_vizia::widgets::{
+    DialModifiers, Panel, SelectorModifiers, param_knob, param_selector,
+};
 
 const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;
+
+#[derive(Default, DeriveEnumValues)]
+pub enum WaveType {
+    #[default]
+    Square,
+    Saw,
+    SS,
+    S123,
+    S1234,
+    S1,
+    S12,
+    S987,
+    S123456,
+}
 
 #[derive(Params)]
 struct StandaloneParams {
@@ -22,6 +38,9 @@ struct StandaloneParams {
 
     #[param(name = "Cutoff", range = exp(20, 20000, 25), default = 440.0)]
     cutoff: FloatParam,
+
+    #[param(name = "WaveType")]
+    wave_type: EnumParam<WaveType>,
 }
 
 /// Minimal [`GuiContext`] for a host with no audio engine.
@@ -80,6 +99,8 @@ impl HostWindow {
             Panel::new(cx, "Test", |cx| {
                 param_knob(cx, &ui_params.gain);
                 param_knob(cx, &ui_params.cutoff).centered();
+
+                param_selector(cx, &ui_params.wave_type).arrow_select();
             });
         });
 
