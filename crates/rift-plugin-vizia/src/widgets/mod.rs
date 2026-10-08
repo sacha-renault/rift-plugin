@@ -1,7 +1,3 @@
-use rift_plugin_gui::GuiParamEvent;
-use rift_plugin_params::{ClapId, Param, ParamPtr};
-use vizia::prelude::*;
-
 use crate::dev_prelude::*;
 
 pub fn knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Knob<Signal<f32>>> {

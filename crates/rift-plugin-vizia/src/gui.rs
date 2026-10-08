@@ -6,9 +6,9 @@ use std::sync::Arc;
 use raw_window_handle::{HandleError, HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
 use rift_plugin_gui::*;
 use rift_plugin_params::Param;
-use vizia::{Application, WindowHandle, prelude::*};
+use vizia::{Application, WindowHandle};
 
-use crate::data::ParamSignals;
+use crate::dev_prelude::*;
 
 /// Closure that builds the view tree of a plugin.
 pub(crate) type AppFn = dyn Fn(&mut Context, Arc<dyn GuiContext>) + Send + Sync + 'static;
@@ -45,7 +45,6 @@ impl ViziaGui {
 
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
-        let host = context.clone();
         let pump = context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
 
