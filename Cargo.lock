@@ -2129,6 +2129,7 @@ name = "rift-plugin-vizia"
 version = "0.1.0"
 dependencies = [
  "raw-window-handle",
+ "rift-plugin-derive",
  "rift-plugin-gui",
  "rift-plugin-params",
  "vizia",

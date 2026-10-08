@@ -6,6 +6,12 @@ edition = "2024"
 [lib]
 proc-macro = true
 
+[features]
+# Enables the `#[modifiers]` attribute macro. Off by default so consumers that
+# only need the `Params` / `DeriveEnumValues` derives are unaffected.
+default = []
+modifiers = []
+
 [dependencies]
 syn = { version = "2", features = ["full"] }
 quote = "1"

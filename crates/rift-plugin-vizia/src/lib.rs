@@ -19,6 +19,7 @@ pub mod prelude {
     pub use super::bridge::register_param;
     pub use super::factory::{ViziaFactory, vizia_gui};
 
+    pub use rift_plugin_derive::modifiers;
     pub use rift_plugin_gui::GuiFactory;
     pub use vizia::prelude::*;
 }
