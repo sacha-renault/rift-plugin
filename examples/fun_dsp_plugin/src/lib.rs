@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use rift_plugin::prelude::*;
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::knob;
+use rift_plugin_vizia::widgets::param_knob;
 
 pub mod oscillator;
 
@@ -153,9 +153,9 @@ impl ClapPlugin for FunDspPlugin {
     fn gui(params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
         vizia_gui(200, 200, move |cx, _| {
             VStack::new(cx, |cx| {
-                knob(cx, &params.oscillators[0].gain);
+                param_knob(cx, &params.oscillators[0].gain);
 
-                knob(cx, &params.filters[0].cutoff);
+                param_knob(cx, &params.filters[0].cutoff);
             });
         })
     }

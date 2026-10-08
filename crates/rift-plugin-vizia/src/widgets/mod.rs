@@ -1,50 +1,43 @@
-use rift_plugin_gui::GuiParamEvent;
-use rift_plugin_params::{ClapId, Param, ParamPtr};
-use vizia::prelude::*;
+use crate::dev_prelude::*;
 
-use crate::register_param;
+mod dial;
+mod dropdown;
+mod panel;
+mod selector;
 
-pub fn knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Knob<Signal<f32>>> {
-    let signal = register_param(cx, param);
-    let id = param.id();
-    let default = param.normalize(param.default_plain());
+use rift_plugin_params::{EnumParam, EnumValues};
 
-    Knob::new(cx, default, signal, false)
-        .on_mouse_down(param_widget_mouse_left_down(id))
-        .on_change(emit_param_change(id, param.as_ptr(), signal))
-        .on_mouse_up(param_widget_mouse_left_up(id))
+pub use dial::{Dial, DialModifiers};
+pub use dropdown::{Dropdown, DropdownModifiers};
+pub use panel::Panel;
+pub use selector::{Selector, SelectorModifiers};
+
+pub fn param_knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Dial> {
+    let binding = ParamBinding::new(cx, param);
+    let dial = Dial::labeled(cx, binding.name(), binding.text(), binding.normalized());
+    binding.connect(dial)
 }
 
-pub fn param_widget_mouse_left_down(id: ClapId) -> impl Fn(&mut EventContext, MouseButton) {
-    move |cx, btn| {
-        if btn.eq(&MouseButton::Left) {
-            cx.emit_to(Entity::root(), GuiParamEvent::gesture_start(id));
-        }
-    }
+pub fn param_selector<'a, E: EnumValues>(
+    cx: &'a mut Context,
+    param: &EnumParam<E>,
+) -> Handle<'a, Selector> {
+    let binding = ParamBinding::new(cx, param);
+    let options = (0..E::count())
+        .filter_map(E::from_index)
+        .map(|variant| variant.to_string());
+    let selector = Selector::new(cx, options, binding.normalized());
+    binding.connect(selector)
 }
 
-pub fn param_widget_mouse_left_up(id: ClapId) -> impl Fn(&mut EventContext, MouseButton) {
-    move |cx, btn| {
-        if btn.eq(&MouseButton::Left) {
-            cx.emit_to(Entity::root(), GuiParamEvent::gesture_end(id));
-        } else if btn.eq(&MouseButton::Right) {
-            // todo!()
-            // emit context menu
-            // cx.emit(Entity::root())
-        }
-    }
-}
-
-pub fn emit_param_change(
-    id: ClapId,
-    ptr: ParamPtr,
-    value: Signal<f32>,
-) -> impl Fn(&mut EventContext, f32) {
-    move |cx, new| {
-        value.update(|v| *v = new);
-        cx.emit_to(
-            Entity::root(),
-            GuiParamEvent::value(id, ptr.denormalize(new)),
-        );
-    }
+pub fn param_dropdown<'a, E: EnumValues>(
+    cx: &'a mut Context,
+    param: &EnumParam<E>,
+) -> Handle<'a, Dropdown> {
+    let binding = ParamBinding::new(cx, param);
+    let options = (0..E::count())
+        .filter_map(E::from_index)
+        .map(|variant| variant.to_string());
+    let dropdown = Dropdown::new(cx, options, binding.normalized());
+    binding.connect(dropdown)
 }

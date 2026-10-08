@@ -1,0 +1,10 @@
+[
+  {
+    "label": "Install test plugin",
+    "command": "cargo xtask install fun_dsp_plugin -r"
+  },
+  {
+    "label": "Run standalone Vizia Example",
+    "command": "cargo run -p standalone-vizia -r"
+  }
+]
