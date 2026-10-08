@@ -36,7 +36,7 @@ struct StandaloneParams {
     #[param(name = "Gain", range = linear(0, 2), default = 1.0)]
     gain: FloatParam,
 
-    #[param(name = "Cutoff", range = exp(20, 20000, 25), default = 440.0)]
+    #[param(name = "Cutoff", range = exp(20, 20000, 25), default = 440.0, unit = "Hz")]
     cutoff: FloatParam,
 
     #[param(name = "WaveType")]

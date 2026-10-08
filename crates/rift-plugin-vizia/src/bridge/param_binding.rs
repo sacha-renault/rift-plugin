@@ -43,7 +43,8 @@ impl ParamBinding {
 
         let mut text = String::new();
         if self.ptr.value_to_text(plain, &mut text).is_err() {
-            text = format!("{plain}");
+            let unit = self.unit();
+            text = format!("{plain} {unit}");
         }
         text
     }
@@ -68,20 +69,6 @@ impl ParamBinding {
 
     pub fn end(&self, cx: &mut impl EmitContext) {
         cx.emit_to(Entity::root(), GuiParamEvent::gesture_end(self.id()));
-    }
-
-    /// Sets the parameter in one go.
-    ///
-    /// Use it for edits that aren't a drag: (mostly bool params, but could also
-    /// be set with normalized value.)
-    pub fn set_one_shot(&self, cx: &mut impl EmitContext, normalized: f32) {
-        self.begin(cx);
-        self.set(cx, normalized);
-        self.end(cx);
-    }
-
-    pub fn reset(&self, cx: &mut impl EmitContext) {
-        self.set_one_shot(cx, self.default_normalized());
     }
 
     pub fn open_context_menu(&self, cx: &mut EventContext) {
