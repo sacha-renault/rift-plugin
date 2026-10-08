@@ -10,7 +10,7 @@ use rift_plugin_gui::{
     Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::{DialModifiers, param_knob};
+use rift_plugin_vizia::widgets::{DialModifiers, Panel, param_knob};
 
 const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;
@@ -77,7 +77,7 @@ impl HostWindow {
 
         let ui_params = params.clone();
         let factory = vizia_gui(WIDTH, HEIGHT, move |cx, _| {
-            VStack::new(cx, |cx| {
+            Panel::new(cx, "Test", |cx| {
                 param_knob(cx, &ui_params.gain);
                 param_knob(cx, &ui_params.cutoff).centered();
             });
