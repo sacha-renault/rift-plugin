@@ -10,7 +10,7 @@ use rift_plugin_gui::{
     Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::{DialExt, param_knob};
+use rift_plugin_vizia::widgets::{DialModifiers, param_knob};
 
 const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;

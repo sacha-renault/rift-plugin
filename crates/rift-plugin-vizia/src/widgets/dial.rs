@@ -4,7 +4,7 @@ use crate::dev_prelude::*;
 const DRAG_RANGE: f32 = 220.0;
 
 /// Alias to `Knob`, but with text.
-pub struct DialModifiers {
+pub struct Dial {
     hot: Signal<bool>,
     drag: Option<Drag>,
     value: Signal<f32>,
@@ -13,7 +13,7 @@ pub struct DialModifiers {
     callbacks: ControlCallbacks,
 }
 
-impl View for DialModifiers {
+impl View for Dial {
     fn element(&self) -> Option<&'static str> {
         Some("dial")
     }
@@ -75,7 +75,7 @@ impl View for DialModifiers {
     }
 }
 
-impl DialModifiers {
+impl Dial {
     pub fn labeled(
         cx: &mut Context,
         label: impl Res<String> + 'static,
@@ -84,14 +84,13 @@ impl DialModifiers {
     ) -> Handle<'_, Self> {
         let label = label.to_signal(cx);
         let readout = readout.to_signal(cx);
-        Self::build_dial(cx, value, Some((label, readout)), false)
+        Self::build_dial(cx, value, Some((label, readout)))
     }
 
     fn build_dial(
         cx: &mut Context,
         value: Signal<f32>,
         texts: Option<(Signal<String>, Signal<String>)>,
-        centered: bool,
     ) -> Handle<'_, Self> {
         let hot = Signal::new(false);
         let centered = Signal::new(false);
@@ -162,7 +161,7 @@ impl DialModifiers {
     }
 }
 
-impl Control for DialModifiers {
+impl Control for Dial {
     fn callbacks_mut(&mut self) -> &mut ControlCallbacks {
         &mut self.callbacks
     }
@@ -172,8 +171,8 @@ impl Control for DialModifiers {
     }
 }
 
-#[modifiers(for Handle<'_, DialModifiers>)]
-pub trait DialExt {
+#[modifiers(for Handle<'_, Dial>)]
+pub trait DialModifiers {
     #[concrete]
     fn centered(self) -> Self {
         self.modify(|dial| dial.centered.set(true))
