@@ -101,7 +101,7 @@ impl HostWindow {
                 param_knob(cx, &ui_params.cutoff).centered();
 
                 param_selector(cx, &ui_params.wave_type)
-                    .arrow_select()
+                    .dropdown()
                     .disable_scroll();
             });
         });

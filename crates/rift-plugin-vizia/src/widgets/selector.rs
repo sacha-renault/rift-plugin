@@ -16,6 +16,7 @@ pub enum SelectorStyle {
     Segmented,
     VerticalSegmented,
     ArrowSelect,
+    DropDown,
 }
 
 /// A selector for an option of a short list (a waveform, a filter type...).
@@ -57,16 +58,13 @@ impl Selector {
                 let options = options.clone();
                 match style {
                     SelectorStyle::Segmented | SelectorStyle::VerticalSegmented => {
-                        segmented(cx, value, options)
+                        segmented(cx, value, options, false)
                     }
                     SelectorStyle::ArrowSelect => arrow_selected(cx, value, options),
+                    SelectorStyle::DropDown => drop_down(cx, value, options),
                 }
             });
         })
-        .toggle_class(
-            "vertical",
-            style.map(|v| matches!(v, SelectorStyle::VerticalSegmented)),
-        )
         .role(Role::RadioGroup)
         .navigable(true)
     }
@@ -86,7 +84,7 @@ fn value_of(index: usize, count: usize) -> f32 {
     }
 }
 
-fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
+fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>, is_popover: bool) {
     let count = options.len();
 
     for (index, option) in options.into_iter().enumerate() {
@@ -94,7 +92,12 @@ fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
         Label::new(cx, option)
             .class("segment")
             .toggle_class("selected", selected)
-            .on_press(move |cx| cx.emit(SelectorEvent::Pick(index)));
+            .on_press(move |cx| {
+                cx.emit(SelectorEvent::Pick(index));
+                if is_popover {
+                    cx.emit(PopupEvent::Close);
+                }
+            });
     }
 }
 
@@ -116,6 +119,28 @@ fn arrow_selected(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
     .class("step")
     .disabled(value.map(move |v| index_of(*v, count) == count - 1))
     .on_press(|cx| cx.emit(SelectorEvent::Step(1)));
+}
+
+fn drop_down(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
+    let count = options.len();
+    let options_for_dropdown = options.clone();
+    let selected_text = value.map(move |v| options[index_of(*v, count)].clone());
+
+    Dropdown::new(
+        cx,
+        move |cx| {
+            Label::new(cx, selected_text)
+                .on_mouse_down(|cx, mb| {
+                    if matches!(mb, MouseButton::Left) {
+                        cx.emit(PopupEvent::Open);
+                    }
+                })
+                .class("dropdown-trigger");
+        },
+        move |cx| {
+            segmented(cx, value, options_for_dropdown.clone(), true);
+        },
+    );
 }
 
 impl Control for Selector {
@@ -197,7 +222,14 @@ pub trait SelectorModifiers {
 
     #[concrete]
     fn vertical(self) -> Self {
-        self.modify(|selector| selector.style.set(SelectorStyle::VerticalSegmented))
+        self.class("vertical")
+            .modify(|selector| selector.style.set(SelectorStyle::VerticalSegmented))
+    }
+
+    #[concrete]
+    fn dropdown(self) -> Self {
+        self.class("vertical")
+            .modify(|selector| selector.style.set(SelectorStyle::DropDown))
     }
 
     #[concrete]
