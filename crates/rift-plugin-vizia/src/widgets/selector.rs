@@ -66,6 +66,7 @@ impl Selector {
                             Svg::new(cx, ICON_CHEVRON_LEFT).hoverable(false);
                         })
                         .class("step")
+                        .disabled(value.map(move |v| index_of(*v, count) == 0))
                         .on_press(|cx| cx.emit(SelectorEvent::Step(-1)));
 
                         let options = options.clone();
@@ -76,6 +77,7 @@ impl Selector {
                             Svg::new(cx, ICON_CHEVRON_RIGHT).hoverable(false);
                         })
                         .class("step")
+                        .disabled(value.map(move |v| index_of(*v, count) == count - 1))
                         .on_press(|cx| cx.emit(SelectorEvent::Step(1)));
                     }
                 }
