@@ -14,6 +14,7 @@ enum SelectorEvent {
 pub enum SelectorStyle {
     #[default]
     Segmented,
+    VerticalSegmented,
     ArrowSelect,
 }
 
@@ -23,6 +24,7 @@ pub struct Selector {
     count: usize,
     callbacks: ControlCallbacks,
     style: Signal<SelectorStyle>,
+    scroll_enabled: bool,
 }
 
 impl Selector {
@@ -46,43 +48,25 @@ impl Selector {
             count,
             callbacks: ControlCallbacks::default(),
             style,
+            scroll_enabled: true,
         }
         .build(cx, |cx| {
             style.set_or_bind(cx, move |cx, style| {
                 let style = style.get();
 
+                let options = options.clone();
                 match style {
-                    SelectorStyle::Segmented => {
-                        for (index, option) in options.iter().enumerate() {
-                            let selected = value.map(move |v| index_of(*v, count) == index);
-                            Label::new(cx, option.clone())
-                                .class("segment")
-                                .toggle_class("selected", selected)
-                                .on_press(move |cx| cx.emit(SelectorEvent::Pick(index)));
-                        }
+                    SelectorStyle::Segmented | SelectorStyle::VerticalSegmented => {
+                        segmented(cx, value, options)
                     }
-                    SelectorStyle::ArrowSelect => {
-                        ZStack::new(cx, |cx| {
-                            Svg::new(cx, ICON_CHEVRON_LEFT).hoverable(false);
-                        })
-                        .class("step")
-                        .disabled(value.map(move |v| index_of(*v, count) == 0))
-                        .on_press(|cx| cx.emit(SelectorEvent::Step(-1)));
-
-                        let options = options.clone();
-                        let current = value.map(move |v| options[index_of(*v, count)].clone());
-                        Label::new(cx, current).class("current").hoverable(false);
-
-                        ZStack::new(cx, |cx| {
-                            Svg::new(cx, ICON_CHEVRON_RIGHT).hoverable(false);
-                        })
-                        .class("step")
-                        .disabled(value.map(move |v| index_of(*v, count) == count - 1))
-                        .on_press(|cx| cx.emit(SelectorEvent::Step(1)));
-                    }
+                    SelectorStyle::ArrowSelect => arrow_selected(cx, value, options),
                 }
             });
         })
+        .toggle_class(
+            "vertical",
+            style.map(|v| matches!(v, SelectorStyle::VerticalSegmented)),
+        )
         .role(Role::RadioGroup)
         .navigable(true)
     }
@@ -100,6 +84,38 @@ fn value_of(index: usize, count: usize) -> f32 {
     } else {
         index as f32 / (count - 1) as f32
     }
+}
+
+fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
+    let count = options.len();
+
+    for (index, option) in options.into_iter().enumerate() {
+        let selected = value.map(move |v| index_of(*v, count) == index);
+        Label::new(cx, option)
+            .class("segment")
+            .toggle_class("selected", selected)
+            .on_press(move |cx| cx.emit(SelectorEvent::Pick(index)));
+    }
+}
+
+fn arrow_selected(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
+    let count = options.len();
+    ZStack::new(cx, |cx| {
+        Svg::new(cx, ICON_CHEVRON_LEFT).hoverable(false);
+    })
+    .class("step")
+    .disabled(value.map(move |v| index_of(*v, count) == 0))
+    .on_press(|cx| cx.emit(SelectorEvent::Step(-1)));
+
+    let current = value.map(move |v| options[index_of(*v, count)].clone());
+    Label::new(cx, current).class("current").hoverable(false);
+
+    ZStack::new(cx, |cx| {
+        Svg::new(cx, ICON_CHEVRON_RIGHT).hoverable(false);
+    })
+    .class("step")
+    .disabled(value.map(move |v| index_of(*v, count) == count - 1))
+    .on_press(|cx| cx.emit(SelectorEvent::Step(1)));
 }
 
 impl Control for Selector {
@@ -151,7 +167,9 @@ impl View for Selector {
                 meta.consume();
             }
 
-            WindowEvent::MouseScroll(_, y) if *y != 0.0 && !cx.is_disabled() => {
+            WindowEvent::MouseScroll(_, y)
+                if self.scroll_enabled && *y != 0.0 && !cx.is_disabled() =>
+            {
                 self.step(cx, if *y > 0.0 { -1 } else { 1 });
                 meta.consume();
             }
@@ -175,5 +193,16 @@ pub trait SelectorModifiers {
     fn arrow_select(self) -> Self {
         self.class("stepper")
             .modify(|selector| selector.style.set(SelectorStyle::ArrowSelect))
+    }
+
+    #[concrete]
+    fn vertical(self) -> Self {
+        self.modify(|selector| selector.style.set(SelectorStyle::VerticalSegmented))
+    }
+
+    #[concrete]
+    /// If this function is called, this will prevent to change the value on scroll
+    fn disable_scroll(self) -> Self {
+        self.modify(|selector| selector.scroll_enabled = false)
     }
 }
