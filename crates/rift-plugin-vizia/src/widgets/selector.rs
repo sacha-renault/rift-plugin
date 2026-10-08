@@ -1,7 +1,7 @@
 //! Picks one option out of a short list.
 use crate::dev_prelude::*;
 
-use vizia::icons::{ICON_CHEVRON_LEFT, ICON_CHEVRON_RIGHT};
+use vizia::icons::{ICON_CHEVRON_LEFT, ICON_CHEVRON_RIGHT, ICON_CHEVRONS_DOWN};
 use vizia::prelude::*;
 
 /// Internal events; never leaks outside
@@ -129,13 +129,20 @@ fn drop_down(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
     Dropdown::new(
         cx,
         move |cx| {
-            Label::new(cx, selected_text)
-                .on_mouse_down(|cx, mb| {
-                    if matches!(mb, MouseButton::Left) {
-                        cx.emit(PopupEvent::Open);
-                    }
+            HStack::new(cx, |cx| {
+                ZStack::new(cx, |cx| {
+                    Svg::new(cx, ICON_CHEVRONS_DOWN).hoverable(false);
                 })
-                .class("dropdown-trigger");
+                .class("step");
+
+                Label::new(cx, selected_text);
+            })
+            .on_mouse_down(|cx, mb| {
+                if matches!(mb, MouseButton::Left) {
+                    cx.emit(PopupEvent::Open);
+                }
+            })
+            .class("dropdown-trigger");
         },
         move |cx| {
             segmented(cx, value, options_for_dropdown.clone(), true);
