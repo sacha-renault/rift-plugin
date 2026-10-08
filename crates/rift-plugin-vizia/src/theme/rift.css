@@ -159,6 +159,10 @@ selector {
     border-color: #222838;
 }
 
+selector.vertical {
+    layout-type: column;
+}
+
 selector .segment,
 selector .step,
 selector .current {
@@ -177,6 +181,10 @@ selector .segment {
     padding-right: 12px;
     transition: background-color 130ms;
     transition: color 130ms;
+}
+
+selector.vertical .segment {
+    width: auto; /** TODO, this doesn't really takes all width rn ...*/
 }
 
 selector .segment:hover {
