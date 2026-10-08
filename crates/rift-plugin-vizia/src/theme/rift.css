@@ -144,12 +144,12 @@ panel .panel-body {
 
 /*
 --------------
-SELECVTOR
+SELECTOR
 --------------
 */
 
 selector,
-selector popup{
+selector popup {
     layout-type: row;
     size: auto;
     gap: 2px;
@@ -207,6 +207,7 @@ selector .segment.selected {
     shadow: 0px 2px 8px #8b6cff40;
 }
 
+selector .dropdown-trigger .step,
 selector.stepper .step {
     size: 26px;
     alignment: center;
@@ -216,15 +217,18 @@ selector.stepper .step {
     transition: fill 130ms;
 }
 
+selector .dropdown-trigger .step svg,
 selector.stepper .step svg {
     size: 16px;
 }
 
+selector .dropdown-trigger .step:hover svg,
 selector.stepper .step:hover {
     fill: #ffffff;
     background-color: #1f2535;
 }
 
+selector .dropdown-trigger .step:active,
 selector.stepper .step:active {
     background-color: #161a26;
 }
