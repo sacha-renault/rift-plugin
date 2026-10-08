@@ -1,0 +1,11 @@
+[package]
+name = "standalone-vizia"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rift-plugin = { workspace = true, features = ["assert-no-alloc"] }
+rift-plugin-gui = { workspace = true }
+rift-plugin-vizia = { workspace = true }
+rift-plugin-dsp = { workspace = true }
+baseview = "0.2.2"
