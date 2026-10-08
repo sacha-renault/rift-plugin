@@ -14,6 +14,10 @@ use vizia::prelude::*;
 
 /// Drag precision multiplier when Shift is held.
 pub(crate) const FINE: f32 = 0.1;
+/// Range covered by one notch of the mouse wheel.
+pub(crate) const WHEEL_STEP: f32 = 0.02;
+/// A single wheel event never counts for more notches than this.
+pub(crate) const MAX_NOTCHES: f32 = 5.0;
 
 type Action = Box<dyn Fn(&mut EventContext)>;
 type ValueAction = Box<dyn Fn(&mut EventContext, f32)>;

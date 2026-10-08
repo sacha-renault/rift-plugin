@@ -2,8 +2,6 @@ use crate::dev_prelude::*;
 
 /// Total sweep of the arc, in degrees. The gap sits at the bottom.
 const SWEEP: f32 = 270.0;
-/// Where the arc starts, in degrees clockwise from 3 o'clock (7:30 on a clock).
-const START: f32 = 135.0;
 /// Pixels of vertical travel needed to sweep the whole range.
 const DRAG_RANGE: f32 = 220.0;
 
@@ -71,6 +69,11 @@ impl View for Dial {
                     }
                     None => self.callbacks.single_edit(cx, self.default),
                 }
+                meta.consume();
+            }
+
+            WindowEvent::MouseScroll(_, y) if *y != 0.0 && !cx.is_disabled() => {
+                self.step(cx, y.clamp(-MAX_NOTCHES, MAX_NOTCHES) * WHEEL_STEP);
                 meta.consume();
             }
 
@@ -142,6 +145,9 @@ impl Dial {
                 Label::new(cx, text).class("dial-label").hoverable(false);
             }
         })
+        .role(Role::Slider)
+        .numeric_value(value.map(|v| (*v as f64 * 100.0).round()))
+        .navigable(true)
     }
 
     fn update_hot(&self, cx: &EventContext) {
@@ -161,6 +167,13 @@ impl Dial {
 
         let value = drag.value;
         self.callbacks.change(cx, value);
+    }
+
+    fn step(&self, cx: &mut EventContext, amount: f32) {
+        // TODO!() why don't i get even when shift is on ?
+        let fine = if cx.modifiers().shift() { FINE } else { 1.0 };
+        let value = (self.value.get_untracked() + amount * fine).clamp(0.0, 1.0);
+        self.callbacks.single_edit(cx, value);
     }
 }
 
