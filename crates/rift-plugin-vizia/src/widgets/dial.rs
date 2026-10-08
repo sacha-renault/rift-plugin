@@ -122,7 +122,12 @@ impl Dial {
                     KnobMode::Continuous,
                 )
                 .value(value)
-                .class("dial-track");
+                .class("dial-track")
+                .bind(centered, |_handle| {
+                    // todo!()
+                    // need to find a way to
+                    // redraw and center the knob ...
+                });
 
                 Element::new(cx).class("dial-cap").hoverable(false);
                 HStack::new(cx, move |cx| {
@@ -192,5 +197,15 @@ pub trait DialModifiers {
     #[concrete]
     fn centered(self) -> Self {
         self.modify(|dial| dial.centered.set(true))
+    }
+
+    #[concrete]
+    fn small(self) -> Self {
+        self.toggle_class("large", false).class("small")
+    }
+
+    #[concrete]
+    fn large(self) -> Self {
+        self.toggle_class("small", false).class("large")
     }
 }
