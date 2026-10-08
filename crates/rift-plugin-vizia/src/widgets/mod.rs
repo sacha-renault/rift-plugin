@@ -24,9 +24,15 @@ pub fn param_widget_mouse_left_up(id: ClapId) -> impl Fn(&mut EventContext, Mous
         if btn.eq(&MouseButton::Left) {
             cx.emit_to(Entity::root(), GuiParamEvent::gesture_end(id));
         } else if btn.eq(&MouseButton::Right) {
-            // todo!()
-            // emit context menu
-            // cx.emit(Entity::root())
+            let scale = cx.scale_factor().max(f32::EPSILON);
+            let mouse = cx.mouse();
+            let request = ParamContextMenuRequest {
+                id,
+                x: (mouse.cursor_x / scale).round() as i32,
+                y: (mouse.cursor_y / scale).round() as i32,
+                screen: 0,
+            };
+            cx.emit_to(Entity::root(), request);
         }
     }
 }

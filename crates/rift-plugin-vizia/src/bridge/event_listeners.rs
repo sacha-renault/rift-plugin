@@ -13,6 +13,11 @@ pub fn install_event_listener(cx: &mut Context, host: Arc<dyn GuiContext>) {
             host.param_event(*e);
             meta.consume();
         });
+
+        event.map(|e: &ParamContextMenuRequest, meta| {
+            host.param_context_menu(e.id, e.x, e.y, e.screen);
+            meta.consume();
+        });
     });
 
     ParamRegistry::new().build(cx);
