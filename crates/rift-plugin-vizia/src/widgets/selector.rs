@@ -1,7 +1,8 @@
 //! Picks one option out of a short list.
 use crate::dev_prelude::*;
 
-use vizia::icons::{ICON_CHEVRON_LEFT, ICON_CHEVRON_RIGHT, ICON_CHEVRONS_DOWN};
+use super::{index_of, value_of};
+use vizia::icons::{ICON_CHEVRON_LEFT, ICON_CHEVRON_RIGHT};
 use vizia::prelude::*;
 
 /// Internal events; never leaks outside
@@ -16,10 +17,13 @@ pub enum SelectorStyle {
     Segmented,
     VerticalSegmented,
     ArrowSelect,
-    DropDown,
 }
 
 /// A selector for an option of a short list (a waveform, a filter type...).
+///
+/// # Note:
+/// For the case of vertical segment not taking full width,
+/// see the note on `Dropdown`.
 pub struct Selector {
     value: Signal<f32>,
     count: usize,
@@ -58,10 +62,9 @@ impl Selector {
                 let options = options.clone();
                 match style {
                     SelectorStyle::Segmented | SelectorStyle::VerticalSegmented => {
-                        segmented(cx, value, options, false)
+                        segmented(cx, value, options)
                     }
                     SelectorStyle::ArrowSelect => arrow_selected(cx, value, options),
-                    SelectorStyle::DropDown => drop_down(cx, value, options),
                 }
             });
         })
@@ -70,21 +73,8 @@ impl Selector {
     }
 }
 
-/// The option a normalized value stands for.
-fn index_of(value: f32, count: usize) -> usize {
-    ((value.clamp(0.0, 1.0) * (count - 1) as f32).round() as usize).min(count - 1)
-}
-
-/// The normalized value of option `index`.
-fn value_of(index: usize, count: usize) -> f32 {
-    if count <= 1 {
-        0.0
-    } else {
-        index as f32 / (count - 1) as f32
-    }
-}
-
-fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>, is_popover: bool) {
+/// One pill per option, laid out inline.
+fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
     let count = options.len();
 
     for (index, option) in options.into_iter().enumerate() {
@@ -94,9 +84,6 @@ fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>, is_popo
             .toggle_class("selected", selected)
             .on_press(move |cx| {
                 cx.emit(SelectorEvent::Pick(index));
-                if is_popover {
-                    cx.emit(PopupEvent::Close);
-                }
             });
     }
 }
@@ -119,35 +106,6 @@ fn arrow_selected(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
     .class("step")
     .disabled(value.map(move |v| index_of(*v, count) == count - 1))
     .on_press(|cx| cx.emit(SelectorEvent::Step(1)));
-}
-
-fn drop_down(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
-    let count = options.len();
-    let options_for_dropdown = options.clone();
-    let selected_text = value.map(move |v| options[index_of(*v, count)].clone());
-
-    Dropdown::new(
-        cx,
-        move |cx| {
-            HStack::new(cx, |cx| {
-                ZStack::new(cx, |cx| {
-                    Svg::new(cx, ICON_CHEVRONS_DOWN).hoverable(false);
-                })
-                .class("step");
-
-                Label::new(cx, selected_text);
-            })
-            .on_mouse_down(|cx, mb| {
-                if matches!(mb, MouseButton::Left) {
-                    cx.emit(PopupEvent::Open);
-                }
-            })
-            .class("dropdown-trigger");
-        },
-        move |cx| {
-            segmented(cx, value, options_for_dropdown.clone(), true);
-        },
-    );
 }
 
 impl Control for Selector {
@@ -231,12 +189,6 @@ pub trait SelectorModifiers {
     fn vertical(self) -> Self {
         self.class("vertical")
             .modify(|selector| selector.style.set(SelectorStyle::VerticalSegmented))
-    }
-
-    #[concrete]
-    fn dropdown(self) -> Self {
-        self.class("vertical")
-            .modify(|selector| selector.style.set(SelectorStyle::DropDown))
     }
 
     #[concrete]
