@@ -45,37 +45,15 @@ impl ViziaGui {
 
         let app_fn = self.app_fn.clone();
         let context = self.context.clone();
-        let pump = context.clone();
+        let host = context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
 
         let application = Application::new(move |cx| {
-            // Here we notify RT when param change
-            // GUI => audio thread
-            let ctx2 = context.clone();
-            cx.add_global_listener(move |_, event| {
-                event.map(|e: &GuiParamEvent, meta| {
-                    ctx2.param_event(*e);
-                    meta.consume();
-                })
-            });
-
+            crate::theme::install(cx);
+            crate::bridge::install_event_listener(cx, context.clone());
             app_fn(cx, context.clone());
         })
-        .on_idle(move |cx| {
-            // Here we have to pump param change
-            // audio thread => GUI
-            let signals = &cx.data::<ParamSignals>().signals;
-            while let Some(task) = pump.pop_in_gui() {
-                match task {
-                    GuiTasks::ParamChanged { id, value } => {
-                        if let Some(data) = signals.get(&id) {
-                            let normalized = data.ptr.normalize(value);
-                            data.signal.update(|v| *v = normalized);
-                        }
-                    }
-                }
-            }
-        })
+        .on_idle(move |cx| crate::bridge::pump(cx, host.as_ref()))
         .inner_size(wsize);
 
         self.handle = Some(application.open_parented(self));
