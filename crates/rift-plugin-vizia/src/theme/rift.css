@@ -52,6 +52,35 @@ dial arctrack {
     transition: selection-color 160ms;
 }
 
+dial:hover arctrack {
+    selection-color: #8b6cff50;
+}
+
+dial.dragging arctrack {
+    selection-color: #8b6cff80;
+}
+
+dial:disabled arctrack {
+    color: #4a5168;
+    caret-color: #4a5168;
+}
+
+dial .dial-cap {
+    size: 58%;
+    corner-radius: 50%;
+    background-image: linear-gradient(to bottom, #363d54, #1a1e2a);
+    border-width: 1px;
+    border-color: #4a5370;
+    shadow: 0px 3px 8px #000000b0;
+}
+
+dial .dial-pointer {
+    size: 58%;
+    corner-radius: 50%;
+    alignment: top-center;
+    padding-top: 4px;
+}
+
 dial .dial-tick {
     width: 3px;
     height: 9px;
