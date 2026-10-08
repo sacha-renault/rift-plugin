@@ -95,6 +95,20 @@ impl ParamBinding {
         };
         cx.emit_to(Entity::root(), request);
     }
+
+    /// Wires a control to the parameter: its edits are reported to the host as
+    /// gestures, and its default value is the one of the parameter.
+    ///
+    /// The control must be showing [`normalized`] values.
+    pub fn connect<C: ControlExt>(&self, control: C) -> C {
+        let binding = *self;
+        control
+            .default_normalized(self.default_normalized())
+            .on_begin(move |cx| binding.begin(cx))
+            .on_change(move |cx, value| binding.set(cx, value))
+            .on_end(move |cx| binding.end(cx))
+            .on_context_menu(move |cx| binding.open_context_menu(cx))
+    }
 }
 
 /// Round the value for display so it's never too long with too many decimals

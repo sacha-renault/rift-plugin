@@ -1,17 +1,13 @@
 use crate::dev_prelude::*;
 
-pub fn knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Knob<Signal<f32>>> {
-    let binding = ParamBinding::new(cx, param);
+mod dial;
 
-    Knob::new(
-        cx,
-        binding.default_normalized(),
-        binding.normalized(),
-        false,
-    )
-    .on_mouse_down(param_widget_mouse_left_down(binding))
-    .on_change(emit_param_change(binding))
-    .on_mouse_up(param_widget_mouse_left_up(binding))
+pub use dial::{DialExt, DialModifiers};
+
+pub fn param_knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, DialModifiers> {
+    let binding = ParamBinding::new(cx, param);
+    let dial = DialModifiers::labeled(cx, binding.name(), binding.text(), binding.normalized());
+    binding.connect(dial)
 }
 
 pub fn param_widget_mouse_left_down(
