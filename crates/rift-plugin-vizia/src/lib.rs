@@ -2,10 +2,13 @@ mod bridge;
 mod factory;
 mod gui;
 mod theme;
+mod utils;
 
 pub mod widgets;
 
 pub(crate) mod dev_prelude {
+    pub(crate) use super::utils::*;
+
     pub use super::bridge::*;
     pub use super::prelude::*;
 

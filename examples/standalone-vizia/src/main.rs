@@ -10,7 +10,7 @@ use rift_plugin_gui::{
     Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::knob;
+use rift_plugin_vizia::widgets::{DialExt, param_knob};
 
 const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;
@@ -20,7 +20,7 @@ struct StandaloneParams {
     #[param(name = "Gain", range = linear(0, 2), default = 1.0)]
     gain: FloatParam,
 
-    #[param(name = "Cutoff", range = linear(20, 20000), default = 440.0)]
+    #[param(name = "Cutoff", range = exp(20, 20000, 25), default = 440.0)]
     cutoff: FloatParam,
 }
 
@@ -78,8 +78,8 @@ impl HostWindow {
         let ui_params = params.clone();
         let factory = vizia_gui(WIDTH, HEIGHT, move |cx, _| {
             VStack::new(cx, |cx| {
-                knob(cx, &ui_params.gain);
-                knob(cx, &ui_params.cutoff);
+                param_knob(cx, &ui_params.gain);
+                param_knob(cx, &ui_params.cutoff).centered();
             });
         });
 

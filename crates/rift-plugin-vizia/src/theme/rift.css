@@ -10,3 +10,69 @@
     color: var(--rift-text);
     font-size: 12px;
 }
+
+/*
+--------------
+DIAL
+--------------
+*/
+
+dial {
+    layout-type: column;
+    alignment: top-center;
+    size: auto;
+    gap: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 6px;
+    padding-right: 6px;
+    corner-radius: 10px;
+}
+
+dial .dial-face {
+    size: 64px;
+    alignment: center;
+}
+
+dial.small .dial-face {
+    size: 44px;
+}
+
+dial.large .dial-face {
+    size: 88px;
+}
+
+dial arctrack {
+    size: 1s;
+    background-color: #232838;
+    color: #8b6cff;
+    caret-color: #38d0f5;
+    selection-color: #8b6cff00;
+    outline-color: #4a5372;
+    transition: selection-color 160ms;
+}
+
+dial .dial-tick {
+    width: 3px;
+    height: 9px;
+    corner-radius: 2px;
+    background-color: #c9cfe0;
+    transition: background-color 120ms;
+}
+
+dial:hover .dial-tick,
+dial.dragging .dial-tick {
+    background-color: #ffffff;
+}
+
+dial .dial-label {
+    size: auto;
+    font-size: 11px;
+    color: #8f98b0;
+    transition: color 120ms;
+}
+
+dial:hover .dial-label,
+dial.dragging .dial-label {
+    color: #e9ecf5;
+}
