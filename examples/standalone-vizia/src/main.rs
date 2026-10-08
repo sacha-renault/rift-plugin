@@ -10,9 +10,7 @@ use rift_plugin_gui::{
     Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::{
-    DialModifiers, Panel, SelectorModifiers, param_knob, param_selector,
-};
+use rift_plugin_vizia::widgets::*;
 
 const WIDTH: u32 = 320;
 const HEIGHT: u32 = 240;
@@ -23,12 +21,12 @@ pub enum WaveType {
     Square,
     Saw,
     SS,
-    S123,
-    S1234,
-    S1,
-    S12,
-    S987,
-    S123456,
+    // S123,
+    // S1234,
+    // S1,
+    // S12,
+    // S987,
+    // S123456,
 }
 
 #[derive(Params)]
@@ -100,9 +98,8 @@ impl HostWindow {
                 param_knob(cx, &ui_params.gain);
                 param_knob(cx, &ui_params.cutoff).centered();
 
-                param_selector(cx, &ui_params.wave_type)
-                    .dropdown()
-                    .disable_scroll();
+                // param_selector(cx, &ui_params.wave_type).disable_scroll();
+                param_dropdown(cx, &ui_params.wave_type);
             });
         });
 

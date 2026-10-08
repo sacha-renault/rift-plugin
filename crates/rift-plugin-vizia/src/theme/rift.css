@@ -148,8 +148,7 @@ SELECTOR
 --------------
 */
 
-selector,
-selector popup {
+selector {
     layout-type: row;
     size: auto;
     gap: 2px;
@@ -160,17 +159,10 @@ selector popup {
     border-color: #222838;
 }
 
-selector > dropdown {
-    height: auto;
-}
-
-selector.vertical,
-selector.vertical popup {
+selector.vertical {
     layout-type: column;
 }
 
-selector .dropdown-trigger,
-selector .segment,
 selector .step,
 selector .current {
     size: auto;
@@ -181,8 +173,14 @@ selector .current {
     corner-radius: 7px;
 }
 
-selector .dropdown-trigger,
-selector .segment {
+selector .segment,
+dropdown .segment {
+    size: auto;
+    alignment: center;
+    font-size: 11px;
+    font-weight: 550;
+    color: #8f98b0;
+    corner-radius: 7px;
     padding-top: 6px;
     padding-bottom: 6px;
     padding-left: 12px;
@@ -195,19 +193,19 @@ selector.vertical .segment {
     width: auto; /** TODO, this doesn't really takes all width rn ...*/
 }
 
-selector .dropdown-trigger:hover,
-selector .segment:hover {
+selector .segment:hover,
+dropdown .segment:hover {
     color: #e9ecf5;
     background-color: #1a1f2c;
 }
 
-selector .segment.selected {
+selector .segment.selected,
+dropdown .segment.selected {
     color: #ffffff;
     background-image: linear-gradient(to bottom, #6f55e0, #5640bd);
     shadow: 0px 2px 8px #8b6cff40;
 }
 
-selector .dropdown-trigger .step,
 selector.stepper .step {
     size: 26px;
     alignment: center;
@@ -217,18 +215,15 @@ selector.stepper .step {
     transition: fill 130ms;
 }
 
-selector .dropdown-trigger .step svg,
 selector.stepper .step svg {
     size: 16px;
 }
 
-selector .dropdown-trigger .step:hover svg,
 selector.stepper .step:hover {
     fill: #ffffff;
     background-color: #1f2535;
 }
 
-selector .dropdown-trigger .step:active,
 selector.stepper .step:active {
     background-color: #161a26;
 }
@@ -237,4 +232,62 @@ selector.stepper .current {
     width: 84px;
     height: 26px;
     color: #e9ecf5;
+}
+
+/*
+--------------
+DROPDOWN
+--------------
+*/
+
+dropdown {
+    size: auto;
+}
+
+dropdown .dropdown-trigger {
+    layout-type: row;
+    size: auto;
+    gap: 4px;
+    alignment: center;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-left: 10px;
+    padding-right: 10px;
+    corner-radius: 7px;
+    background-color: #0e1117;
+    border-width: 1px;
+    border-color: #222838;
+    transition: background-color 130ms;
+}
+
+dropdown .dropdown-trigger:hover {
+    background-color: #1a1f2c;
+}
+
+dropdown .dropdown-trigger .icon {
+    size: 16px;
+    alignment: center;
+    fill: #8f98b0;
+}
+
+dropdown .dropdown-trigger.open .icon {
+    transform: rotate(90deg);
+}
+
+dropdown .dropdown-trigger .current {
+    size: auto;
+    font-size: 11px;
+    font-weight: 550;
+    color: #e9ecf5;
+}
+
+dropdown popup {
+    layout-type: column;
+    size: auto;
+    gap: 2px;
+    padding: 2px;
+    corner-radius: 9px;
+    background-color: #0e1117;
+    border-width: 1px;
+    border-color: #222838;
 }
