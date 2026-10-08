@@ -94,6 +94,19 @@ impl HostWindow {
 
         let ui_params = params.clone();
         let factory = vizia_gui(WIDTH, HEIGHT, move |cx, _| {
+            cx.add_stylesheet(
+                r#"
+dropdown .segment {
+    width: 1s;
+}
+
+dropdown popup {
+    min-width: 150px;
+}
+                "#,
+            )
+            .unwrap();
+
             Panel::new(cx, "Test", |cx| {
                 param_knob(cx, &ui_params.gain);
                 param_knob(cx, &ui_params.cutoff).centered();
