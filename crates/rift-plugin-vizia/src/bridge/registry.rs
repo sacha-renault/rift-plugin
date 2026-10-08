@@ -58,3 +58,7 @@ impl ParamRegistry {
         }
     }
 }
+
+pub fn register_param<P: Param>(cx: &mut Context, param: &P) -> Signal<f32> {
+    ParamRegistry::from_context(cx).register(param.as_ptr())
+}

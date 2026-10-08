@@ -1,5 +1,4 @@
 mod bridge;
-mod data;
 mod factory;
 mod gui;
 mod theme;
@@ -7,8 +6,7 @@ mod theme;
 pub mod widgets;
 
 pub(crate) mod dev_prelude {
-    pub use super::data::*;
-    pub use super::data::{NewSignal, ParamData, ParamSignals};
+    pub use super::bridge::*;
     pub use super::prelude::*;
 
     pub use rift_plugin_gui::{GuiContext, GuiParamEvent};
@@ -18,7 +16,9 @@ pub(crate) mod dev_prelude {
 }
 
 pub mod prelude {
+    pub use super::bridge::register_param;
     pub use super::factory::{ViziaFactory, vizia_gui};
+
     pub use rift_plugin_gui::GuiFactory;
     pub use vizia::prelude::*;
 }
