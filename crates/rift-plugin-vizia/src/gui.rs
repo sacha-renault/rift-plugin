@@ -5,7 +5,6 @@ use std::sync::Arc;
 #[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
 use raw_window_handle::{HandleError, HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
 use rift_plugin_gui::*;
-use rift_plugin_params::Param;
 use vizia::{Application, WindowHandle};
 
 use crate::dev_prelude::*;
