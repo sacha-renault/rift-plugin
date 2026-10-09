@@ -1,7 +1,10 @@
+use vizia::vg::Point;
+
 use crate::dev_prelude::*;
 
 /// Total sweep of the arc, in degrees. The gap sits at the bottom.
 const SWEEP: f32 = 270.0;
+const START: f32 = 135.0;
 /// Pixels of vertical travel needed to sweep the whole range.
 const DRAG_RANGE: f32 = 220.0;
 
@@ -10,7 +13,7 @@ pub struct Dial {
     hot: Signal<bool>,
     drag: Option<Drag>,
     value: Signal<f32>,
-    centered: Signal<bool>,
+    origin: Signal<f32>,
     default: f32,
     callbacks: ControlCallbacks,
 }
@@ -100,34 +103,19 @@ impl Dial {
         texts: Option<(Signal<String>, Signal<String>)>,
     ) -> Handle<'_, Self> {
         let hot = Signal::new(false);
-        let centered = Signal::new(false);
+        let origin = Signal::new(0.);
 
         Self {
             hot,
             drag: None,
             value,
             default: value.get_untracked(),
-            centered,
+            origin,
             callbacks: ControlCallbacks::default(),
         }
         .build(cx, |cx| {
             ZStack::new(cx, move |cx| {
-                ArcTrack::new(
-                    cx,
-                    centered.get(),
-                    Percentage(100.0),
-                    Percentage(15.0),
-                    -240.,
-                    60.,
-                    KnobMode::Continuous,
-                )
-                .value(value)
-                .class("dial-track")
-                .bind(centered, |_handle| {
-                    // todo!()
-                    // need to find a way to
-                    // redraw and center the knob ...
-                });
+                DialArc::new(cx, value, origin).class("dial-track");
 
                 Element::new(cx).class("dial-cap").hoverable(false);
                 HStack::new(cx, move |cx| {
@@ -196,7 +184,12 @@ impl Control for Dial {
 pub trait DialModifiers {
     #[concrete]
     fn centered(self) -> Self {
-        self.modify(|dial| dial.centered.set(true))
+        self.with_origin(0.5)
+    }
+
+    #[concrete]
+    fn with_origin(self, value: f32) -> Self {
+        self.modify(|dial| dial.origin.set(value))
     }
 
     #[concrete]
@@ -207,5 +200,98 @@ pub trait DialModifiers {
     #[concrete]
     fn large(self) -> Self {
         self.toggle_class("small", false).class("large")
+    }
+}
+
+/// Draws the arcs of a [`Dial`]: the track, the value and the glow.
+struct DialArc {
+    value: Signal<f32>,
+    origin: Signal<f32>,
+}
+
+impl DialArc {
+    fn new(cx: &mut Context, value: Signal<f32>, origin: Signal<f32>) -> Handle<'_, Self> {
+        Self { value, origin }
+            .build(cx, |_| {})
+            .bind(value, |mut handle| handle.needs_redraw())
+            .bind(origin, |mut handle| handle.needs_redraw())
+            .hoverable(false)
+    }
+}
+
+impl View for DialArc {
+    fn element(&self) -> Option<&'static str> {
+        Some("dial-arc")
+    }
+
+    fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
+        let bounds = cx.bounds();
+        if bounds.w < 1.0 || bounds.h < 1.0 {
+            return;
+        }
+
+        let slots = Slots::read(cx);
+        let size = bounds.w.min(bounds.h);
+        let center = Point::new(bounds.x + bounds.w / 2.0, bounds.y + bounds.h / 2.0);
+
+        let stroke = size * 0.0625;
+        let radius = size / 2.0 - size * 0.125;
+        let oval = square(center, radius);
+
+        // The empty track.
+        let mut track = stroke_paint(stroke);
+        track.set_color(slots.track);
+        canvas.draw_arc(oval, START, SWEEP, false, &track);
+
+        // A tick marks the origin when it isn't the start of the arc.
+        let origin = self.origin.get_untracked().clamp(0.0, 1.0);
+        if origin > 0.001 {
+            let angle = (START + SWEEP * origin).to_radians();
+            let (sin, cos) = angle.sin_cos();
+            let (inner, outer) = (radius - stroke * 0.9, radius + stroke * 0.9);
+            let mut tick = stroke_paint((stroke * 0.3).max(1.0));
+            tick.set_color(slots.marker);
+            canvas.draw_line(
+                Point::new(center.x + cos * inner, center.y + sin * inner),
+                Point::new(center.x + cos * outer, center.y + sin * outer),
+                &tick,
+            );
+        }
+
+        // The filled part.
+        let value = self.value.get_untracked().clamp(0.0, 1.0);
+        let from = START + SWEEP * origin;
+        let sweep = SWEEP * (value - origin);
+
+        if sweep.abs() < 0.5 {
+            return;
+        }
+
+        // A sweep gradient anchored on the whole arc keeps colors stable as the
+        // value moves.
+        let shader = sweep_gradient(center, START, SWEEP, slots.accent, slots.accent_end);
+
+        if slots.glow.a() > 0 {
+            let glow = blurred(
+                {
+                    let mut paint = stroke_paint(stroke * 1.8);
+                    paint.set_color(slots.glow);
+                    paint
+                },
+                stroke * 0.9,
+            );
+            canvas.draw_arc(oval, from, sweep, false, &glow);
+        }
+
+        let mut active = stroke_paint(stroke);
+        match shader {
+            Some(shader) => {
+                active.set_shader(shader);
+            }
+            None => {
+                active.set_color(slots.accent);
+            }
+        }
+        canvas.draw_arc(oval, from, sweep, false, &active);
     }
 }

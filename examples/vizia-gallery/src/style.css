@@ -1,0 +1,102 @@
+/*
+--------------
+Gallery layout
+--------------
+*/
+
+.gallery {
+    background-color: var(--rift-bg);
+}
+
+.gallery-bar {
+    height: auto;
+    gap: 10px;
+    alignment: center;
+}
+
+.gallery-title {
+    font-size: 15px;
+    font-weight: 650;
+    color: var(--rift-text);
+}
+
+.gallery-hint {
+    font-size: 11px;
+    color: var(--rift-text-muted);
+}
+
+/* Let the cards fill the height of their row. */
+.gallery panel {
+    height: 1s;
+}
+
+/* Buttons hug their content instead of stretching. */
+.gallery button {
+    width: auto;
+}
+
+/*
+--------------
+Widget tweaks
+--------------
+*/
+
+dropdown .segment {
+    width: 1s;
+}
+
+dropdown popup {
+    min-width: 150px;
+}
+
+toggle.status-light .toggle-track {
+    border-width: 0px;
+    border-color: transparent;
+    background-color: transparent;
+}
+
+/*
+Alternate themes
+*/
+
+.gallery-light {
+    --rift-bg: #eef1f7;
+    --rift-well: #ffffff;
+    --rift-surface: #e6eaf3;
+    --rift-surface-hover: #dce1ee;
+    --rift-surface-active: #ccd3e3;
+    --rift-track: #d9dde9;
+    --rift-border: #ccd2e0;
+    --rift-border-strong: #aab3ca;
+    --rift-border-soft: #e2e6f0;
+    --rift-text: #1b2030;
+    --rift-text-muted: #5a6377;
+    --rift-text-faint: #8b92a6;
+    --rift-shadow: 0px 8px 20px #1b20301f;
+    --rift-shadow-inset: 0px 2px 5px #1b20301a inset;
+}
+
+.gallery-ocean {
+    --rift-bg: #06121a;
+    --rift-well: #0a1a26;
+    --rift-surface: #122636;
+    --rift-surface-hover: #1a3244;
+    --rift-surface-active: #0d1f2c;
+    --rift-track: #16303f;
+    --rift-border: #1d3a4c;
+    --rift-border-strong: #2f5b74;
+    --rift-border-soft: #12303f;
+    --rift-text: #e3f1fb;
+    --rift-text-muted: #8fb0c4;
+    --rift-text-faint: #5f8296;
+    --rift-accent: #38b6f5;
+    --rift-accent-hover: #56c6ff;
+    --rift-accent-active: #2a9fd6;
+    --rift-accent-soft: #8fd8ff;
+    --rift-glow: #38b6f550;
+    --rift-glow-strong: #38b6f580;
+}
+
+panel.knob-panel .panel-body {
+    gap: 1s;
+}

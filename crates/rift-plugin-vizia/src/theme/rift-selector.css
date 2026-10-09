@@ -13,9 +13,9 @@ selector {
     gap: 2px;
     padding: 2px;
     corner-radius: 9px;
-    background-color: #0e1117;
+    background-color: var(--rift-well);
     border-width: 1px;
-    border-color: #222838;
+    border-color: var(--rift-border-soft);
 }
 
 selector.vertical {
@@ -28,7 +28,7 @@ selector .current {
     alignment: center;
     font-size: 11px;
     font-weight: 550;
-    color: #8f98b0;
+    color: var(--rift-text-muted);
     corner-radius: 7px;
 }
 
@@ -38,7 +38,7 @@ dropdown .segment {
     alignment: center;
     font-size: 11px;
     font-weight: 550;
-    color: #8f98b0;
+    color: var(--rift-text-muted);
     corner-radius: 7px;
     padding-top: 6px;
     padding-bottom: 6px;
@@ -54,22 +54,22 @@ selector.vertical .segment {
 
 selector .segment:hover,
 dropdown .segment:hover {
-    color: #e9ecf5;
-    background-color: #1a1f2c;
+    color: var(--rift-text);
+    background-color: var(--rift-surface);
 }
 
 selector .segment.selected,
 dropdown .segment.selected {
-    color: #ffffff;
-    background-image: linear-gradient(to bottom, #6f55e0, #5640bd);
-    shadow: 0px 2px 8px #8b6cff40;
+    color: var(--rift-text);
+    background-color: var(--rift-accent);
+    shadow: var(--rift-shadow-accent);
 }
 
 selector.stepper .step {
     size: 26px;
     alignment: center;
     corner-radius: 7px;
-    fill: #8f98b0;
+    fill: var(--rift-text-muted);
     transition: background-color 130ms;
     transition: fill 130ms;
 }
@@ -79,18 +79,18 @@ selector.stepper .step svg {
 }
 
 selector.stepper .step:hover {
-    fill: #ffffff;
-    background-color: #1f2535;
+    fill: var(--rift-text);
+    background-color: var(--rift-surface);
 }
 
 selector.stepper .step:active {
-    background-color: #161a26;
+    background-color: var(--rift-surface-active);
 }
 
 selector.stepper .current {
     width: 84px;
     height: 26px;
-    color: #e9ecf5;
+    color: var(--rift-text);
 }
 
 /*
@@ -113,20 +113,20 @@ dropdown .dropdown-trigger {
     padding-left: 10px;
     padding-right: 10px;
     corner-radius: 7px;
-    background-color: #0e1117;
+    background-color: var(--rift-well);
     border-width: 1px;
-    border-color: #222838;
+    border-color: var(--rift-border-soft);
     transition: background-color 130ms;
 }
 
 dropdown .dropdown-trigger:hover {
-    background-color: #1a1f2c;
+    background-color: var(--rift-surface);
 }
 
 dropdown .dropdown-trigger .icon {
     size: 16px;
     alignment: center;
-    fill: #8f98b0;
+    fill: var(--rift-text-muted);
 }
 
 dropdown .dropdown-trigger.open .icon {
@@ -137,7 +137,7 @@ dropdown .dropdown-trigger .current {
     size: auto;
     font-size: 11px;
     font-weight: 550;
-    color: #e9ecf5;
+    color: var(--rift-text);
 }
 
 dropdown popup {
@@ -146,7 +146,7 @@ dropdown popup {
     gap: 2px;
     padding: 2px;
     corner-radius: 9px;
-    background-color: #0e1117;
+    background-color: var(--rift-well);
     border-width: 1px;
-    border-color: #222838;
+    border-color: var(--rift-border-soft);
 }
