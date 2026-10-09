@@ -1,5 +1,6 @@
 use crate::dev_prelude::*;
 
+mod button;
 mod dial;
 mod dropdown;
 mod panel;
@@ -8,6 +9,7 @@ mod toggle;
 
 use rift_plugin_params::{EnumParam, EnumValues};
 
+pub use button::{ButtonExt, ButtonModifiers2};
 pub use dial::{Dial, DialModifiers};
 pub use dropdown::{Dropdown, DropdownModifiers};
 pub use panel::Panel;

@@ -14,7 +14,7 @@ use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::*;
 
 const WIDTH: u32 = 320;
-const HEIGHT: u32 = 240;
+const HEIGHT: u32 = 320;
 
 #[derive(Default, DeriveEnumValues)]
 pub enum WaveType {
@@ -105,12 +105,18 @@ impl HostWindow {
                         param_toggle(cx, &ui_params.cutoff);
                         param_toggle(cx, &ui_params.cutoff).status_light();
                     });
+
+                    Panel::new(cx, "Buttons", |cx| {
+                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
+                            .reversed();
+                        Button::label(cx, "No Icon".to_string()).on_press(|_| println!("PRESSED"));
+                    });
                 })
                 .width(Units::Stretch(8.));
 
                 HStack::new(cx, |cx| {
                     Meter::new(cx, Signal::new(0.8));
-                    Meter::new(cx, Signal::new(0.9));
+                    Meter::new(cx, Signal::new(1.2));
                 })
                 .height(Units::Stretch(1.))
                 .width(Units::Stretch(2.))

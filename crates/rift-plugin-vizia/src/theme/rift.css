@@ -13,6 +13,65 @@
 
 /*
 --------------
+Buttons
+--------------
+*/
+
+button {
+    layout-type: row;
+    gap: 6px;
+    height: 28px;
+    padding-left: 14px;
+    padding-right: 14px;
+    font-size: 11px;
+    font-weight: 550;
+    corner-radius: 8px;
+    background-color: #1c2130;
+    color: #dde1ee;
+    border-width: 1px;
+    border-color: #2c3347;
+    transition: background-color 120ms;
+    transition: border-color 120ms;
+}
+
+button.reversed {
+    direction: rtl;
+}
+
+button .icon {
+    size: 16px;
+    alignment: center;
+}
+
+button .icon svg {
+    size: 16px;
+}
+
+button:hover {
+    background-color: #262c3f;
+    border-color: #3d4660;
+}
+
+button:active {
+    background-color: #161a26;
+}
+
+button.accent {
+    background-image: linear-gradient(to right, #8b6cff, #5f8cff);
+    border-color: #a08aff;
+    color: #ffffff;
+}
+
+button.accent:hover {
+    background-image: linear-gradient(to right, #9a7dff, #6f9aff);
+}
+
+button.accent:active {
+    background-image: linear-gradient(to right, #7b5cf0, #4f7cf0);
+}
+
+/*
+--------------
 DIAL
 --------------
 */
