@@ -22,12 +22,12 @@ pub fn param_selector<'a, E: EnumValues>(
 pub fn param_dropdown<'a, E: EnumValues>(
     cx: &'a mut Context,
     param: &EnumParam<E>,
-) -> Handle<'a, Dropdown> {
+) -> Handle<'a, PopupSelector> {
     let binding = ParamBinding::new(cx, param);
     let options = (0..E::count())
         .filter_map(E::from_index)
         .map(|variant| variant.to_string());
-    let dropdown = Dropdown::new(cx, options, binding.normalized());
+    let dropdown = PopupSelector::new(cx, options, binding.normalized());
     binding.connect(dropdown)
 }
 

@@ -11,7 +11,7 @@ mod toggle;
 
 pub use button::{ButtonExt, ButtonModifiers2};
 pub use dial::{Dial, DialModifiers};
-pub use dropdown::{Dropdown, DropdownModifiers};
+pub use dropdown::{DropdownModifiers, PopupSelector};
 pub use fader::{Fader, FaderModifers};
 pub use panel::Panel;
 pub use params::*;
