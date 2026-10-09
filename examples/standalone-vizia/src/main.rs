@@ -102,8 +102,8 @@ impl HostWindow {
                     .width(Units::Stretch(1.));
 
                     Panel::new(cx, "Test", |cx| {
-                        param_knob(cx, &ui_params.gain);
-                        param_knob(cx, &ui_params.cutoff).centered();
+                        param_knob(cx, &ui_params.gain).centered();
+                        param_knob(cx, &ui_params.cutoff);
                         // param_selector(cx, &ui_params.wave_type).disable_scroll();
                         param_dropdown(cx, &ui_params.wave_type);
                     });
