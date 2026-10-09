@@ -1,0 +1,19 @@
+/*
+--------------
+Meter
+--------------
+*/
+
+meter {
+    width: 8px;
+    height: 96px;
+    background-color: #1a1e2b;
+    color: #3ddc97;
+    selection-color: #ffc857;
+    caret-color: #ff5d73;
+}
+
+meter.wide {
+    width: 140px;
+    height: 8px;
+}

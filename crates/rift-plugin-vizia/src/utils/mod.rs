@@ -1,5 +1,9 @@
+mod paint;
+
+pub(crate) use paint::*;
+
 #[derive(Clone, Copy)]
-pub(crate) struct Drag {
+pub struct Drag {
     /// Vertical position of the cursor at the previous event (physical px).
     pub last_y: f32,
     /// Value being edited. Kept apart from the signal so that the value is not
@@ -8,12 +12,12 @@ pub(crate) struct Drag {
 }
 
 /// The index of the option a normalized value stands for.
-pub(crate) fn index_of(value: f32, count: usize) -> usize {
+pub fn index_of(value: f32, count: usize) -> usize {
     ((value.clamp(0.0, 1.0) * (count - 1) as f32).round() as usize).min(count - 1)
 }
 
 /// The normalized value of the option at `index`.
-pub(crate) fn value_of(index: usize, count: usize) -> f32 {
+pub fn value_of(index: usize, count: usize) -> f32 {
     if count <= 1 {
         0.0
     } else {

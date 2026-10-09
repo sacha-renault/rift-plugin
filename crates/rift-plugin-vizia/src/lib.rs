@@ -4,6 +4,7 @@ mod gui;
 mod theme;
 mod utils;
 
+pub mod analysers;
 pub mod widgets;
 
 pub(crate) mod dev_prelude {
@@ -24,5 +25,6 @@ pub mod prelude {
 
     pub use rift_plugin_derive::modifiers;
     pub use rift_plugin_gui::GuiFactory;
+    pub use vizia::icons;
     pub use vizia::prelude::*;
 }

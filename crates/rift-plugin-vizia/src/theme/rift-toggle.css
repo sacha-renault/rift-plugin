@@ -1,0 +1,127 @@
+/*
+--------------
+Toggle
+--------------
+*/
+
+toggle {
+    layout-type: row;
+    size: auto;
+    alignment: left;
+    gap: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    padding-left: 6px;
+    padding-right: 6px;
+    corner-radius: 8px;
+}
+
+toggle .toggle-track {
+    width: 36px;
+    height: 20px;
+    corner-radius: 10px;
+    background-color: #1c2130;
+    border-width: 1px;
+    border-color: #343b50;
+    transition: background-color 150ms;
+    transition: border-color 150ms;
+    transition: shadow 150ms;
+}
+
+toggle .toggle-thumb {
+    position-type: absolute;
+    left: 3px;
+    top: 1s;
+    bottom: 1s;
+    size: 12px;
+    corner-radius: 50%;
+    background-color: #8f98b0;
+    transition: left 150ms;
+    transition: background-color 150ms;
+}
+
+toggle:hover .toggle-track {
+    border-color: #4a5370;
+}
+
+toggle:checked .toggle-track {
+    background-image: linear-gradient(to right, #8b6cff, #38b6f5);
+    border-color: #a58fff;
+    shadow: 0px 0px 10px #8b6cff66;
+}
+
+toggle:checked .toggle-thumb {
+    left: 19px;
+    background-color: #ffffff;
+    transition: left 150ms;
+}
+
+toggle .toggle-label {
+    size: auto;
+    font-size: 11px;
+    color: #8f98b0;
+    transition: color 120ms;
+}
+
+toggle:hover .toggle-label,
+toggle:checked .toggle-label {
+    color: #e9ecf5;
+}
+
+/*
+--------------
+Light (toggle.status-light)
+--------------
+*/
+
+/* A toggle variant that reads as an indicator lamp instead of a slider: a
+   round bezel with a bulb that lights up. Enabled with
+   `ToggleModifiers::status-light()`. */
+toggle.status-light {
+    gap: 8px;
+}
+
+toggle.status-light .toggle-track {
+    width: 22px;
+    height: 22px;
+    corner-radius: 50%;
+    alignment: center;
+    background-color: #0d1017;
+    background-image: none;
+    border-width: 1px;
+    border-color: #2b3145;
+    shadow: 0px 2px 5px #000000a8 inset;
+    transition: border-color 150ms;
+}
+
+toggle.status-light:hover .toggle-track {
+    border-color: #3d455e;
+}
+
+toggle.status-light .toggle-thumb {
+    position-type: relative;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    size: 12px;
+    corner-radius: 50%;
+    background-color: #333a4f;
+    background-image: none;
+    shadow: 0px 0px 0px #8b6cff00;
+    transition: background-color 150ms;
+    transition: shadow 150ms;
+}
+
+toggle.status-light:checked .toggle-track {
+    background-color: #0d1017;
+    background-image: none;
+    border-color: #4a5370;
+    shadow: 0px 2px 5px #000000a8 inset;
+}
+
+toggle.status-light:checked .toggle-thumb {
+    left: 0;
+    background-color: #b9a6ff;
+    background-image: linear-gradient(to bottom, #d6ccff, #8b6cff);
+    shadow: 0px 0px 6px #8b6cffcc, 0px 0px 16px #8b6cff80;
+}
