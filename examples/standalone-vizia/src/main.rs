@@ -9,24 +9,19 @@ use rift_plugin_gui::{
     ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiTasks,
     Window as ClapWindow,
 };
+use rift_plugin_vizia::analysers::*;
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::*;
 
 const WIDTH: u32 = 320;
-const HEIGHT: u32 = 240;
+const HEIGHT: u32 = 320;
 
 #[derive(Default, DeriveEnumValues)]
 pub enum WaveType {
     #[default]
     Square,
     Saw,
-    SS,
-    // S123,
-    // S1234,
-    // S1,
-    // S12,
-    // S987,
-    // S123456,
+    Sine,
 }
 
 #[derive(Params)]
@@ -94,12 +89,41 @@ impl HostWindow {
 
         let ui_params = params.clone();
         let factory = vizia_gui(WIDTH, HEIGHT, move |cx, _| {
-            Panel::new(cx, "Test", |cx| {
-                param_knob(cx, &ui_params.gain);
-                param_knob(cx, &ui_params.cutoff).centered();
+            cx.add_stylesheet(include_str!("style.css"))
+                .expect("Failed to add");
 
-                // param_selector(cx, &ui_params.wave_type).disable_scroll();
-                param_dropdown(cx, &ui_params.wave_type);
+            HStack::new(cx, |cx| {
+                VStack::new(cx, |cx| {
+                    Panel::new(cx, "Test", |cx| {
+                        param_knob(cx, &ui_params.gain);
+                        param_knob(cx, &ui_params.cutoff).centered();
+                        // param_selector(cx, &ui_params.wave_type).disable_scroll();
+                        param_dropdown(cx, &ui_params.wave_type);
+                    });
+
+                    Panel::new(cx, "More tests", |cx| {
+                        param_toggle(cx, &ui_params.cutoff);
+                        param_toggle(cx, &ui_params.cutoff).status_light();
+                    });
+
+                    Panel::new(cx, "Buttons", |cx| {
+                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
+                            .large();
+                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string());
+                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
+                            .small();
+                        Button::label(cx, "No Icon".to_string());
+                    });
+                })
+                .width(Units::Stretch(8.));
+
+                HStack::new(cx, |cx| {
+                    Meter::new(cx, Signal::new(0.8));
+                    Meter::new(cx, Signal::new(1.2));
+                })
+                .height(Units::Stretch(1.))
+                .width(Units::Stretch(2.))
+                .alignment(Alignment::Center);
             });
         });
 
