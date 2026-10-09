@@ -10,6 +10,7 @@ fader {
 
 fader.horizontal {
     layout-type: row;
+    alignment: center;
     width: 1s;
     height: auto;
 }

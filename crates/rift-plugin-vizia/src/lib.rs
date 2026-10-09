@@ -20,7 +20,7 @@ pub(crate) mod dev_prelude {
 }
 
 pub mod prelude {
-    pub use super::bridge::register_param;
+    pub use super::bridge::{Control, ControlExt, ParamBinding, register_param};
     pub use super::factory::{ViziaFactory, vizia_gui};
 
     pub use rift_plugin_derive::modifiers;
