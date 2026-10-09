@@ -108,7 +108,10 @@ impl HostWindow {
 
                     Panel::new(cx, "Buttons", |cx| {
                         Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
-                            .reversed();
+                            .large();
+                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string());
+                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
+                            .small();
                         Button::label(cx, "No Icon".to_string()).on_press(|_| println!("PRESSED"));
                     });
                 })
