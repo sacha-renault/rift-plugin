@@ -65,14 +65,7 @@ impl Fader {
                 .hoverable(false);
             }
 
-            FaderTrack::new(
-                cx,
-                value,
-                thumb_scaling,
-                line_scaling,
-                vertical,
-                cx.current(),
-            );
+            FaderTrack::new(cx, value, thumb_scaling, line_scaling, vertical);
         })
         .role(Role::Slider)
         .numeric_value(value.map(|v| (*v as f64 * 100.0).round()))
@@ -229,7 +222,6 @@ struct FaderTrack {
     thumb_scaling: Signal<f32>,
     line_scaling: Signal<f32>,
     vertical: Signal<bool>,
-    fader: Entity,
 }
 
 impl FaderTrack {
@@ -239,14 +231,12 @@ impl FaderTrack {
         thumb_scaling: Signal<f32>,
         line_scaling: Signal<f32>,
         vertical: Signal<bool>,
-        fader: Entity,
     ) -> Handle<'_, Self> {
         Self {
             value,
             thumb_scaling,
             line_scaling,
             vertical,
-            fader,
         }
         .build(cx, |_| {})
         .class("track")
