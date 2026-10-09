@@ -1,8 +1,42 @@
 :root,
 .dark {
-    --rift-bg: #0b0d12;
-
+    /* Text */
     --rift-text: #e9ecf5;
+    --rift-text-muted: #8f98b0;
+    --rift-text-faint: #646d86;
+
+    /* Surfaces */
+    --rift-bg: #0b0d12;
+    --rift-well: #0e1117;
+    --rift-surface: #1c2130;
+    --rift-surface-hover: #262c3f;
+    --rift-surface-active: #161a26;
+    --rift-track: #232838;
+
+    /* Borders */
+    --rift-border: #2c3347;
+    --rift-border-strong: #4a5370;
+    --rift-border-soft: #222838;
+
+    /* Accent */
+    --rift-accent: #8b6cff;
+    --rift-accent-hover: #9a7dff;
+    --rift-accent-active: #7b5cf0;
+    --rift-accent-soft: #b9a6ff;
+    --rift-glow: #8b6cff50;
+    --rift-glow-strong: #8b6cff80;
+
+    /* Meter */
+    --rift-ok: #3ddc97;
+    --rift-warn: #ffc857;
+    --rift-clip: #ff5d73;
+
+    /* Shadows */
+    --rift-shadow: 0px 8px 20px #00000070;
+    --rift-shadow-inset: 0px 2px 5px #000000a8 inset;
+    --rift-shadow-accent: 0px 0px 10px #8b6cff66;
+    --rift-shadow-glow: 0px 0px 6px #8b6cffcc, 0px 0px 16px #8b6cff80;
+    --rift-shadow-off: 0px 0px 0px #8b6cff00;
 }
 
 :root {
