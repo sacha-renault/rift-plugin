@@ -8,7 +8,6 @@ dropdown popup {
 
 toggle.status-light .toggle-track {
     border-width: 0px;
-    shadow: none;
     border-color: transparent;
     background-color: transparent;
 }

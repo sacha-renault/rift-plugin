@@ -17,19 +17,21 @@ fader.horizontal {
 fader .fader-header {
     layout-type: column;
     alignment: top-center;
-    size: auto;
+    height: auto;
+    width: 1s;
 }
 
 fader.horizontal .fader-header {
     layout-type: row;
     alignment: left;
     gap: 4px;
+    width: auto;
 }
 
 fader .fader-label {
     height: auto;
     font-size: 11px;
-    color: #8f98b0;
+    color: var(--rift-text-muted);
     transition: color 120ms;
 }
 
@@ -40,34 +42,34 @@ fader.horizontal .fader-label {
 fader .fader-readout {
     size: auto;
     font-size: 11px;
-    color: #646d86;
+    color: var(--rift-text-faint);
     transition: color 120ms;
 }
 
 fader:hover .fader-label,
 fader.dragging .fader-label {
-    color: #e9ecf5;
+    color: var(--rift-text);
 }
 
 fader:hover .fader-readout,
 fader.dragging .fader-readout {
-    color: #b9a8ff;
+    color: var(--rift-accent-soft);
 }
 
 fader-track {
-    background-color: #232838;
-    color: #8b6cff;
-    caret-color: #38d0f5;
-    selection-color: #8b6cff00;
-    border-color: #e4e8f4;
-    outline-color: #4a5372;
+    background-color: var(--rift-track);
+    color: var(--rift-accent);
+    caret-color: var(--rift-accent);
+    selection-color: transparent;
+    border-color: var(--rift-border);
+    outline-color: var(--rift-border-strong);
     transition: selection-color 160ms;
 }
 
 fader:hover fader-track {
-    selection-color: #8b6cff50;
+    selection-color: var(--rift-glow);
 }
 
 fader.dragging fader-track {
-    selection-color: #8b6cff80;
+    selection-color: var(--rift-glow-strong);
 }

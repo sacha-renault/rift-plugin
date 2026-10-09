@@ -7,10 +7,10 @@ Meter
 meter {
     width: 8px;
     height: 96px;
-    background-color: #1a1e2b;
-    color: #3ddc97;
-    selection-color: #ffc857;
-    caret-color: #ff5d73;
+    background-color: var(--rift-track);
+    color: var(--rift-ok);
+    selection-color: var(--rift-warn);
+    caret-color: var(--rift-clip);
 }
 
 meter.wide {
