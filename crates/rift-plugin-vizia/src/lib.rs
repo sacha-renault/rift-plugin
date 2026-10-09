@@ -4,6 +4,7 @@ mod gui;
 mod theme;
 mod utils;
 
+pub mod analysers;
 pub mod widgets;
 
 pub(crate) mod dev_prelude {
