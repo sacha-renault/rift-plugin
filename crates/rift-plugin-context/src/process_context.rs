@@ -12,18 +12,19 @@ use rift_plugin_types::transport::{BlockIndex, BlockInfo};
 use crate::PluginSharedState;
 use rift_plugin_types::MidiMessage;
 
+#[derive(bon::Builder)]
 pub struct ProcessContext<'a, 'e> {
-    pub host: &'a HostAudioProcessorHandle<'a>,
-    pub states: Arc<PluginSharedState>,
-    pub process: Process<'a>,
-    pub samplerate: f64,
-    pub block_index: BlockIndex,
+    host: &'a HostAudioProcessorHandle<'a>,
+    states: Arc<PluginSharedState>,
+    process: Process<'a>,
+    samplerate: f64,
+    block_index: BlockIndex,
 
     /// Count of pending events to be drained. MUST be initialized to 0; dropping with >0
     /// triggers a callback request to the host via the destructor.
-    pub num_events: usize,
-    pub outputs_events: &'e mut OutputEvents<'e>,
-    pub host_params: Arc<ParamsWrapper>,
+    num_events: usize,
+    outputs_events: &'e mut OutputEvents<'e>,
+    host_params: Arc<ParamsWrapper>,
 }
 
 impl<'a, 'e> ProcessContext<'a, 'e> {

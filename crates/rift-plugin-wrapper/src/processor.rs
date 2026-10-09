@@ -195,16 +195,16 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                     .set_is_playing(flags.contains(TransportFlags::IS_PLAYING));
             }
 
-            let context = ProcessContext {
-                host: &self.host,
-                states: self.shared.states.clone(),
-                process,
-                samplerate: self.samplerate,
-                num_events: 0,
-                outputs_events: events.output,
-                block_index: self.block_index.increment(),
-                host_params: self.shared.host_params.clone(),
-            };
+            let context = ProcessContext::builder()
+                .host(&self.host)
+                .states(self.shared.states.clone())
+                .process(process)
+                .samplerate(self.samplerate)
+                .num_events(0)
+                .outputs_events(events.output)
+                .block_index(self.block_index.increment())
+                .host_params(self.shared.host_params.clone())
+                .build();
 
             self.plugin.process(
                 buffers,
