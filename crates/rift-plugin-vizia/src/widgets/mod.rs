@@ -12,7 +12,7 @@ pub use dial::{Dial, DialModifiers};
 pub use dropdown::{Dropdown, DropdownModifiers};
 pub use panel::Panel;
 pub use selector::{Selector, SelectorModifiers};
-pub use toggle::Toggle;
+pub use toggle::{Toggle, ToggleModifers};
 
 pub fn param_knob<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Dial> {
     let binding = ParamBinding::new(cx, param);

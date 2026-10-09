@@ -104,3 +104,15 @@ impl View for Toggle {
         });
     }
 }
+
+#[modifiers(for Handle<'_, Toggle>)]
+pub trait ToggleModifers {
+    #[concrete]
+    /// Change the toggle style into a
+    /// kind of bulb that turns on light
+    /// when value is true. Default style is
+    /// a toggle that goes left right.
+    fn status_light(self) -> Self {
+        self.class("status-light")
+    }
+}

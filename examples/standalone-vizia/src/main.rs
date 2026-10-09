@@ -101,6 +101,7 @@ impl HostWindow {
 
                 Panel::new(cx, "More tests", |cx| {
                     param_toggle(cx, &ui_params.cutoff);
+                    param_toggle(cx, &ui_params.cutoff).status_light();
                 });
             });
         });
