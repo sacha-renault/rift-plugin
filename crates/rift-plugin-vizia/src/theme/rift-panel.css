@@ -6,7 +6,8 @@ Panel
 
 panel {
     layout-type: column;
-    size: auto;
+    width: 1s;
+    height: auto;
     gap: 8px;
     padding-top: 12px;
     padding-bottom: 12px;
@@ -28,7 +29,8 @@ panel .panel-title {
 }
 
 panel .panel-body {
-    size: auto;
+    width: 1s;
+    height: auto;
     gap: 4px;
     alignment: top-left;
 }

@@ -37,3 +37,9 @@ pub fn param_toggle<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, 
     let toggle = Toggle::labeled(cx, binding.name(), binding.normalized());
     binding.connect(toggle)
 }
+
+pub fn param_slider<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, Fader> {
+    let binding = ParamBinding::new(cx, param);
+    let slider = Fader::labeled(cx, binding.name(), binding.text(), binding.normalized());
+    binding.connect(slider)
+}
