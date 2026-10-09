@@ -9,11 +9,10 @@ use rift_plugin_gui::{
     ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiTasks,
     Window as ClapWindow,
 };
-use rift_plugin_vizia::analysers::*;
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::*;
 
-const WIDTH: u32 = 320;
+const WIDTH: u32 = 480;
 const HEIGHT: u32 = 320;
 
 #[derive(Default, DeriveEnumValues)]
@@ -92,8 +91,16 @@ impl HostWindow {
             cx.add_stylesheet(include_str!("style.css"))
                 .expect("Failed to add");
 
+            cx.add_stylesheet("fader { background_color: red ;}")
+                .expect("Failed to load");
+
             HStack::new(cx, |cx| {
                 VStack::new(cx, |cx| {
+                    Panel::new(cx, "HSlider", |cx| {
+                        param_slider(cx, &ui_params.cutoff).horizontal();
+                    })
+                    .width(Units::Stretch(1.));
+
                     Panel::new(cx, "Test", |cx| {
                         param_knob(cx, &ui_params.gain);
                         param_knob(cx, &ui_params.cutoff).centered();
@@ -106,25 +113,32 @@ impl HostWindow {
                         param_toggle(cx, &ui_params.cutoff).status_light();
                     });
 
-                    Panel::new(cx, "Buttons", |cx| {
-                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
-                            .large();
-                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string());
-                        Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
-                            .small();
-                        Button::label(cx, "No Icon".to_string());
-                    });
+                    // Panel::new(cx, "Buttons", |cx| {
+                    //     Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
+                    //         .large();
+                    //     Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string());
+                    //     Button::icon(cx, "Text".to_string(), icons::ICON_SHARE_OFF.to_string())
+                    //         .small();
+                    //     Button::label(cx, "No Icon".to_string());
+                    // });
                 })
                 .width(Units::Stretch(8.));
+                // .width(Units::Stretch(0.1));
 
                 HStack::new(cx, |cx| {
-                    Meter::new(cx, Signal::new(0.8));
-                    Meter::new(cx, Signal::new(1.2));
+                    param_slider(cx, &ui_params.cutoff)
+                        .thumb_scaling(1.)
+                        .line_scaling(3.);
+                    // Meter::new(cx, Signal::new(0.8));
+                    // Meter::new(cx, Signal::new(1.2));
                 })
                 .height(Units::Stretch(1.))
                 .width(Units::Stretch(2.))
                 .alignment(Alignment::Center);
-            });
+            })
+            .width(Units::Stretch(1.))
+            .height(Units::Stretch(1.))
+            .padding(Units::Pixels(10.));
         });
 
         let mut gui = factory.build(context);

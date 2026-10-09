@@ -1,6 +1,8 @@
-use vizia::vg::{Paint, PaintStyle};
-
-use crate::dev_prelude::*;
+use vizia::prelude::{Color, DrawContext};
+use vizia::vg::{
+    self, BlurStyle, Color4f, MaskFilter, Paint, PaintCap, PaintStyle, Point, Shader, TileMode,
+    gradient_shader::{Gradient, GradientColors, Interpolation},
+};
 
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Slots {
@@ -8,6 +10,7 @@ pub(crate) struct Slots {
     pub accent: Color,
     pub accent_end: Color,
     pub glow: Color,
+    pub rim: Color,
 }
 
 impl Slots {
@@ -29,6 +32,7 @@ impl Slots {
                 accent_end
             },
             glow: cx.selection_color(),
+            rim: cx.border_color(),
         }
     }
 }
@@ -52,4 +56,36 @@ pub(crate) fn fill_paint(color: Color) -> Paint {
     paint.set_style(PaintStyle::Fill);
     paint.set_color(color);
     paint
+}
+
+/// A linear gradient between two points.
+pub(crate) fn linear(a: Point, b: Point, from: Color, to: Color) -> Option<Shader> {
+    let colors = [to_4f(from), to_4f(to)];
+    vg::shaders::linear_gradient((a, b), &gradient(&colors, None), None)
+}
+
+/// A paint for anti-aliased strokes with round caps.
+pub(crate) fn stroke_paint(width: f32) -> Paint {
+    let mut paint = Paint::default();
+    paint.set_anti_alias(true);
+    paint.set_style(PaintStyle::Stroke);
+    paint.set_stroke_width(width);
+    paint.set_stroke_cap(PaintCap::Round);
+    paint
+}
+
+pub(crate) fn blurred(mut paint: Paint, sigma: f32) -> Paint {
+    paint.set_mask_filter(MaskFilter::blur(BlurStyle::Normal, sigma, false));
+    paint
+}
+
+fn gradient<'a>(colors: &'a [Color4f], positions: Option<&'a [f32]>) -> Gradient<'a> {
+    Gradient::new(
+        GradientColors::new(colors, positions, TileMode::Clamp, None),
+        Interpolation::default(),
+    )
+}
+
+fn to_4f(color: Color) -> Color4f {
+    Color4f::from(vg::Color::from(color))
 }
