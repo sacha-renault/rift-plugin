@@ -9,6 +9,7 @@ use rift_plugin_gui::{
     ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiTasks,
     Window as ClapWindow,
 };
+use rift_plugin_vizia::analysers::*;
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::*;
 
@@ -91,18 +92,29 @@ impl HostWindow {
             cx.add_stylesheet(include_str!("style.css"))
                 .expect("Failed to add");
 
-            VStack::new(cx, |cx| {
-                Panel::new(cx, "Test", |cx| {
-                    param_knob(cx, &ui_params.gain);
-                    param_knob(cx, &ui_params.cutoff).centered();
-                    // param_selector(cx, &ui_params.wave_type).disable_scroll();
-                    param_dropdown(cx, &ui_params.wave_type);
-                });
+            HStack::new(cx, |cx| {
+                VStack::new(cx, |cx| {
+                    Panel::new(cx, "Test", |cx| {
+                        param_knob(cx, &ui_params.gain);
+                        param_knob(cx, &ui_params.cutoff).centered();
+                        // param_selector(cx, &ui_params.wave_type).disable_scroll();
+                        param_dropdown(cx, &ui_params.wave_type);
+                    });
 
-                Panel::new(cx, "More tests", |cx| {
-                    param_toggle(cx, &ui_params.cutoff);
-                    param_toggle(cx, &ui_params.cutoff).status_light();
-                });
+                    Panel::new(cx, "More tests", |cx| {
+                        param_toggle(cx, &ui_params.cutoff);
+                        param_toggle(cx, &ui_params.cutoff).status_light();
+                    });
+                })
+                .width(Units::Stretch(8.));
+
+                HStack::new(cx, |cx| {
+                    Meter::new(cx, Signal::new(0.8));
+                    Meter::new(cx, Signal::new(0.9));
+                })
+                .height(Units::Stretch(1.))
+                .width(Units::Stretch(2.))
+                .alignment(Alignment::Center);
             });
         });
 

@@ -419,3 +419,23 @@ toggle.status-light:checked .toggle-thumb {
     background-image: linear-gradient(to bottom, #d6ccff, #8b6cff);
     shadow: 0px 0px 6px #8b6cffcc, 0px 0px 16px #8b6cff80;
 }
+
+/*
+--------------
+Meter (toggle.status-light)
+--------------
+*/
+
+meter {
+    width: 8px;
+    height: 96px;
+    background-color: #1a1e2b;
+    color: #3ddc97;
+    selection-color: #ffc857;
+    caret-color: #ff5d73;
+}
+
+meter.wide {
+    width: 140px;
+    height: 8px;
+}
