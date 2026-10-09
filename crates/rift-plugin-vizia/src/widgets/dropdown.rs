@@ -25,7 +25,7 @@ enum DropdownEvent {
 /// ```
 /// So it takes full width, but i am not sure what's the best default.
 /// I prefer let this like that, anyone can override anyway ...
-pub struct Dropdown {
+pub struct PopupSelector {
     value: Signal<f32>,
     count: usize,
     is_open: Signal<bool>,
@@ -33,7 +33,7 @@ pub struct Dropdown {
     placement: Signal<Placement>,
 }
 
-impl Dropdown {
+impl PopupSelector {
     /// A dropdown over `options`.
     ///
     /// # Panics
@@ -108,7 +108,7 @@ impl Dropdown {
     }
 }
 
-impl Control for Dropdown {
+impl Control for PopupSelector {
     fn callbacks_mut(&mut self) -> &mut ControlCallbacks {
         &mut self.callbacks
     }
@@ -116,7 +116,7 @@ impl Control for Dropdown {
     fn set_default(&mut self, _normalized: f32) {}
 }
 
-impl View for Dropdown {
+impl View for PopupSelector {
     fn element(&self) -> Option<&'static str> {
         Some("dropdown")
     }
@@ -158,7 +158,7 @@ impl View for Dropdown {
     }
 }
 
-#[modifiers(for Handle<'_, Dropdown>)]
+#[modifiers(for Handle<'_, PopupSelector>)]
 pub trait DropdownModifiers {
     #[concrete]
     fn placement(self, placement: Placement) -> Self {
