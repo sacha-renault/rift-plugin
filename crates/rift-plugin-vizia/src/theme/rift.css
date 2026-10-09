@@ -70,6 +70,41 @@ button.accent:active {
     background-image: linear-gradient(to right, #7b5cf0, #4f7cf0);
 }
 
+/* Btn variants */
+button.large {
+    height: 36px;
+    padding-left: 18px;
+    padding-right: 18px;
+    font-size: 13px;
+    gap: 8px;
+    corner-radius: 10px;
+}
+
+button.large .icon {
+    size: 20px;
+}
+
+button.large .icon svg {
+    size: 20px;
+}
+
+button.small {
+    height: 22px;
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 10px;
+    gap: 4px;
+    corner-radius: 6px;
+}
+
+button.small .icon {
+    size: 12px;
+}
+
+button.small .icon svg {
+    size: 12px;
+}
+
 /*
 --------------
 DIAL

@@ -25,7 +25,7 @@ pub trait ButtonExt {
         T: Res<String> + Clone,
         T: 'static,
     {
-        Button::new(cx, move |cx| Label::new(cx, text))
+        Button::new(cx, move |cx| Label::new(cx, text).hoverable(false))
     }
 }
 
@@ -34,5 +34,15 @@ pub trait ButtonModifiers2 {
     #[concrete]
     fn reversed(self) -> Self {
         self.class("reversed")
+    }
+
+    #[concrete]
+    fn small(self) -> Self {
+        self.class("small").toggle_class("large", false)
+    }
+
+    #[concrete]
+    fn large(self) -> Self {
+        self.class("large").toggle_class("small", false)
     }
 }
