@@ -25,5 +25,6 @@ pub mod prelude {
 
     pub use rift_plugin_derive::modifiers;
     pub use rift_plugin_gui::GuiFactory;
+    pub use vizia::icons;
     pub use vizia::prelude::*;
 }
