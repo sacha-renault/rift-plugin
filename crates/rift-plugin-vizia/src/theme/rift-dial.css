@@ -29,7 +29,7 @@ dial.large .dial-face {
     size: 88px;
 }
 
-dial arctrack {
+dial dial-arc {
     background-color: var(--rift-track);
     color: var(--rift-accent);
     caret-color: var(--rift-accent);
@@ -38,21 +38,21 @@ dial arctrack {
     transition: selection-color 160ms;
 }
 
-dial:hover arctrack {
+dial:hover dial-arc {
     selection-color: var(--rift-glow);
 }
 
-dial.dragging arctrack {
+dial.dragging dial-arc {
     selection-color: var(--rift-glow-strong);
 }
 
-dial:disabled arctrack {
+dial:disabled dial-arc {
     color: var(--rift-border-strong);
     caret-color: var(--rift-border-strong);
 }
 
 dial .dial-cap {
-    size: 58%;
+    size: 60%;
     corner-radius: 50%;
     background-color: var(--rift-surface-hover);
     border-width: 1px;
@@ -61,7 +61,7 @@ dial .dial-cap {
 }
 
 dial .dial-pointer {
-    size: 58%;
+    size: 60%;
     corner-radius: 50%;
     alignment: top-center;
     padding-top: 4px;
