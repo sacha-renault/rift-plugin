@@ -1,0 +1,7 @@
+dropdown .segment {
+    width: 1s;
+}
+
+dropdown popup {
+    min-width: 150px;
+}

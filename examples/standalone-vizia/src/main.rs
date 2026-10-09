@@ -20,13 +20,7 @@ pub enum WaveType {
     #[default]
     Square,
     Saw,
-    SS,
-    // S123,
-    // S1234,
-    // S1,
-    // S12,
-    // S987,
-    // S123456,
+    Sine,
 }
 
 #[derive(Params)]
@@ -94,25 +88,20 @@ impl HostWindow {
 
         let ui_params = params.clone();
         let factory = vizia_gui(WIDTH, HEIGHT, move |cx, _| {
-            cx.add_stylesheet(
-                r#"
-dropdown .segment {
-    width: 1s;
-}
+            cx.add_stylesheet(include_str!("style.css"))
+                .expect("Failed to add");
 
-dropdown popup {
-    min-width: 150px;
-}
-                "#,
-            )
-            .unwrap();
+            VStack::new(cx, |cx| {
+                Panel::new(cx, "Test", |cx| {
+                    param_knob(cx, &ui_params.gain);
+                    param_knob(cx, &ui_params.cutoff).centered();
+                    // param_selector(cx, &ui_params.wave_type).disable_scroll();
+                    param_dropdown(cx, &ui_params.wave_type);
+                });
 
-            Panel::new(cx, "Test", |cx| {
-                param_knob(cx, &ui_params.gain);
-                param_knob(cx, &ui_params.cutoff).centered();
-
-                // param_selector(cx, &ui_params.wave_type).disable_scroll();
-                param_dropdown(cx, &ui_params.wave_type);
+                Panel::new(cx, "More tests", |cx| {
+                    param_toggle(cx, &ui_params.cutoff);
+                });
             });
         });
 
