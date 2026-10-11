@@ -7,7 +7,7 @@ use fundsp::shared::Var;
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
-use crate::Scale;
+use crate::{EnumValues, Scale};
 
 #[derive(bon::Builder)]
 pub struct SharedFloatParam {
@@ -47,6 +47,7 @@ pub struct SharedFloatParam {
 impl TypedParam for SharedFloatParam {
     type Type = f32;
 
+    #[inline]
     fn value(&self) -> Self::Type {
         self.value.value()
     }
@@ -81,7 +82,7 @@ impl Param for SharedFloatParam {
     }
 
     fn plain(&self) -> f32 {
-        self.value.value()
+        self.value()
     }
 
     fn default_plain(&self) -> f32 {
@@ -89,12 +90,12 @@ impl Param for SharedFloatParam {
     }
 
     fn normalized(&self) -> f32 {
-        let value = self.plain();
+        let value = self.value();
         self.normalize(value)
     }
 
     fn set_normalized(&self, normalized: f32) {
-        self.set_plain(self.denormalize(normalized));
+        self.set_value(self.denormalize(normalized));
     }
 
     fn flags(&self) -> ParamInfoFlags {
@@ -160,5 +161,32 @@ impl SharedFloatParam {
     /// ```
     pub fn var(&self) -> An<Var> {
         var(&self.value)
+    }
+
+    pub fn read_bool(&self) -> bool {
+        self.normalized() > 0.5
+    }
+
+    pub fn set_bool(&self, v: bool) {
+        let v = self.denormalize(if v { 1. } else { 0. });
+        self.set_value(v);
+    }
+
+    pub fn read_int(&self) -> i32 {
+        self.value().floor() as i32
+    }
+
+    pub fn set_int(&self, v: i32) {
+        self.set_value(v as f32);
+    }
+
+    pub fn read_enum<E: EnumValues>(&self) -> E {
+        let enum_count = E::count();
+        let index = self.normalized() * enum_count as f32;
+
+        match E::from_index((index as u32).clamp(0, enum_count - 1)) {
+            Some(v) => v,
+            None => panic!("Normalized value should always be mapped to enum values ..."),
+        }
     }
 }
