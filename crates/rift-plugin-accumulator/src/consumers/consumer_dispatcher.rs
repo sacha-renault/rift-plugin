@@ -3,42 +3,22 @@ use rift_plugin_utils::ConsumerCell;
 
 use crate::prelude::{MonoConsumer, MultiConsumer};
 
-/// Determines how audio channels are reduced before reaching a consumer.
-pub enum ChannelMode {
-    /// Average all channels into a single mono signal.
-    ///
-    /// The consumer receives one block per audio callback, delivered after the
-    /// last channel has been accumulated. Each sample is the arithmetic mean
-    /// of the corresponding samples across all channels.
-    Averaged,
-
-    /// Forward every channel independently.
-    ///
-    /// The consumer is called once per channel per audio callback, receiving
-    /// the raw block along with the full [`ChannelsInfo`] so it can distinguish
-    /// which channel it is processing. This is useful for consumers that track
-    /// per-channel state, such as peak meters.
-    All,
-
-    /// Forward a single channel unchanged.
-    ///
-    /// The consumer receives the raw block for the specified channel index
-    /// and is never called for other channels.
-    Channel(usize),
-}
-
-/// Pairs a consumer with its channel routing mode.
+/// A consumer that only receives one channel.
 struct ChannelConsumer {
     consumer: ConsumerCell<dyn MonoConsumer>,
     channel: usize,
 }
 
-/// Routes multi-channel audio blocks to registered [`AudioConsumer`]s according
-/// to each consumer's [`ChannelMode`].
+/// Routes multi-channel audio blocks to registered consumers.
 ///
 /// This struct centralises the channel-reduction logic that would otherwise be
-/// duplicated inside every consumer. Consumers registered here only need to
-/// handle a plain `&[f32]` block. They never deal with channel bookkeeping.
+/// duplicated inside every consumer. There are three routing modes, one per
+/// `add_consumer_*` method:
+///
+/// - **averaged** - a [`MonoConsumer`] receives the mean of all channels, once
+///   the last channel of a block has been dispatched.
+/// - **all** - a [`MultiConsumer`] receives every channel with its [`ChannelsInfo`].
+/// - **at channel** - a [`MonoConsumer`] receives a single channel unchanged.
 ///
 /// # Example
 ///
@@ -54,7 +34,7 @@ struct ChannelConsumer {
 /// ```
 pub struct ConsumerDispatcher {
     /// Scratch buffer used to accumulate the channel average.
-    /// Only allocated / used when at least one consumer is in [`ChannelMode::Averaged`].
+    /// Only used when at least one averaged consumer is registered.
     intermediate: Vec<f32>,
 
     /// Registered consumers
@@ -110,9 +90,12 @@ impl ConsumerDispatcher {
 
     /// Routes `block` to the appropriate consumers based on the current channel.
     ///
-    /// Must be called once per channel per audio callback, in ascending channel
-    /// order. Consumers whose [`ConsumerCell`] is already borrowed are silently
-    /// skipped to avoid panics in single-threaded `RefCell` scenarios.
+    /// Must be called once per channel per block, in ascending channel order,
+    /// with the same block length for every channel.
+    ///
+    /// A consumer whose [`ConsumerCell`] is already borrowed (e.g. the UI holds
+    /// a `borrow()` across the dispatch) panics in debug builds and is skipped
+    /// in release builds.
     pub fn dispatch(&mut self, block: &[f32], channels: ChannelsInfo, time: BlockTime) {
         let total_channel = channels.total_channels as f32;
 
@@ -129,46 +112,29 @@ impl ConsumerDispatcher {
         }
 
         for consumer in &self.all_consumers {
-            let Ok(mut consumer) = consumer.try_borrow_mut() else {
-                #[cfg(debug_assertions)]
-                panic!("Can't borrow consumer");
-
-                #[cfg(not(debug_assertions))]
-                continue;
-            };
-
-            consumer.consume(block, channels, time);
+            with_consumer(consumer, |c| c.consume(block, channels, time));
         }
 
         for ChannelConsumer { consumer, channel } in &self.channel_consumers {
-            if channels.current != *channel {
-                continue;
+            if channels.current == *channel {
+                with_consumer(consumer, |c| c.consume(block, time));
             }
-
-            let Ok(mut consumer) = consumer.try_borrow_mut() else {
-                #[cfg(debug_assertions)]
-                panic!("Can't borrow consumer");
-
-                #[cfg(not(debug_assertions))]
-                continue;
-            };
-
-            consumer.consume(block, time);
         }
 
         if channels.is_last_channel() {
             for consumer in &self.avg_consumers {
-                let Ok(mut consumer) = consumer.try_borrow_mut() else {
-                    #[cfg(debug_assertions)]
-                    panic!("Can't borrow consumer");
-
-                    #[cfg(not(debug_assertions))]
-                    continue;
-                };
-
-                consumer.consume(self.intermediate.as_slice(), time);
+                with_consumer(consumer, |c| c.consume(&self.intermediate, time));
             }
         }
+    }
+}
+
+/// Runs `f` on the consumer. Panics on debug builds and
+/// just ignore on release builds.
+fn with_consumer<T: ?Sized>(consumer: &ConsumerCell<T>, f: impl FnOnce(&mut T)) {
+    match consumer.try_borrow_mut() {
+        Ok(mut c) => f(&mut c),
+        Err(_) => debug_assert!(false, "consumer is already borrowed during dispatch"),
     }
 }
 
