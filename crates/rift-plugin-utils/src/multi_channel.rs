@@ -14,7 +14,7 @@ use std::ops::{Index, IndexMut};
 /// # Examples
 ///
 /// ```ignore
-/// let peaks = MultiChannel::new(2, AudioPeaks::new);
+/// let peaks = MultiChannel::new(2, AudioPeak::new);
 ///
 /// // Read the smoothed peak of channel 0
 /// let level = peaks.with_channel(0, |p| p.peak());
