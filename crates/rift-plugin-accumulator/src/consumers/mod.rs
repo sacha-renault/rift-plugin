@@ -5,7 +5,7 @@ mod traits;
 mod windowed_peaks;
 
 pub use audio_peaks::AudioPeak;
-pub use consumer_dispatcher::{ChannelMode, ConsumerDispatcher};
+pub use consumer_dispatcher::ConsumerDispatcher;
 pub use spectrogram::StftConsumer;
-pub use traits::{MonoConsumer, MultiConsumer};
+pub use traits::{Consumer, MonoConsumer, MultiConsumer};
 pub use windowed_peaks::{Bucket, PeakBucket, WindowBuckets};
