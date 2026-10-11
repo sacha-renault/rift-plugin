@@ -1,6 +1,6 @@
 use std::sync::{
     Arc,
-    atomic::{AtomicU64, AtomicUsize, Ordering},
+    atomic::{AtomicU64, Ordering},
 };
 
 use rift_plugin_buffers::Buffer;
@@ -8,32 +8,20 @@ use rift_plugin_types::transport::*;
 
 use crate::{accumulator::channel::RingBuffer, consumers::ConsumerDispatcher};
 
+mod anchor;
 mod channel;
 
-// #[cfg(test)]
-// mod tests;
-
-/// The concrete, const-generic implementation behind [`AudioAccumulator`].
-///
-/// Each channel gets its own [`ChannelProducer<N>`] ring, where `N` is the
-/// fixed frame-block size chosen at compile time. The struct is intentionally
-/// kept private; callers interact with it only through the type-erased
-/// [`AudioAccumulatorErased`] trait, which hides `N` behind an [`Arc`].
+use anchor::Anchor;
 pub struct AudioAccumulator {
     /// One producer ring per allocated channel
     channels: Arc<[RingBuffer]>,
     capacity: usize,
 
-    /// Monotonically increasing counter incremented on every [`push_slices`] call.
-    /// Read by the UI thread to detect new data without holding a lock.
-    num_writes: AtomicU64,
+    written: AtomicU64,
+    read: AtomicU64,
 
-    read_position: AtomicUsize,
-    write_position: AtomicUsize,
-    // --
-    // TODO
-    // add an anchor with a block position so the reader knows the actual time
-    // of what he gets.
+    /// Timing of the latest written buffer.
+    anchor: Anchor,
 }
 
 impl AudioAccumulator {
@@ -44,20 +32,21 @@ impl AudioAccumulator {
         Self {
             channels: producers.into(),
             capacity,
-            num_writes: AtomicU64::new(0),
-            read_position: AtomicUsize::new(0),
-            write_position: AtomicUsize::new(0),
+            written: AtomicU64::new(0),
+            read: AtomicU64::new(0),
+            anchor: Anchor::new(),
         }
     }
 
-    pub fn audio_thread_writes(&self, buffer: &Buffer) {
+    pub fn audio_thread_writes(&self, buffer: &Buffer, info: Option<BlockInfo>) {
         // TODO
         // Actually handle those case rather than doing nothing on
         // release builds.
         debug_assert_eq!(buffer.channels(), self.channels.len());
         debug_assert!(buffer.samples() < self.capacity);
 
-        let w = self.write_position.load(Ordering::Relaxed);
+        let start = self.written.load(Ordering::Relaxed);
+        let w = (start % self.capacity as u64) as usize;
         let end = w + buffer.samples();
 
         let write_idx = if end <= self.capacity {
@@ -73,32 +62,42 @@ impl AudioAccumulator {
             ch.push_slice(write_idx, slice);
         }
 
-        let new_pos = end % self.capacity;
-        self.write_position.store(new_pos, Ordering::Release);
-        self.num_writes.fetch_add(1, Ordering::Release);
+        self.anchor.store(start, info.as_ref());
+        self.written
+            .store(start + buffer.samples() as u64, Ordering::Release);
     }
 
     pub fn ui_thread_read(&self, consumers: &mut ConsumerDispatcher) {
-        let w = self.write_position.load(Ordering::Acquire);
-        let r = self.read_position.load(Ordering::Relaxed); // only UI thread touches this
+        let written = self.written.load(Ordering::Acquire);
+        let mut read = self.read.load(Ordering::Relaxed); // only UI thread touches this
 
-        if r == w {
-            return; // nothing new since last read
+        // Fell behind (GUI was closed)
+        read = read.max(written.saturating_sub(self.capacity as u64));
+
+        let available = (written - read) as usize;
+        if available == 0 {
+            return;
         }
 
-        let available = if w > r { w - r } else { self.capacity - r + w };
+        let r = (read % self.capacity as u64) as usize;
         let total_channels = self.channels.len();
-        let time = BlockTime::none(); // TODO once transport timing lands
+        let time = self.anchor.time_at(read);
 
         if r + available <= self.capacity {
             self.dispatch_segment(consumers, r, available, total_channels, time);
         } else {
             let first_len = self.capacity - r;
             self.dispatch_segment(consumers, r, first_len, total_channels, time);
-            self.dispatch_segment(consumers, 0, available - first_len, total_channels, time);
+            self.dispatch_segment(
+                consumers,
+                0,
+                available - first_len,
+                total_channels,
+                time.advanced_by(first_len as i64),
+            );
         }
 
-        self.read_position.store(w, Ordering::Relaxed);
+        self.read.store(written, Ordering::Relaxed);
     }
 
     fn dispatch_segment(
