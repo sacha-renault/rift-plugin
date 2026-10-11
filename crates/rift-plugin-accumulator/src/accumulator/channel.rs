@@ -11,6 +11,8 @@ pub(crate) struct RingBuffer {
     buffer: UnsafeCell<Box<[f32]>>,
 }
 
+unsafe impl Sync for RingBuffer {}
+
 impl RingBuffer {
     /// Creates a new `ChannelProducer` with a queue that can hold up to
     /// `capacity` blocks before dropping incoming data.
