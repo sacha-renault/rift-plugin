@@ -14,6 +14,8 @@ use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{AudioThreadTask, InitContext, ProcessContext};
 use rift_plugin_types::{EventPreProcess, EventSource};
 
+pub use crate::processor::background_task_executor::Deallocator;
+
 /// Runs the audio callback under `assert_no_alloc` when the debug-only
 /// `assert-no-alloc` feature is enabled, and calls it directly otherwise.
 #[cfg(all(feature = "assert-no-alloc", debug_assertions))]
@@ -141,9 +143,15 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     }
 
     fn handle_background_tasks(&mut self) {
+        let deallocator = Deallocator {
+            sender: &self.task_executor.deallocator.sender,
+        };
+
         while let Ok(result) = self.task_executor.task_thread.receiver.try_recv() {
-            self.plugin.on_task_end(result.inner());
+            self.plugin.on_task_end(result.inner(), deallocator);
         }
+
+        while let Ok(_) = self.task_executor.deallocator.receiver.try_recv() {} // Drain
     }
 }
 

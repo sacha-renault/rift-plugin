@@ -1,4 +1,7 @@
-use std::{sync::mpsc, thread::JoinHandle};
+use std::{
+    sync::mpsc::{self, TrySendError},
+    thread::JoinHandle,
+};
 
 use rift_plugin_types::{BackgroundTask, Task};
 
@@ -49,14 +52,29 @@ impl<I, O> Drop for BackgroundThread<I, O> {
 
 pub(crate) struct BackgroundTaskExecutor {
     pub(crate) task_thread: BackgroundThread<BackgroundTask, Task>,
-    pub(crate) deallocator_thread: BackgroundThread<Task, ()>,
+    pub(crate) deallocator: BackgroundThread<Task, ()>,
 }
 
 impl BackgroundTaskExecutor {
     pub fn new(capacity: usize) -> Self {
         Self {
             task_thread: BackgroundThread::new(capacity, |task: BackgroundTask| task.run()),
-            deallocator_thread: BackgroundThread::new(capacity, |obj| drop(obj)),
+            deallocator: BackgroundThread::new(capacity, |obj| drop(obj)),
         }
+    }
+}
+
+// Copy ref is super cheap
+#[derive(Debug, Clone, Copy)]
+pub struct Deallocator<'a> {
+    pub(crate) sender: &'a mpsc::SyncSender<Task>,
+}
+
+impl<'a> Deallocator<'a> {
+    pub fn deallocate<V>(&self, obj: Box<V>) -> Result<(), TrySendError<Task>>
+    where
+        V: Send + 'static,
+    {
+        self.sender.try_send(Task::from_boxed(obj))
     }
 }

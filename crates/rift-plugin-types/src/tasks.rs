@@ -82,6 +82,10 @@ impl Task {
         Self(Box::new(v))
     }
 
+    pub fn from_boxed<V: Send + 'static>(v: Box<V>) -> Self {
+        Self(v)
+    }
+
     pub fn inner(self) -> Box<dyn Any> {
         self.0
     }

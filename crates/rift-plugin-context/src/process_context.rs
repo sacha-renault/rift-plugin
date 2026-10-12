@@ -1,5 +1,5 @@
-use std::sync::mpsc::SendError;
-use std::sync::{Arc, mpsc};
+use std::sync::Arc;
+use std::sync::mpsc::{self, TrySendError};
 
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::host::HostAudioProcessorHandle;
@@ -61,14 +61,14 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         }
     }
 
-    pub fn background_task<F, V>(&self, task: F) -> Result<(), SendError<BackgroundTask>>
+    pub fn background_task<F, V>(&self, task: F) -> Result<(), TrySendError<BackgroundTask>>
     where
         V: Send + 'static,
         F: Send + 'static,
         F: FnOnce() -> Box<V>,
     {
         let task = BackgroundTask::new(task);
-        self.task_queue.send(task)
+        self.task_queue.try_send(task)
     }
 }
 

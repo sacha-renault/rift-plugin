@@ -20,6 +20,8 @@ pub mod shared;
 
 pub use factory::PluginWrapper;
 
+use crate::processor::Deallocator;
+
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
     /// These are automatically synchronized between the GUI and Audio threads.
@@ -140,7 +142,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ) {
     }
 
-    fn on_task_end(&mut self, _result: Box<dyn Any>) {}
+    fn on_task_end(&mut self, _result: Box<dyn Any>, _deallocator: Deallocator) {}
 
     /// Creates the GUI factory for this plugin.
     ///
