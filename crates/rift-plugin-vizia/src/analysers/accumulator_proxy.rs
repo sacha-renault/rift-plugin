@@ -59,21 +59,30 @@ impl AccumulatorProxy {
         Meter::with_peak(cx, level, peak)
     }
 
-    pub fn add_consumer_all<C: MultiConsumer>(&self, consumer: C) {
-        self.consumers
-            .borrow_mut()
-            .add_consumer_all(consumer.wraps_consumer());
+    /// Registers `consumer` for every channel independently.
+    ///
+    /// Returns the cell the dispatcher writes into (keep it to read the results).
+    pub fn add_consumer_all<C: MultiConsumer>(&self, consumer: C) -> ConsumerCell<C> {
+        self.consumers.borrow_mut().add_consumer_all(consumer)
     }
 
-    pub fn add_consumer_at_channel<C: MonoConsumer>(&self, consumer: C, channel: usize) {
+    /// Registers `consumer` for a single `channel` only.
+    ///
+    /// Returns the cell the dispatcher writes into (keep it to read the results).
+    pub fn add_consumer_at_channel<C: MonoConsumer>(
+        &self,
+        consumer: C,
+        channel: usize,
+    ) -> ConsumerCell<C> {
         self.consumers
             .borrow_mut()
-            .add_consumer_at_channel(consumer.wraps_consumer(), channel);
+            .add_consumer_at_channel(consumer, channel)
     }
 
-    pub fn add_consumer_averaged<C: MonoConsumer>(&self, consumer: C) {
-        self.consumers
-            .borrow_mut()
-            .add_consumer_averaged(consumer.wraps_consumer());
+    /// Registers `consumer` for the mono-averaged mix of all channels.
+    ///
+    /// Returns the cell the dispatcher writes into (keep it to read the results).
+    pub fn add_consumer_averaged<C: MonoConsumer>(&self, consumer: C) -> ConsumerCell<C> {
+        self.consumers.borrow_mut().add_consumer_averaged(consumer)
     }
 }

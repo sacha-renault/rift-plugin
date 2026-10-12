@@ -20,12 +20,16 @@ struct ChannelConsumer {
 /// - **all** - a [`MultiConsumer`] receives every channel with its [`ChannelsInfo`].
 /// - **at channel** - a [`MonoConsumer`] receives a single channel unchanged.
 ///
+/// Each `add_consumer_*` takes the consumer **by value**, wraps it, and returns
+/// the [`ConsumerCell`] it registered, so the caller (typically the UI) keeps a
+/// clone to read the results.
+///
 /// # Example
 ///
 /// ```ignore
 /// let mut dispatcher = ConsumerDispatcher::new();
-/// dispatcher.add_consumer_averaged(my_vu_meter.clone());
-/// dispatcher.add_consumer_at_channel(my_stft.clone(), 0);
+/// let vu = dispatcher.add_consumer_averaged(my_vu_meter); // keep `vu` to read levels
+/// dispatcher.add_consumer_at_channel(my_stft, 0);
 ///
 /// // In the drain loop (called from the UI thread):
 /// for ch in 0..total_channels {
@@ -62,24 +66,38 @@ impl ConsumerDispatcher {
 
     /// Registers a consumer that will receive a mono-averaged block once per
     /// audio callback, after all channels have been dispatched.
-    pub fn add_consumer_averaged(&mut self, consumer: ConsumerCell<dyn MonoConsumer>) {
-        self.avg_consumers.push(consumer);
+    ///
+    /// Returns the [`ConsumerCell`] the dispatcher writes into.
+    pub fn add_consumer_averaged<C: MonoConsumer>(&mut self, consumer: C) -> ConsumerCell<C> {
+        let cell = consumer.wraps_consumer();
+        self.avg_consumers.push(cell.clone());
+        cell
     }
 
     /// Registers a consumer that will receive a every channel independently.
-    pub fn add_consumer_all(&mut self, consumer: ConsumerCell<dyn MultiConsumer>) {
-        self.all_consumers.push(consumer);
+    ///
+    /// Returns the [`ConsumerCell`] the dispatcher writes into.
+    pub fn add_consumer_all<C: MultiConsumer>(&mut self, consumer: C) -> ConsumerCell<C> {
+        let cell = consumer.wraps_consumer();
+        self.all_consumers.push(cell.clone());
+        cell
     }
 
     /// Registers a consumer that will receive the raw block for `channel` only.
     /// Blocks for all other channels are silently ignored.
-    pub fn add_consumer_at_channel(
+    ///
+    /// Returns the [`ConsumerCell`] the dispatcher writes into.
+    pub fn add_consumer_at_channel<C: MonoConsumer>(
         &mut self,
-        consumer: ConsumerCell<dyn MonoConsumer>,
+        consumer: C,
         channel: usize,
-    ) {
-        self.channel_consumers
-            .push(ChannelConsumer { consumer, channel });
+    ) -> ConsumerCell<C> {
+        let cell = consumer.wraps_consumer();
+        self.channel_consumers.push(ChannelConsumer {
+            consumer: cell.clone(),
+            channel,
+        });
+        cell
     }
 
     /// Returns the total number of registered consumers (both averaged and
@@ -140,10 +158,7 @@ fn with_consumer<T: ?Sized>(consumer: &ConsumerCell<T>, f: impl FnOnce(&mut T)) 
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, rc::Rc};
-
     use rift_plugin_types::transport::{BlockTime, ChannelsInfo};
-    use rift_plugin_utils::ConsumerCell;
 
     use crate::prelude::{MonoConsumer, MultiConsumer};
 
@@ -154,8 +169,8 @@ mod tests {
     }
 
     impl MonoMock {
-        fn new() -> ConsumerCell<Self> {
-            Rc::new(RefCell::new(MonoMock { calls: Vec::new() }))
+        fn new() -> Self {
+            MonoMock { calls: Vec::new() }
         }
     }
 
@@ -176,8 +191,8 @@ mod tests {
     }
 
     impl MultiMock {
-        fn new() -> ConsumerCell<Self> {
-            Rc::new(RefCell::new(MultiMock { calls: Vec::new() }))
+        fn new() -> Self {
+            MultiMock { calls: Vec::new() }
         }
     }
 
@@ -205,9 +220,8 @@ mod tests {
 
     #[test]
     fn channel_mode_receives_correct_channel() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_at_channel(consumer.clone(), 1);
+        let consumer = d.add_consumer_at_channel(MonoMock::new(), 1);
 
         let left = vec![0.0_f32; 4];
         let right = vec![1.0_f32; 4];
@@ -220,9 +234,8 @@ mod tests {
 
     #[test]
     fn channel_mode_ignores_wrong_channel() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_at_channel(consumer.clone(), 1);
+        let consumer = d.add_consumer_at_channel(MonoMock::new(), 1);
 
         d.dispatch(&[1.0; 4], ch(0, 2), BlockTime::none());
 
@@ -231,9 +244,8 @@ mod tests {
 
     #[test]
     fn averaged_mode_produces_mean_of_channels() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_averaged(consumer.clone());
+        let consumer = d.add_consumer_averaged(MonoMock::new());
 
         let left = vec![1.0_f32; 4];
         let right = vec![0.0_f32; 4];
@@ -246,9 +258,8 @@ mod tests {
 
     #[test]
     fn averaged_mode_not_called_until_last_channel() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_averaged(consumer.clone());
+        let consumer = d.add_consumer_averaged(MonoMock::new());
 
         d.dispatch(&[1.0; 4], ch(0, 2), BlockTime::none());
 
@@ -257,9 +268,8 @@ mod tests {
 
     #[test]
     fn averaged_mode_mono_passes_through() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_averaged(consumer.clone());
+        let consumer = d.add_consumer_averaged(MonoMock::new());
 
         let block = vec![0.7_f32; 4];
         d.dispatch(&block, ch(0, 1), BlockTime::none());
@@ -271,9 +281,8 @@ mod tests {
 
     #[test]
     fn all_mode_receives_every_channel() {
-        let consumer = MultiMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_all(consumer.clone());
+        let consumer = d.add_consumer_all(MultiMock::new());
 
         let left = vec![1.0_f32; 4];
         let right = vec![2.0_f32; 4];
@@ -289,9 +298,8 @@ mod tests {
 
     #[test]
     fn all_mode_forwards_channel_info() {
-        let consumer = MultiMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_all(consumer.clone());
+        let consumer = d.add_consumer_all(MultiMock::new());
 
         d.dispatch(&[0.0; 4], ch(0, 3), BlockTime::none());
         d.dispatch(&[0.0; 4], ch(1, 3), BlockTime::none());
@@ -307,14 +315,10 @@ mod tests {
 
     #[test]
     fn mixed_modes_all_receive_correct_data() {
-        let avg_consumer = MonoMock::new();
-        let ch0_consumer = MonoMock::new();
-        let all_consumer = MultiMock::new();
-
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_averaged(avg_consumer.clone());
-        d.add_consumer_at_channel(ch0_consumer.clone(), 0);
-        d.add_consumer_all(all_consumer.clone());
+        let avg_consumer = d.add_consumer_averaged(MonoMock::new());
+        let ch0_consumer = d.add_consumer_at_channel(MonoMock::new(), 0);
+        let all_consumer = d.add_consumer_all(MultiMock::new());
 
         let left = vec![1.0_f32; 4];
         let right = vec![0.0_f32; 4];
@@ -336,9 +340,8 @@ mod tests {
 
     #[test]
     fn no_intermediate_work_without_averaged_consumers() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_at_channel(consumer.clone(), 0);
+        d.add_consumer_at_channel(MonoMock::new(), 0);
 
         d.dispatch(&[1.0; 4], ch(0, 2), BlockTime::none());
 
@@ -347,9 +350,8 @@ mod tests {
 
     #[test]
     fn intermediate_resets_between_callbacks() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_averaged(consumer.clone());
+        let consumer = d.add_consumer_averaged(MonoMock::new());
 
         dispatch_stereo(&mut d, &[1.0; 4], &[1.0; 4]);
         dispatch_stereo(&mut d, &[0.0; 4], &[0.0; 4]);
@@ -379,9 +381,8 @@ mod tests {
 
     #[test]
     fn empty_block_dispatches_empty_slice() {
-        let consumer = MonoMock::new();
         let mut d = ConsumerDispatcher::new();
-        d.add_consumer_at_channel(consumer.clone(), 0);
+        let consumer = d.add_consumer_at_channel(MonoMock::new(), 0);
 
         d.dispatch(&[], ch(0, 1), BlockTime::none());
 
