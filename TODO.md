@@ -9,6 +9,8 @@
 - [x] BoundedVec capacity is weird to save, capacity should always be defined by what's written in the plugin, not in the saved state.
 - [x] Shared has a different meaning in clack and rift, yet the same name. Should change that because that's confusing asf.
 - [x] Don't use naive generator with infinite frequencies (i.e. if phase > 0.5 { -1. } else { 1. }) has it would create serious issues with later effects, like filters. (resolution ... Just use fundsp xx)
+- [ ] Need to add a way to do background jobs. (usage: a param has changed and a reset / init requires allocation and therefore needs to be processed on background task.)
+- [ ] 
 
 ## Parameters
 
