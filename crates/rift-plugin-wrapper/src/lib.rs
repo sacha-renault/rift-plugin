@@ -20,7 +20,7 @@ pub mod shared;
 
 pub use factory::PluginWrapper;
 
-use crate::processor::Deallocator;
+pub use crate::processor::{Deallocator, TaskLauncher};
 
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
@@ -139,6 +139,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
         _params: &Self::Params,
         _shared: &Self::SharedData,
         _source: EventSource,
+        _launcher: TaskLauncher,
     ) {
     }
 

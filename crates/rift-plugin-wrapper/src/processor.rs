@@ -14,7 +14,7 @@ use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{AudioThreadTask, InitContext, ProcessContext};
 use rift_plugin_types::{EventPreProcess, EventSource};
 
-pub use crate::processor::background_task_executor::Deallocator;
+pub use crate::processor::background_task_executor::{Deallocator, TaskLauncher};
 
 /// Runs the audio callback under `assert_no_alloc` when the debug-only
 /// `assert-no-alloc` feature is enabled, and calls it directly otherwise.
@@ -72,6 +72,10 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
             return;
         }
 
+        let task_launcher = TaskLauncher {
+            sender: &self.task_executor.task_thread.sender,
+        };
+
         for event in events.iter() {
             if let Some(event) = event.as_event::<ParamValueEvent>() {
                 let Some(id) = event.param_id() else {
@@ -89,6 +93,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                         &self.shared.params,
                         &self.shared.data,
                         EventSource::Host,
+                        task_launcher,
                     );
                 }
 
@@ -117,6 +122,9 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         {
             log::error!("There was an error push event {err:?}")
         }
+        let task_launcher = TaskLauncher {
+            sender: &self.task_executor.task_thread.sender,
+        };
 
         match event.kind {
             GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
@@ -129,6 +137,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     &self.shared.params,
                     &self.shared.data,
                     EventSource::GUI,
+                    task_launcher,
                 );
             }
             GuiParamEventKind::ValueLess => {
@@ -137,6 +146,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     &self.shared.params,
                     &self.shared.data,
                     EventSource::GUI,
+                    task_launcher,
                 );
             }
         }

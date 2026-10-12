@@ -78,3 +78,21 @@ impl<'a> Deallocator<'a> {
         self.sender.try_send(Task::from_boxed(obj))
     }
 }
+
+// Copy ref is super cheap
+#[derive(Debug, Clone, Copy)]
+pub struct TaskLauncher<'a> {
+    pub(crate) sender: &'a mpsc::SyncSender<BackgroundTask>,
+}
+
+impl<'a> TaskLauncher<'a> {
+    pub fn background_task<F, V>(&self, task: F) -> Result<(), TrySendError<BackgroundTask>>
+    where
+        V: Send + 'static,
+        F: Send + 'static,
+        F: FnOnce() -> Box<V>,
+    {
+        let task = BackgroundTask::new(task);
+        self.sender.try_send(task)
+    }
+}
