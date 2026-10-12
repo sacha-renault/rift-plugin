@@ -76,7 +76,7 @@ impl ClapPlugin for MinimalGain {
 
     fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
         vizia_gui(480, 320, move |cx, _| {
-            let proxy = AccumulatorProxy::new();
+            let proxy = AccumulatorProxy::new(cx, data.acc.clone());
 
             HStack::new(cx, |cx| {
                 param_knob(cx, &params.gain);
@@ -86,8 +86,6 @@ impl ClapPlugin for MinimalGain {
                     proxy.meter(cx, 1);
                 });
             });
-
-            proxy.pump_on_frame(cx, data.acc.clone());
         })
     }
 
