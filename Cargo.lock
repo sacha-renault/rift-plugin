@@ -1406,7 +1406,9 @@ name = "minimal_gain"
 version = "0.1.0"
 dependencies = [
  "rift-plugin",
+ "rift-plugin-accumulator",
  "rift-plugin-gui",
+ "rift-plugin-vizia",
 ]
 
 [[package]]
@@ -2130,9 +2132,11 @@ name = "rift-plugin-vizia"
 version = "0.1.0"
 dependencies = [
  "raw-window-handle",
+ "rift-plugin-accumulator",
  "rift-plugin-derive",
  "rift-plugin-gui",
  "rift-plugin-params",
+ "rift-plugin-types",
  "vizia",
 ]
 

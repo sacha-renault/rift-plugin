@@ -6,13 +6,14 @@
 //! which builds a [`NoGui`] doing nothing.
 
 use std::ffi::CStr;
-use std::marker::PhantomData;
 use std::sync::Arc;
 
-use rift_plugin::prelude::clack_extensions::gui::{GuiSize, Window};
 use rift_plugin::prelude::clack_plugin::plugin::features;
 use rift_plugin::prelude::*;
-use rift_plugin_gui::{ClapGui, GuiContext, GuiFactory, ParamSync};
+use rift_plugin_accumulator::prelude::AudioAccumulator;
+use rift_plugin_vizia::analysers::AccumulatorProxy;
+use rift_plugin_vizia::prelude::*;
+use rift_plugin_vizia::widgets::param_knob;
 
 #[derive(Params)]
 pub struct MinimalGainParams {
@@ -21,22 +22,14 @@ pub struct MinimalGainParams {
 }
 
 /// Shared between the audio thread and the main/GUI thread.
-struct SharedData<P: ClapPlugin> {
-    _channels: usize,
-    _p: PhantomData<P>,
+struct SharedData {
+    acc: Arc<AudioAccumulator>,
 }
 
-impl<P: ClapPlugin> Default for SharedData<P> {
+impl Default for SharedData {
     fn default() -> Self {
-        let channels = P::MAIN_AUDIO_PORTS.capacity()
-            + P::AUX_AUDIO_PORTS
-                .iter()
-                .map(AudioPort::channels)
-                .sum::<u32>();
-
         Self {
-            _channels: channels as usize,
-            _p: PhantomData,
+            acc: Arc::new(AudioAccumulator::new(2, 44100)),
         }
     }
 }
@@ -45,7 +38,7 @@ struct MinimalGain {}
 
 impl ClapPlugin for MinimalGain {
     type Params = MinimalGainParams;
-    type SharedData = SharedData<Self>;
+    type SharedData = SharedData;
 
     const EVENT_PRE_PROCESS: EventPreProcess =
         EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
@@ -61,10 +54,10 @@ impl ClapPlugin for MinimalGain {
     fn process(
         &mut self,
         mut buffers: Buffers,
-        _context: ProcessContext,
+        context: ProcessContext,
         _input_events: &InputEvents,
         params: &Self::Params,
-        _data: &Self::SharedData,
+        data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
         let gain = params.gain.value();
 
@@ -75,11 +68,27 @@ impl ClapPlugin for MinimalGain {
             }
         }
 
+        data.acc
+            .audio_thread_writes(&buffers.main(), context.block_info());
+
         Ok(ProcessStatus::Continue)
     }
 
-    fn gui(_params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        Box::new(NoGuiFactory)
+    fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
+        vizia_gui(480, 320, move |cx, _| {
+            let proxy = AccumulatorProxy::new();
+
+            HStack::new(cx, |cx| {
+                param_knob(cx, &params.gain);
+
+                HStack::new(cx, |cx| {
+                    proxy.meter(cx, 0);
+                    proxy.meter(cx, 1);
+                });
+            });
+
+            proxy.pump_on_frame(cx, data.acc.clone());
+        })
     }
 
     const ID: &str = "com.rift.minimal-gain";
@@ -88,65 +97,6 @@ impl ClapPlugin for MinimalGain {
     const FEATURES: &[&CStr] = &[features::AUDIO_EFFECT, features::STEREO];
 
     const MAIN_AUDIO_PORTS: MainAudioPort = MainAudioPort::InputOutput(2);
-}
-
-/// No-op GUI. Every CLAP GUI callback succeeds and does nothing.
-struct NoGui;
-
-impl ClapGui for NoGui {
-    fn set_scale(&mut self, _scale: f64) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn get_size(&mut self) -> Option<GuiSize> {
-        None
-    }
-
-    fn can_resize(&mut self) -> bool {
-        false
-    }
-
-    fn adjust_size(&mut self, _size: GuiSize) -> Option<GuiSize> {
-        None
-    }
-
-    fn set_size(&mut self, _size: GuiSize) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn set_parent(&mut self, _window: Window) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn set_transient(&mut self, _window: Window) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn show(&mut self) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn hide(&mut self) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn create(&mut self, _: clack_extensions::gui::GuiConfiguration) -> Result<(), PluginError> {
-        Ok(())
-    }
-
-    fn destroy(&mut self) {}
-
-    fn param_sync(&self) -> ParamSync {
-        ParamSync::Pull
-    }
-}
-
-struct NoGuiFactory;
-
-impl GuiFactory for NoGuiFactory {
-    fn build(self: Box<Self>, _states: Arc<dyn GuiContext>) -> Box<dyn ClapGui> {
-        Box::new(NoGui)
-    }
 }
 
 export_clap_plugin!(MinimalGain);
