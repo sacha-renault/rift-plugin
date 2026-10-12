@@ -87,5 +87,6 @@ impl Task {
     }
 }
 
-/// Enforced at construction `V: Send + 'static`
+// SAFETY: `Task` is only ever built from a `V: Send` (`BackgroundTask::new` / `Task::new`),
+// so moving it to another thread is sound even though `Box<dyn Any>` isn't `Send`.
 unsafe impl Send for Task {}
