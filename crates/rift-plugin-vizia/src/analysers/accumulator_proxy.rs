@@ -16,7 +16,7 @@ impl AccumulatorProxy {
     ///
     /// Call from a static layout only (root is always fine). You risk otherwise to register
     /// multiple time the consumer on every view rebuild.
-    pub fn new(cx: &mut Context, accumulator: Arc<AudioAccumulator>) -> Self {
+    pub fn install(cx: &mut Context, accumulator: Arc<AudioAccumulator>) -> Self {
         let consumers = Rc::new(RefCell::new(ConsumerDispatcher::new()));
         let frame_signal = FrameSignal::signal(cx);
 
