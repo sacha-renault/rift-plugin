@@ -1,4 +1,4 @@
-use std::{cell::RefCell, sync::Arc};
+use std::{cell::RefCell, rc::Rc, sync::Arc};
 
 use rift_plugin_accumulator::prelude::*;
 use rift_plugin_types::transport::BlockTime;
@@ -8,23 +8,24 @@ use super::*;
 use crate::dev_prelude::*;
 
 pub struct AccumulatorProxy {
-    consumers: RefCell<ConsumerDispatcher>,
+    consumers: Rc<RefCell<ConsumerDispatcher>>,
 }
 
 impl AccumulatorProxy {
-    pub fn new() -> Self {
-        Self {
-            consumers: RefCell::new(ConsumerDispatcher::new()),
-        }
-    }
-
-    /// Consumer the proxy and start pumping the values on GUI side at every frame.
-    pub fn pump_on_frame(self, cx: &mut Context, acc: Arc<AudioAccumulator>) {
+    /// Starts pumping `accumulator` every frame for as long as the GUI lives.
+    ///
+    /// Call from a static layout only (root is always fine). You risk otherwise to register
+    /// multiple time the consumer on every view rebuild.
+    pub fn new(cx: &mut Context, accumulator: Arc<AudioAccumulator>) -> Self {
+        let consumers = Rc::new(RefCell::new(ConsumerDispatcher::new()));
         let frame_signal = FrameSignal::signal(cx);
 
+        let pumped = consumers.clone();
         Binding::new(cx, *frame_signal, move |_| {
-            self.pump(&acc);
+            accumulator.ui_thread_read(&mut pumped.borrow_mut());
         });
+
+        Self { consumers }
     }
 
     pub fn meter<'a>(&self, cx: &'a mut Context, channel: usize) -> Handle<'a, Meter> {
@@ -56,10 +57,6 @@ impl AccumulatorProxy {
         );
 
         Meter::with_peak(cx, level, peak)
-    }
-
-    fn pump(&self, acc: &AudioAccumulator) {
-        acc.ui_thread_read(&mut self.consumers.borrow_mut());
     }
 
     pub fn add_consumer_all<C: MultiConsumer>(&self, consumer: C) {
