@@ -6,7 +6,7 @@ Meter
 
 meter {
     width: 8px;
-    height: 96px;
+    min-height: 96px;
     background-color: var(--rift-track);
     color: var(--rift-ok);
     selection-color: var(--rift-warn);
