@@ -22,6 +22,7 @@ pub(crate) mod dev_prelude {
 pub mod prelude {
     pub use super::bridge::{Control, ControlExt, ParamBinding, register_param};
     pub use super::factory::{ViziaFactory, vizia_gui};
+    pub use super::utils::FrameSignal;
 
     pub use rift_plugin_derive::modifiers;
     pub use rift_plugin_gui::GuiFactory;

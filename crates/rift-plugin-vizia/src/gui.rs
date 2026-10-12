@@ -47,12 +47,18 @@ impl ViziaGui {
         let host = context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
 
+        let frame_signal = FrameSignal::new();
+
         let application = Application::new(move |cx| {
             crate::theme::install(cx);
             crate::bridge::install_event_listener(cx, context.clone());
+            frame_signal.install(cx);
             app_fn(cx, context.clone());
         })
-        .on_idle(move |cx| crate::bridge::pump(cx, host.as_ref()))
+        .on_idle(move |cx| {
+            crate::bridge::pump(cx, host.as_ref());
+            frame_signal.tick();
+        })
         .inner_size(wsize);
 
         self.handle = Some(application.open_parented(self));

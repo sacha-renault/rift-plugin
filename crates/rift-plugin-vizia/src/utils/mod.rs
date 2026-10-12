@@ -1,5 +1,7 @@
+mod frame_signal;
 mod paint;
 
+pub use frame_signal::FrameSignal;
 pub(crate) use paint::*;
 
 #[derive(Clone, Copy)]
