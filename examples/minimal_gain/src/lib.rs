@@ -13,7 +13,7 @@ use rift_plugin::prelude::*;
 use rift_plugin_accumulator::prelude::AudioAccumulator;
 use rift_plugin_vizia::analysers::AccumulatorProxy;
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::param_knob;
+use rift_plugin_vizia::widgets::{DialModifiers, param_knob};
 
 #[derive(Params)]
 pub struct MinimalGainParams {
@@ -75,17 +75,24 @@ impl ClapPlugin for MinimalGain {
     }
 
     fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        vizia_gui(480, 320, move |cx, _| {
-            let proxy = AccumulatorProxy::new(cx, data.acc.clone());
+        vizia_gui(160, 200, move |cx, _| {
+            let proxy = AccumulatorProxy::install(cx, data.acc.clone());
 
             HStack::new(cx, |cx| {
-                param_knob(cx, &params.gain);
+                param_knob(cx, &params.gain)
+                    .large()
+                    .height(Units::Stretch(1.))
+                    .width(Units::Stretch(8.));
 
                 HStack::new(cx, |cx| {
                     proxy.meter(cx, 0);
                     proxy.meter(cx, 1);
-                });
-            });
+                })
+                .height(Units::Percentage(80.))
+                .width(Units::Stretch(2.));
+            })
+            .height(Units::Stretch(1.))
+            .width(Units::Stretch(1.));
         })
     }
 
