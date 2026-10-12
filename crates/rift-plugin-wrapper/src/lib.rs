@@ -1,7 +1,7 @@
 //! The CLAP wrapper: the [`ClapPlugin`] trait implemented by plugins, plus the
 //! glue that turns it into a CLAP plugin.
 
-use std::{ffi::CStr, sync::Arc};
+use std::{any::Any, ffi::CStr, sync::Arc};
 
 pub use clack_plugin::prelude::*;
 
@@ -139,6 +139,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
         _source: EventSource,
     ) {
     }
+
+    fn on_task_end(&mut self, _result: Box<dyn Any>) {}
 
     /// Creates the GUI factory for this plugin.
     ///

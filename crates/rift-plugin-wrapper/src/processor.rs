@@ -1,3 +1,5 @@
+mod background_task_executor;
+
 use clack_extensions::params::*;
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::prelude::*;
@@ -6,6 +8,7 @@ use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind, GuiTasks};
 use rift_plugin_params::ParamCollection;
 use rift_plugin_types::transport::BlockIndex;
 
+use crate::processor::background_task_executor::BackgroundTaskExecutor;
 use crate::{ClapPlugin, main_thread::WrapperMainThread, shared::WrapperShared};
 use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{AudioThreadTask, InitContext, ProcessContext};
@@ -31,6 +34,7 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     host: HostAudioProcessorHandle<'a>,
     samplerate: f64,
     block_index: BlockIndex,
+    task_executor: BackgroundTaskExecutor,
 
     /// Whether the audio thread pushes param changes into the GUI queue.
     /// True for `ParamSync::Push` (retained GUIs); false for `Pull`, where the
@@ -135,12 +139,19 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
             }
         }
     }
+
+    fn handle_background_tasks(&mut self) {
+        while let Ok(result) = self.task_executor.task_thread.receiver.try_recv() {
+            self.plugin.on_task_end(result.inner());
+        }
+    }
 }
 
 impl<'a, P: ClapPlugin> PluginAudioProcessorParams for WrapperProcessor<'a, P> {
     fn flush(&mut self, inputs: &InputEvents, outputs: &mut OutputEvents) {
         self.handle_audio_thread_tasks(outputs);
         self.handle_input_events(inputs);
+        self.handle_background_tasks();
     }
 }
 
@@ -173,6 +184,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             samplerate: audio_config.sample_rate,
             block_index: BlockIndex(-1),
             notify_gui,
+            task_executor: BackgroundTaskExecutor::new(128),
         })
     }
 
@@ -201,6 +213,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 .outputs_events(events.output)
                 .block_index(self.block_index.increment())
                 .host_params(self.shared.host_params.clone())
+                .task_queue(&self.task_executor.task_thread.sender)
                 .build();
 
             self.plugin.process(

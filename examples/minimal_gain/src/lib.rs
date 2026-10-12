@@ -71,6 +71,10 @@ impl ClapPlugin for MinimalGain {
         data.acc
             .audio_thread_writes(&buffers.main(), context.block_info());
 
+        if gain > 1.9 {
+            let _ = context.background_task::<_, ()>(|| todo!());
+        }
+
         Ok(ProcessStatus::Continue)
     }
 

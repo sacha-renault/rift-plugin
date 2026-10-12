@@ -6,6 +6,7 @@ mod event_pre_process;
 mod event_source;
 mod midi_message;
 mod midi_port;
+mod tasks;
 pub mod transport;
 mod triple_buffer;
 
@@ -14,4 +15,5 @@ pub use event_pre_process::*;
 pub use event_source::EventSource;
 pub use midi_message::{MidiMessage, MidiMessageKind};
 pub use midi_port::MidiPort;
+pub use tasks::{BackgroundTask, Task};
 pub use triple_buffer::TripleBuffer;

@@ -1,4 +1,5 @@
-use std::sync::Arc;
+use std::sync::mpsc::SendError;
+use std::sync::{Arc, mpsc};
 
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
 use clack_plugin::host::HostAudioProcessorHandle;
@@ -10,7 +11,7 @@ use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
 
 use crate::PluginSharedState;
-use rift_plugin_types::MidiMessage;
+use rift_plugin_types::{BackgroundTask, MidiMessage};
 
 #[derive(bon::Builder)]
 pub struct ProcessContext<'a, 'e> {
@@ -25,6 +26,7 @@ pub struct ProcessContext<'a, 'e> {
     num_events: usize,
     outputs_events: &'e mut OutputEvents<'e>,
     host_params: Arc<ParamsWrapper>,
+    task_queue: &'a mpsc::SyncSender<BackgroundTask>,
 }
 
 impl<'a, 'e> ProcessContext<'a, 'e> {
@@ -57,6 +59,16 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         if let Some(id) = param_event.param_id() {
             self.host_params.set_value(id, param_event.value() as f32);
         }
+    }
+
+    pub fn background_task<F, V>(&self, task: F) -> Result<(), SendError<BackgroundTask>>
+    where
+        V: Send + 'static,
+        F: Send + 'static,
+        F: FnOnce() -> Box<V>,
+    {
+        let task = BackgroundTask::new(task);
+        self.task_queue.send(task)
     }
 }
 
