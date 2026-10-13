@@ -47,12 +47,16 @@ impl OscillatorVoice {
 
     /// Re-initialises an existing oscillator to play `note` at phase 0,
     /// reusing its already-allocated state.
-    pub fn reset(&mut self, samplerate: f32, note: u8) {
+    pub fn reset(&mut self, note: u8) {
         self.position = 0f32;
         self.note = note;
-        self.sr_recip = samplerate.recip();
         self.frequency = midi_to_frequency(note);
         self.table_hint = 0;
+    }
+
+    /// Sets the sample rate used to advance the phase, in Hz.
+    pub fn set_samplerate(&mut self, samplerate: f32) {
+        self.sr_recip = samplerate.recip();
     }
 
     /// Returns the current phase position in the range [0, 1).
