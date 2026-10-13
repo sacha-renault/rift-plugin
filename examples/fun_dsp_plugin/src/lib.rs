@@ -1,11 +1,14 @@
 use std::ffi::CStr;
 use std::sync::Arc;
 
+use fundsp::wavetable::Wavetable;
+use rift_plugin::prelude::utils::BoundedVec;
 use rift_plugin::prelude::*;
+use rift_plugin_dsp::oscillator::OscillatorVoice;
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::param_knob;
 
-pub mod oscillator;
+const WAVETABLES_CAPACITY: usize = 256;
 
 #[derive(Params)]
 pub struct OscillatorParams {
@@ -41,7 +44,8 @@ pub struct FunDspParams {
 }
 
 struct FunDspPlugin {
-    oscillators: [crate::oscillator::Oscillator; OSC_COUNT],
+    oscillators: [PolyVoice<OscillatorVoice, 128>; OSC_COUNT],
+    wavetables: [BoundedVec<Arc<Wavetable>, WAVETABLES_CAPACITY>; OSC_COUNT],
 }
 
 impl ClapPlugin for FunDspPlugin {
@@ -60,7 +64,7 @@ impl ClapPlugin for FunDspPlugin {
         const MAX_PITCH: f64 = 20_000.0;
         const TABLES_PER_OCTAVE: f64 = 4.0;
 
-        let wt = (0..256)
+        let wt: Vec<_> = (0..256)
             .map(|idx| {
                 // `idx / 255` morphs 0 (pure sine) -> 1 (band-limited square).
                 let morph = idx as f64 / 255.0;
@@ -87,8 +91,7 @@ impl ClapPlugin for FunDspPlugin {
             })
             .collect();
 
-        let mut oscillator = crate::oscillator::Oscillator::new(config.sample_rate);
-        oscillator.set_wavetables(wt);
+        let oscillator = PolyVoice::new(config.sample_rate as f32);
 
         use fundsp::prelude32::*;
 
@@ -99,6 +102,7 @@ impl ClapPlugin for FunDspPlugin {
 
         Self {
             oscillators: [oscillator],
+            wavetables: [wt.try_into().unwrap()],
         }
     }
 
@@ -106,28 +110,39 @@ impl ClapPlugin for FunDspPlugin {
         &mut self,
         mut buffers: Buffers,
         _ctx: ProcessContext,
-        events: &InputEvents,
+        _events: &InputEvents,
         params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
-        for (events, frame) in buffers.main().iter_samples().zip_events(events) {
-            for _event in events {}
+        buffers.main().for_each_stereo_frame(|frame| {
+            frame.fill(0.);
 
-            let mut fr = [0f32; 2];
+            for ((osc, oscp), wavetable) in self
+                .oscillators
+                .iter_mut()
+                .zip(&params.oscillators)
+                .zip(&self.wavetables)
+            {
+                let wt_pos = oscp.wt_position.value();
+                let wt = ((wavetable.len() - 1) as f32 * wt_pos.clamp(0.0, 1.0)) as usize;
+                let table = &wavetable[wt];
 
-            for (oscillator, osc_params) in self.oscillators.iter_mut().zip(&params.oscillators) {
-                let wt_pos = osc_params.wt_position.value();
-                let pan = osc_params.pan.value();
-                let gain = osc_params.gain.value();
+                let pan = oscp.pan.value();
+                let gain = oscp.gain.value();
 
-                let v = oscillator.tick(wt_pos);
+                osc.tick(|voice, adsr_gain, velocity| {
+                    let (value, hint) =
+                        table.read(voice.table_hint(), voice.frequency(), voice.next_phase());
+                    voice.set_table_hint(hint);
 
-                fr[0] += gain * v * (0.5 - pan).clamp(0f32, 1f32);
-                fr[1] += gain * v * (0.5 + pan).clamp(0f32, 1f32);
+                    const MAX_VELOCITY: f32 = u8::MAX as f32;
+                    let v = adsr_gain * gain * value * (velocity as f32 / MAX_VELOCITY);
+
+                    frame[0] += v * (0.5 - pan).clamp(0f32, 1f32);
+                    frame[1] += v * (0.5 + pan).clamp(0f32, 1f32);
+                });
             }
-
-            frame.fill(fr);
-        }
+        });
 
         // self.synth.process(size, input, output);
 
@@ -135,27 +150,17 @@ impl ClapPlugin for FunDspPlugin {
     }
 
     fn on_midi_message(&mut self, midi: MidiMessage, _: &Self::Params, _: &Self::SharedData) {
-        match midi.kind {
-            MidiMessageKind::NoteOn { note, .. } => {
-                for osc in &mut self.oscillators {
-                    osc.trigger(note, || 0f32);
-                }
-            }
-            MidiMessageKind::NoteOff { note, .. } => {
-                for osc in &mut self.oscillators {
-                    osc.deactivate(note);
-                }
-            }
-            _ => {}
+        for osc in &mut self.oscillators {
+            osc.event(midi);
         }
     }
 
     fn gui(params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
         vizia_gui(200, 200, move |cx, _| {
             VStack::new(cx, |cx| {
+                param_knob(cx, &params.oscillators[0].wt_position);
                 param_knob(cx, &params.oscillators[0].gain);
-
-                param_knob(cx, &params.filters[0].cutoff);
+                param_knob(cx, &params.oscillators[0].pan);
             });
         })
     }

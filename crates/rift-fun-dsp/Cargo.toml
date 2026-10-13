@@ -7,3 +7,6 @@ edition = "2024"
 fundsp = { workspace = true }
 rift-plugin-derive = { workspace = true, features = ["modifiers"] }
 rift-plugin-buffers = { workspace = true, features = ["internal"] }
+rift-plugin-utils = { workspace = true }
+rift-plugin-types = { workspace = true }
+rift-plugin-dsp = { workspace = true }
