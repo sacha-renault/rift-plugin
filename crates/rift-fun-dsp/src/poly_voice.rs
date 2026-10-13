@@ -170,25 +170,39 @@ where
         (0..256).find(|slot| !self.active_voices.contains(slot))
     }
 
+    /// Returns the active slot currently playing `note`, if any.
+    fn slot_for_note(&self, note: u8) -> Option<usize> {
+        self.active_voices
+            .iter()
+            .copied()
+            .find(|&slot| self.voices[slot].note == note)
+    }
+
     pub fn event(&mut self, midi: MidiMessage) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, velocity } => {
-                let Some(slot) = self.free_slot() else {
-                    return;
+                // Reuse the slot already playing this note, if any, so rapid
+                // retriggers don't pile up voices that the matching note-off
+                // can never reach.
+                let slot = match self.slot_for_note(note) {
+                    Some(slot) => slot,
+                    None => match self.free_slot() {
+                        Some(slot) => {
+                            self.active_voices.push(slot);
+                            slot
+                        }
+                        None => return,
+                    },
                 };
                 self.voices[slot].trigger(note, velocity);
-                self.active_voices.push(slot);
             }
             MidiMessageKind::NoteOff { note, .. } => {
-                if let Some(slot) = self
-                    .active_voices
-                    .iter()
-                    .copied()
-                    .find(|&slot| self.voices[slot].note == note)
-                {
-                    // Hand the voice over to its envelope, which releases and
-                    // eventually marks it `INACTIVE`.
-                    self.voices[slot].active.set(RELEASED);
+                // Hand the voice over to its envelope, which releases and
+                // eventually marks it `INACTIVE`.
+                for &slot in self.active_voices.iter() {
+                    if self.voices[slot].note == note {
+                        self.voices[slot].active.set(RELEASED);
+                    }
                 }
             }
             _ => {}
@@ -201,8 +215,7 @@ where
         F: FnMut(&mut V, f32, u8),
     {
         for slot in self.active_voices.iter().copied() {
-            // Safety:
-            let voice = unsafe { self.voices.get_unchecked_mut(slot) };
+            let voice = &mut self.voices[slot];
 
             if voice.active.value() == INACTIVE {
                 continue;
@@ -219,5 +232,54 @@ where
         let voices = &self.voices;
         self.active_voices
             .retain(|&slot| voices[slot].active.value() != INACTIVE);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn msg(kind: MidiMessageKind) -> MidiMessage {
+        MidiMessage {
+            channel: 0,
+            port_index: 0,
+            kind,
+            time: 0,
+        }
+    }
+
+    fn note_on(note: u8) -> MidiMessage {
+        msg(MidiMessageKind::NoteOn {
+            note,
+            velocity: 100,
+        })
+    }
+
+    fn note_off(note: u8) -> MidiMessage {
+        msg(MidiMessageKind::NoteOff { note, velocity: 0 })
+    }
+
+    #[test]
+    fn retrigger_reuses_slot_and_still_releases() {
+        let mut poly = PolyVoice::<OscillatorVoice>::new(&());
+
+        // First tap, released while its tail is still ringing.
+        poly.event(note_on(60));
+        poly.tick(|_, _, _| {});
+        poly.event(note_off(60));
+
+        // Second tap before the tail finished must reuse the same slot.
+        poly.event(note_on(60));
+        assert_eq!(poly.active_voices.len(), 1, "retrigger should reuse the slot");
+
+        // Releasing the second tap must eventually free every voice.
+        poly.event(note_off(60));
+        for _ in 0..200_000 {
+            poly.tick(|_, _, _| {});
+            if poly.active_voices.is_empty() {
+                break;
+            }
+        }
+        assert!(poly.active_voices.is_empty(), "note never released");
     }
 }
