@@ -1,10 +1,11 @@
 [
   {
-    "label": "Install test plugin",
-    "command": "cargo xtask install fun_dsp_plugin -r"
+    "label": "Run standalone Vizia Example",
+    "command": "cargo run -p vizia-gallery -r"
   },
   {
-    "label": "Run standalone Vizia Example",
-    "command": "cargo run -p standalone-vizia -r"
-  }
+    "label": "Install current plugin (RELEASE)",
+    "command": "cargo xtask install $ZED_CUSTOM_RUST_PACKAGE -r",
+    "reveal": "always"
+  },
 ]
