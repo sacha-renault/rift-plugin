@@ -959,6 +959,7 @@ name = "fun_dsp_plugin"
 version = "0.1.0"
 dependencies = [
  "fundsp",
+ "rift-fun-dsp",
  "rift-plugin",
  "rift-plugin-dsp",
  "rift-plugin-vizia",
