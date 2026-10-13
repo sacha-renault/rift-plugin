@@ -3,10 +3,19 @@ use rift_plugin_dsp::oscillator::OscillatorVoice;
 use rift_plugin_types::{MidiMessage, MidiMessageKind};
 use rift_plugin_utils::BoundedVec;
 
+mod adsr;
+
+pub use self::adsr::Adsr;
+use self::adsr::{ACTIVE, INACTIVE, RELEASED};
+
 pub trait VoiceInit {
     type Config;
 
     fn create(note: u8, config: &Self::Config) -> Self;
+
+    /// Sample rate in Hz, extracted from the voice configuration. Used to
+    /// advance each voice's [`Adsr`].
+    fn sample_rate(config: &Self::Config) -> f32;
 }
 
 impl VoiceInit for OscillatorVoice {
@@ -14,15 +23,15 @@ impl VoiceInit for OscillatorVoice {
     fn create(note: u8, &samplerate: &Self::Config) -> Self {
         Self::new(samplerate, note)
     }
+    fn sample_rate(&samplerate: &Self::Config) -> f32 {
+        samplerate
+    }
 }
-
-const INACTIVE: f32 = 0.0;
-const ACTIVE: f32 = 1.0;
-const RELEASED: f32 = 2.0;
 
 struct Voice<T> {
     note: u8,
     inner: T,
+    adsr: Adsr,
     processed_samples: u64,
     velocity: u8,
 
@@ -35,6 +44,15 @@ where
     V: VoiceInit,
 {
     config: V::Config,
+    sample_rate: f32,
+
+    /// Shared ADSR parameters, cloned into every voice together with that
+    /// voice's own `active` gate.
+    attack: An<Var>,
+    decay: An<Var>,
+    sustain: An<Var>,
+    release: An<Var>,
+
     active_voices: BoundedVec<Voice<V>, N>,
     pending_remove: BoundedVec<usize, N>,
 }
@@ -43,11 +61,37 @@ impl<V, const N: usize> PolyVoice<V, N>
 where
     V: VoiceInit,
 {
+    /// Creates a poly voice with a short, click-free default envelope
+    /// (10 ms attack, 100 ms decay, full sustain, 100 ms release).
     pub fn new(config: V::Config) -> Self {
+        Self::with_adsr(
+            config,
+            var(&shared(0.01)),
+            var(&shared(0.1)),
+            var(&shared(1.0)),
+            var(&shared(0.1)),
+        )
+    }
+
+    /// Creates a poly voice whose envelopes are driven by the four shared
+    /// ADSR parameters. `attack`, `decay` and `release` are times in seconds;
+    /// `sustain` is a level in `0..=1`.
+    pub fn with_adsr(
+        config: V::Config,
+        attack: An<Var>,
+        decay: An<Var>,
+        sustain: An<Var>,
+        release: An<Var>,
+    ) -> Self {
         Self {
+            sample_rate: V::sample_rate(&config),
+            config,
+            attack,
+            decay,
+            sustain,
+            release,
             active_voices: BoundedVec::new(),
             pending_remove: BoundedVec::new(),
-            config,
         }
     }
 
@@ -57,19 +101,32 @@ where
         }
 
         match midi.kind {
-            MidiMessageKind::NoteOn { note, velocity } => self.active_voices.push(Voice {
-                note,
-                inner: V::create(note, &self.config),
-                processed_samples: 0,
-                velocity,
-                active: Shared::new(ACTIVE),
-            }),
+            MidiMessageKind::NoteOn { note, velocity } => {
+                let active = Shared::new(ACTIVE);
+                let mut adsr = Adsr::new(
+                    self.attack.clone(),
+                    self.decay.clone(),
+                    self.sustain.clone(),
+                    self.release.clone(),
+                    var(&active),
+                );
+                adsr.set_sample_rate(self.sample_rate);
+
+                self.active_voices.push(Voice {
+                    note,
+                    inner: V::create(note, &self.config),
+                    adsr,
+                    processed_samples: 0,
+                    velocity,
+                    active,
+                });
+            }
             MidiMessageKind::NoteOff { note, .. } => {
-                self.active_voices
-                    .iter()
-                    .find(|v| v.note == note)
-                    // TODO!(), current we directly set inactive
-                    .map(|v| v.active.set(INACTIVE));
+                if let Some(voice) = self.active_voices.iter().find(|v| v.note == note) {
+                    // Hand the voice over to its envelope, which releases and
+                    // eventually marks it `INACTIVE`.
+                    voice.active.set(RELEASED);
+                }
             }
             _ => {}
         }
@@ -86,8 +143,7 @@ where
                 continue;
             }
 
-            // todo!, calculate some sort of "gain" from adsr
-            let adsr_gain = 1.0;
+            let adsr_gain = voice.adsr.tick();
 
             f(&mut voice.inner, adsr_gain, voice.velocity);
 

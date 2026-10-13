@@ -86,17 +86,15 @@ impl BiquadCascade {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_utils::spaces::Linspace;
+    use rift_plugin_utils::{DEFAULT_SAMPLERATE, spaces::Linspace};
 
     use super::*;
 
-    const SAMPLERATE: f32 = 48000.;
-
     fn make_saw_wave() -> Vec<f32> {
-        let mut wave = Vec::with_capacity(SAMPLERATE as usize);
+        let mut wave = Vec::with_capacity(DEFAULT_SAMPLERATE as usize);
 
         // This will be a 40Hz saw wave at 48kHz
-        for x in Linspace::new(0., 40., SAMPLERATE as usize) {
+        for x in Linspace::new(0., 40., DEFAULT_SAMPLERATE as usize) {
             let y = (x.rem_euclid(1.) - 0.5) * 2.;
             wave.push(y);
         }
@@ -106,7 +104,7 @@ mod tests {
 
     #[test]
     fn activate() {
-        let mut cascade = BiquadCascade::new(SAMPLERATE);
+        let mut cascade = BiquadCascade::new(DEFAULT_SAMPLERATE as f32);
         let wave = make_saw_wave();
 
         let mode = FilterMode::HighPass {
@@ -125,7 +123,7 @@ mod tests {
 
     #[test]
     fn reactivate_with_new_copy() {
-        let mut cascade = BiquadCascade::new(SAMPLERATE);
+        let mut cascade = BiquadCascade::new(DEFAULT_SAMPLERATE as f32);
 
         let mode_order_4 = FilterMode::HighPass {
             cutoff: 200.,
@@ -145,7 +143,7 @@ mod tests {
 
     #[test]
     fn reactivate_with_no_copy() {
-        let mut cascade = BiquadCascade::new(SAMPLERATE);
+        let mut cascade = BiquadCascade::new(DEFAULT_SAMPLERATE as f32);
 
         let mode_order_4 = FilterMode::HighPass {
             cutoff: 200.,

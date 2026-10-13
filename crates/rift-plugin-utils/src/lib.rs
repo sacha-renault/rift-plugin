@@ -18,3 +18,5 @@ pub type ConsumerCell<T> = Rc<RefCell<T>>;
 
 pub use bounded_vec::BoundedVec;
 pub use multi_channel::MultiChannel;
+
+pub const DEFAULT_SAMPLERATE: f64 = 48000.;

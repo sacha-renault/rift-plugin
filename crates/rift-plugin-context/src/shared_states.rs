@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
 use crossbeam_queue::ArrayQueue;
 use rift_plugin_gui::GuiTasks as GuiTask;
 use rift_plugin_params::AtomicF64;
+use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
 use crate::tasks::{AudioThreadTask, MainThreadTask};
 
@@ -31,7 +32,7 @@ impl PluginSharedState {
         Self {
             latency: AtomicU32::new(0),
             is_playing: Arc::new(AtomicBool::new(false)),
-            samplerate: Arc::new(AtomicF64::new(44100.)),
+            samplerate: Arc::new(AtomicF64::new(DEFAULT_SAMPLERATE)),
 
             main_tasks: ArrayQueue::new(task_capacity),
             audio_tasks: ArrayQueue::new(task_capacity),

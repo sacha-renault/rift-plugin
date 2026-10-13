@@ -118,13 +118,14 @@ impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
 #[cfg(test)]
 mod tests {
     use rift_plugin_types::transport::BlockTime;
+    use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
     use crate::consumers::windowed_peaks::peaks::PeakBucket;
 
     use super::*;
 
     fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuckets<PeakBucket> {
-        let mut buf = WindowBuckets::new(44100.0, seconds);
+        let mut buf = WindowBuckets::new(DEFAULT_SAMPLERATE, seconds);
         buf.set_num_buckets(n_buckets);
         buf
     }

@@ -1,9 +1,8 @@
 use rift_plugin_types::transport::BlockTime;
-use rift_plugin_utils::conversion::linear_to_db;
+use rift_plugin_utils::{DEFAULT_SAMPLERATE, conversion::linear_to_db};
 
 use crate::prelude::MonoConsumer;
 
-const FALLBACK_SAMPLE_RATE: f64 = 48_000.0;
 const SILENCE: f64 = 1e-8;
 
 /// Peak meter for a single channel.
@@ -45,7 +44,7 @@ impl AudioPeak {
             release_db_per_sec: 20.0,
             hold_ms: 1000.0,
             clip_threshold: 1.0,
-            sample_rate: FALLBACK_SAMPLE_RATE,
+            sample_rate: DEFAULT_SAMPLERATE,
             release_coef: 1.0,
             hold_samples: 0,
             hold_left: 0,

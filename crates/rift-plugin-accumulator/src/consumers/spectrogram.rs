@@ -96,13 +96,13 @@ fn hanning(fft_size: usize) -> Vec<f32> {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_utils::assert_approx_eq;
+    use rift_plugin_utils::{DEFAULT_SAMPLERATE, assert_approx_eq};
 
     use super::*;
     use std::f32::consts::PI;
 
     fn make_consumer(fft_size: usize) -> StftConsumer {
-        StftConsumer::new(fft_size, 44100.0)
+        StftConsumer::new(fft_size, DEFAULT_SAMPLERATE as f32)
     }
 
     fn feed_sine(consumer: &mut StftConsumer, freq_hz: f32) {
