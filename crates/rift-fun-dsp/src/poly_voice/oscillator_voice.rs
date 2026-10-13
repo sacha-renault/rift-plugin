@@ -1,4 +1,6 @@
-use rift_plugin_utils::notes::midi_to_frequency;
+use rift_plugin_utils::{DEFAULT_SAMPLERATE, notes::midi_to_frequency};
+
+use crate::VoiceSource;
 
 /// Tracks the phase position of an oscillator, advancing it each sample
 /// based on the current frequency and sample rate.
@@ -105,5 +107,20 @@ impl OscillatorVoice {
 
     pub fn set_table_hint(&mut self, hint: usize) {
         self.table_hint = hint;
+    }
+}
+
+impl VoiceSource for OscillatorVoice {
+    type Config = ();
+    fn new(_: &Self::Config) -> Self {
+        OscillatorVoice::new(DEFAULT_SAMPLERATE as f32, 0)
+    }
+
+    fn reset(&mut self, note: u8) {
+        OscillatorVoice::reset(self, note);
+    }
+
+    fn set_samplerate(&mut self, samplerate: f32) {
+        OscillatorVoice::set_samplerate(self, samplerate);
     }
 }
