@@ -89,7 +89,13 @@ impl Adsr {
         }
 
         match self.stage {
-            Stage::Idle => self.value = 0.0,
+            Stage::Idle => {
+                // Reached only when the gate is not `ACTIVE` (an active gate in
+                // `Idle` moves to `Attack` above). A note released before the
+                // envelope ever started must still hand the voice back.
+                self.value = 0.0;
+                self.active.set_value(INACTIVE);
+            }
             Stage::Attack => {
                 let attack = self.attack.value().max(0.0);
                 self.value += if attack > 0.0 { dt / attack } else { 1.0 };
