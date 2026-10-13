@@ -64,6 +64,13 @@ impl Adsr {
         self.sample_rate = sample_rate;
     }
 
+    /// Returns the envelope to its idle state so it can be retriggered.
+    pub fn reset(&mut self) {
+        self.stage = Stage::Idle;
+        self.value = 0.0;
+        self.release_level = 0.0;
+    }
+
     /// Advances the envelope by one sample and returns its gain in `0..=1`.
     pub fn tick(&mut self) -> f32 {
         let dt = self.sample_rate.recip();

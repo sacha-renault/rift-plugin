@@ -8,27 +8,46 @@ mod adsr;
 pub use self::adsr::Adsr;
 use self::adsr::{ACTIVE, INACTIVE, RELEASED};
 
-pub trait VoiceInit {
+/// A single voice of polyphony.
+///
+/// Implementors own the per-voice synthesis state. The voice pool builds one
+/// instance up front and reuses it for every note by calling [`reset`], instead
+/// of allocating a fresh voice on each note-on.
+///
+/// [`reset`]: VoiceSource::reset
+pub trait VoiceSource {
     type Config;
 
-    fn create(note: u8, config: &Self::Config) -> Self;
+    /// Creates an idle voice. It stays silent until [`reset`] is called with
+    /// the note to play.
+    ///
+    /// [`reset`]: VoiceSource::reset
+    fn new(config: &Self::Config) -> Self;
+
+    /// Re-initialises the voice to play `note` from a clean state, reusing its
+    /// already-allocated state.
+    fn reset(&mut self, note: u8, config: &Self::Config);
 
     /// Sample rate in Hz, extracted from the voice configuration. Used to
     /// advance each voice's [`Adsr`].
     fn sample_rate(config: &Self::Config) -> f32;
 }
 
-impl VoiceInit for OscillatorVoice {
+impl VoiceSource for OscillatorVoice {
     type Config = f32;
-    fn create(note: u8, &samplerate: &Self::Config) -> Self {
-        Self::new(samplerate, note)
+    fn new(&samplerate: &Self::Config) -> Self {
+        OscillatorVoice::new(samplerate, 0)
+    }
+    fn reset(&mut self, note: u8, &samplerate: &Self::Config) {
+        OscillatorVoice::reset(self, samplerate, note);
     }
     fn sample_rate(&samplerate: &Self::Config) -> f32 {
         samplerate
     }
 }
 
-struct Voice<T> {
+/// One slot of the voice pool: a reusable voice plus its envelope and gate.
+struct VoiceSlot<T> {
     note: u8,
     inner: T,
     adsr: Adsr,
@@ -39,27 +58,66 @@ struct Voice<T> {
     active: Shared,
 }
 
-pub struct PolyVoice<V, const N: usize>
+impl<T> VoiceSlot<T>
 where
-    V: VoiceInit,
+    T: VoiceSource,
 {
-    config: V::Config,
-    sample_rate: f32,
+    /// Builds an idle slot whose envelope is driven by the shared ADSR
+    /// parameters.
+    fn new(
+        config: &T::Config,
+        attack: &An<Var>,
+        decay: &An<Var>,
+        sustain: &An<Var>,
+        release: &An<Var>,
+        sample_rate: f32,
+    ) -> Self {
+        let active = Shared::new(INACTIVE);
+        let mut adsr = Adsr::new(
+            attack.clone(),
+            decay.clone(),
+            sustain.clone(),
+            release.clone(),
+            var(&active),
+        );
+        adsr.set_sample_rate(sample_rate);
 
-    /// Shared ADSR parameters, cloned into every voice together with that
-    /// voice's own `active` gate.
-    attack: An<Var>,
-    decay: An<Var>,
-    sustain: An<Var>,
-    release: An<Var>,
+        Self {
+            note: 0,
+            inner: T::new(config),
+            adsr,
+            processed_samples: 0,
+            velocity: 0,
+            active,
+        }
+    }
 
-    active_voices: BoundedVec<Voice<V>, N>,
-    pending_remove: BoundedVec<usize, N>,
+    /// Restarts the slot on `note` without allocating a new voice.
+    fn trigger(&mut self, note: u8, velocity: u8, config: &T::Config) {
+        self.inner.reset(note, config);
+        self.note = note;
+        self.velocity = velocity;
+        self.processed_samples = 0;
+        self.adsr.reset();
+        self.active.set_value(ACTIVE);
+    }
 }
 
-impl<V, const N: usize> PolyVoice<V, N>
+pub struct PolyVoice<V>
 where
-    V: VoiceInit,
+    V: VoiceSource,
+{
+    config: V::Config,
+
+    /// Fixed pool of voices, allocated once. Slots are reused across notes.
+    voices: [VoiceSlot<V>; 256],
+    /// Indices into `voices` that are currently sounding, in trigger order.
+    active_voices: BoundedVec<usize, 256>,
+}
+
+impl<V> PolyVoice<V>
+where
+    V: VoiceSource,
 {
     /// Creates a poly voice with a short, click-free default envelope
     /// (10 ms attack, 100 ms decay, full sustain, 100 ms release).
@@ -83,49 +141,43 @@ where
         sustain: An<Var>,
         release: An<Var>,
     ) -> Self {
+        let sample_rate = V::sample_rate(&config);
+        let voices = std::array::from_fn(|_| {
+            VoiceSlot::new(&config, &attack, &decay, &sustain, &release, sample_rate)
+        });
+
         Self {
-            sample_rate: V::sample_rate(&config),
             config,
-            attack,
-            decay,
-            sustain,
-            release,
+            voices,
             active_voices: BoundedVec::new(),
-            pending_remove: BoundedVec::new(),
         }
     }
 
-    pub fn event(&mut self, midi: MidiMessage) {
-        if self.active_voices.is_full() {
-            return;
-        }
+    /// Returns the index of an unused slot, or `None` when every voice is
+    /// already sounding.
+    fn free_slot(&self) -> Option<usize> {
+        (0..256).find(|slot| !self.active_voices.contains(slot))
+    }
 
+    pub fn event(&mut self, midi: MidiMessage) {
         match midi.kind {
             MidiMessageKind::NoteOn { note, velocity } => {
-                let active = Shared::new(ACTIVE);
-                let mut adsr = Adsr::new(
-                    self.attack.clone(),
-                    self.decay.clone(),
-                    self.sustain.clone(),
-                    self.release.clone(),
-                    var(&active),
-                );
-                adsr.set_sample_rate(self.sample_rate);
-
-                self.active_voices.push(Voice {
-                    note,
-                    inner: V::create(note, &self.config),
-                    adsr,
-                    processed_samples: 0,
-                    velocity,
-                    active,
-                });
+                let Some(slot) = self.free_slot() else {
+                    return;
+                };
+                self.voices[slot].trigger(note, velocity, &self.config);
+                self.active_voices.push(slot);
             }
             MidiMessageKind::NoteOff { note, .. } => {
-                if let Some(voice) = self.active_voices.iter().find(|v| v.note == note) {
+                if let Some(slot) = self
+                    .active_voices
+                    .iter()
+                    .copied()
+                    .find(|&slot| self.voices[slot].note == note)
+                {
                     // Hand the voice over to its envelope, which releases and
                     // eventually marks it `INACTIVE`.
-                    voice.active.set(RELEASED);
+                    self.voices[slot].active.set(RELEASED);
                 }
             }
             _ => {}
@@ -137,9 +189,11 @@ where
     where
         F: FnMut(&mut V, f32, u8),
     {
-        for (i, voice) in self.active_voices.iter_mut().enumerate() {
+        for slot in self.active_voices.iter().copied() {
+            // Safety:
+            let voice = unsafe { self.voices.get_unchecked_mut(slot) };
+
             if voice.active.value() == INACTIVE {
-                self.pending_remove.push(i);
                 continue;
             }
 
@@ -150,8 +204,9 @@ where
             voice.processed_samples += 1;
         }
 
-        while let Some(i) = self.pending_remove.pop() {
-            self.active_voices.remove(i);
-        }
+        // Drop the slots whose envelope has fully released.
+        let voices = &self.voices;
+        self.active_voices
+            .retain(|&slot| voices[slot].active.value() != INACTIVE);
     }
 }
