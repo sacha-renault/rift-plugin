@@ -1,12 +1,13 @@
 use fundsp::prelude32::*;
-use rift_plugin_dsp::oscillator::OscillatorVoice;
 use rift_plugin_types::{MidiMessage, MidiMessageKind};
 use rift_plugin_utils::{BoundedVec, DEFAULT_SAMPLERATE};
 
 mod adsr;
+mod oscillator_voice;
 
 pub use self::adsr::Adsr;
 use self::adsr::{ACTIVE, INACTIVE, RELEASED};
+pub use self::oscillator_voice::OscillatorVoice;
 
 /// A single voice of polyphony.
 ///
@@ -31,21 +32,6 @@ pub trait VoiceSource {
     /// Sample rate in Hz, extracted from the voice configuration. Used to
     /// advance each voice's [`Adsr`].
     fn set_samplerate(&mut self, samplerate: f32);
-}
-
-impl VoiceSource for OscillatorVoice {
-    type Config = ();
-    fn new(_: &Self::Config) -> Self {
-        OscillatorVoice::new(DEFAULT_SAMPLERATE as f32, 0)
-    }
-
-    fn reset(&mut self, note: u8) {
-        OscillatorVoice::reset(self, note);
-    }
-
-    fn set_samplerate(&mut self, samplerate: f32) {
-        OscillatorVoice::set_samplerate(self, samplerate);
-    }
 }
 
 /// One slot of the voice pool: a reusable voice plus its envelope and gate.
@@ -270,7 +256,11 @@ mod tests {
 
         // Second tap before the tail finished must reuse the same slot.
         poly.event(note_on(60));
-        assert_eq!(poly.active_voices.len(), 1, "retrigger should reuse the slot");
+        assert_eq!(
+            poly.active_voices.len(),
+            1,
+            "retrigger should reuse the slot"
+        );
 
         // Releasing the second tap must eventually free every voice.
         poly.event(note_off(60));
