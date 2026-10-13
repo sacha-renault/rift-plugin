@@ -2,6 +2,7 @@ use std::ffi::CStr;
 use std::sync::Arc;
 
 use fundsp::wavetable::Wavetable;
+use rift_fun_dsp::{Blend, WaveShape, WavetableMorph};
 use rift_plugin::prelude::utils::BoundedVec;
 use rift_plugin::prelude::*;
 use rift_plugin_vizia::prelude::*;
@@ -75,32 +76,11 @@ impl ClapPlugin for FunDspPlugin {
         const MAX_PITCH: f64 = 20_000.0;
         const TABLES_PER_OCTAVE: f64 = 4.0;
 
-        let wt: Vec<_> = (0..256)
-            .map(|idx| {
-                // `idx / 255` morphs 0 (pure sine) -> 1 (band-limited square).
-                let morph = idx as f64 / 255.0;
-
-                // All partials are sine-phased, keeping the wave odd and symmetric.
-                let phase = |_| 0.0;
-
-                // A sine is just the fundamental; a square adds odd harmonics at 1/i.
-                let amplitude = move |_pitch: f64, i: u32| {
-                    if i.is_multiple_of(2) {
-                        0.0
-                    } else {
-                        (1.0 - morph) * if i == 1 { 1.0 } else { 0.0 } + morph * (1.0 / i as f64)
-                    }
-                };
-
-                Arc::new(Wavetable::new(
-                    MIN_PITCH,
-                    MAX_PITCH,
-                    TABLES_PER_OCTAVE,
-                    &phase,
-                    &amplitude,
-                ))
-            })
-            .collect();
+        // `wt_position` morphs 0 (pure sine) -> 1 (band-limited square).
+        let wt: Vec<_> = WavetableMorph::new(MIN_PITCH, MAX_PITCH, TABLES_PER_OCTAVE)
+            .shapes([WaveShape::sine(), WaveShape::square()])
+            .blend(Blend::Crossfade)
+            .build(256);
 
         let oscp = &params.oscillators[0];
         let mut oscillator = PolyVoice::with_adsr(
@@ -111,8 +91,6 @@ impl ClapPlugin for FunDspPlugin {
             oscp.release.var(),
         );
         oscillator.set_samplerate(config.sample_rate as f32);
-
-        use fundsp::prelude32::*;
 
         // let mono_filter = || (pass() | params.filters[0].cutoff.var() | dc(0.5f32)) >> lowpass();
         // let mut filter = mono_filter() | mono_filter();
