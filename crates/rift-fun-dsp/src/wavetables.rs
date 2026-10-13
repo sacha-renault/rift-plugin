@@ -3,27 +3,34 @@ use std::sync::Arc;
 use fundsp::fft;
 use fundsp::prelude32::*;
 
-type PhaseFn = dyn Fn(u32) -> f64 + Send + Sync;
-type AmplitudeFn = dyn Fn(f64, u32) -> f64 + Send + Sync;
+const REF_PITCH: f64 = 20.0;
+type PartialFn = dyn Fn(f64, u32) -> Complex64 + Send + Sync;
 
 /// A single wave, described by its partials.
 #[derive(Clone)]
 pub struct WaveShape {
-    phase: Arc<PhaseFn>,
-    amplitude: Arc<AmplitudeFn>,
+    partial: Arc<PartialFn>,
 }
 
 impl WaveShape {
+    fn from_partial<F>(partial: F) -> Self
+    where
+        F: Fn(f64, u32) -> Complex64 + Send + Sync + 'static,
+    {
+        Self {
+            partial: Arc::new(partial),
+        }
+    }
+
     /// Build a shape from a harmonic description.
     pub fn new<P, A>(phase: P, amplitude: A) -> Self
     where
         P: Fn(u32) -> f64 + Send + Sync + 'static,
         A: Fn(f64, u32) -> f64 + Send + Sync + 'static,
     {
-        Self {
-            phase: Arc::new(phase),
-            amplitude: Arc::new(amplitude),
-        }
+        Self::from_partial(move |pitch, partial| {
+            Complex64::from_polar(amplitude(pitch, partial), f64::TAU * phase(partial))
+        })
     }
 
     /// Build a shape from a single-cycle sample.
@@ -33,31 +40,27 @@ impl WaveShape {
         let mut data = Vec::from(wave);
         let spectrum: Arc<[Complex32]> = fft::real_fft(&mut data).to_vec().into();
 
-        let phases = spectrum.clone();
-        let amplitudes = spectrum;
-
-        Self::new(
-            move |partial: u32| {
-                phases
-                    .get(partial as usize)
-                    .map_or(0.0, |bin| bin.arg() as f64 / f64::TAU)
-            },
-            move |_pitch: f64, partial: u32| {
-                amplitudes
-                    .get(partial as usize)
-                    .map_or(0.0, |bin| bin.norm() as f64)
-            },
-        )
+        Self::from_partial(move |_pitch, partial| {
+            spectrum
+                .get(partial as usize)
+                .map_or(Complex64::ZERO, |bin| {
+                    Complex64::new(bin.re as f64, bin.im as f64)
+                })
+        })
     }
 
-    /// Phase of `partial` in `0...1`.
+    fn coefficient(&self, pitch: f64, partial: u32) -> Complex64 {
+        (self.partial)(pitch, partial)
+    }
+
+    /// Phase of `partial`, in turns.
     pub fn phase(&self, partial: u32) -> f64 {
-        (self.phase)(partial)
+        self.coefficient(REF_PITCH, partial).arg() / f64::TAU
     }
 
     /// Relative amplitude of `partial` for a fundamental at `pitch` Hz.
     pub fn amplitude(&self, pitch: f64, partial: u32) -> f64 {
-        (self.amplitude)(pitch, partial)
+        self.coefficient(pitch, partial).norm()
     }
 
     /// Bake this shape into a band-limited [`Wavetable`].
@@ -77,22 +80,21 @@ impl WaveShape {
     }
 
     /// Crossfade between this shape and the other shape.
+    ///
+    /// That's the most basic morph, just just take amp / phase and blend them.
     pub fn crossfade(&self, other: &Self, weight: f64) -> Self {
         let weight = weight.clamp(0.0, 1.0);
-        let phase_from = self.clone();
-        let phase_to = other.clone();
-        let amplitude_from = self.clone();
-        let amplitude_to = other.clone();
+        let from = self.clone();
+        let to = other.clone();
 
-        Self::new(
-            move |partial| {
-                phase_from.phase(partial) * (1.0 - weight) + phase_to.phase(partial) * weight
-            },
-            move |pitch, partial| {
-                amplitude_from.amplitude(pitch, partial) * (1.0 - weight)
-                    + amplitude_to.amplitude(pitch, partial) * weight
-            },
-        )
+        Self::from_partial(move |pitch, partial| {
+            let a = from.coefficient(pitch, partial);
+            let b = to.coefficient(pitch, partial);
+            Complex64::from_polar(
+                lerp(a.norm(), b.norm(), weight),
+                lerp(a.arg(), b.arg(), weight),
+            )
+        })
     }
 
     /// Just a pure sine.
@@ -150,7 +152,7 @@ impl WaveShape {
 /// How two [`WaveShape`]s are combined while morphing.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Blend {
-    /// Crossfade the partials of both shapes by the morph weight.
+    /// Interpolate each partial's amplitude and phase independently.
     #[default]
     Crossfade,
 }
@@ -236,7 +238,8 @@ impl WavetableMorph {
         let index = scaled.floor().min(segments as f64 - 1.0) as usize;
         let weight = scaled - index as f64;
 
-        self.blend.apply(&self.shapes[index], &self.shapes[index + 1], weight)
+        self.blend
+            .apply(&self.shapes[index], &self.shapes[index + 1], weight)
     }
 
     /// Build the table at `position` in `0...1`.
