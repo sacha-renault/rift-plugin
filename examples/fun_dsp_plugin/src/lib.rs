@@ -4,9 +4,8 @@ use std::sync::Arc;
 use fundsp::wavetable::Wavetable;
 use rift_plugin::prelude::utils::BoundedVec;
 use rift_plugin::prelude::*;
-use rift_plugin_dsp::oscillator::OscillatorVoice;
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::param_knob;
+use rift_plugin_vizia::widgets::*;
 
 const WAVETABLES_CAPACITY: usize = 256;
 
@@ -20,6 +19,18 @@ pub struct OscillatorParams {
 
     #[param(id = "Gain", default = 1, range = linear(0, 2))]
     pub gain: FloatParam,
+
+    #[param(id = "Attack", range = skew(0.001, 4.0, 3), default = 0.01)]
+    pub attack: SharedFloatParam,
+
+    #[param(id = "Decay", range = skew(0.001, 4.0, 3), default = 0.1)]
+    pub decay: SharedFloatParam,
+
+    #[param(id = "Sustain", range = linear(0.0, 1.0), default = 1.0)]
+    pub sustain: SharedFloatParam,
+
+    #[param(id = "Release", range = skew(0.001, 4.0, 3), default = 0.2)]
+    pub release: SharedFloatParam,
 }
 
 #[derive(Params)]
@@ -44,7 +55,7 @@ pub struct FunDspParams {
 }
 
 struct FunDspPlugin {
-    oscillators: [PolyVoice<OscillatorVoice, 128>; OSC_COUNT],
+    oscillators: [PolyVoice<OscillatorVoice>; OSC_COUNT],
     wavetables: [BoundedVec<Arc<Wavetable>, WAVETABLES_CAPACITY>; OSC_COUNT],
 }
 
@@ -55,7 +66,7 @@ impl ClapPlugin for FunDspPlugin {
     const EVENT_PRE_PROCESS: EventPreProcess = EventPreProcess::all();
 
     fn create(
-        _params: &Self::Params,
+        params: &Self::Params,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
@@ -91,7 +102,15 @@ impl ClapPlugin for FunDspPlugin {
             })
             .collect();
 
-        let oscillator = PolyVoice::new(config.sample_rate as f32);
+        let oscp = &params.oscillators[0];
+        let mut oscillator = PolyVoice::with_adsr(
+            &(),
+            oscp.attack.var(),
+            oscp.decay.var(),
+            oscp.sustain.var(),
+            oscp.release.var(),
+        );
+        oscillator.set_samplerate(config.sample_rate as f32);
 
         use fundsp::prelude32::*;
 
@@ -156,11 +175,19 @@ impl ClapPlugin for FunDspPlugin {
     }
 
     fn gui(params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        vizia_gui(200, 200, move |cx, _| {
+        vizia_gui(480, 320, move |cx, _| {
             VStack::new(cx, |cx| {
-                param_knob(cx, &params.oscillators[0].wt_position);
-                param_knob(cx, &params.oscillators[0].gain);
-                param_knob(cx, &params.oscillators[0].pan);
+                Panel::new(cx, "Osc1", |cx| {
+                    param_knob(cx, &params.oscillators[0].wt_position);
+                    param_knob(cx, &params.oscillators[0].gain);
+                    param_knob(cx, &params.oscillators[0].pan);
+                });
+                Panel::new(cx, "Adsr", |cx| {
+                    param_knob(cx, &params.oscillators[0].attack);
+                    param_knob(cx, &params.oscillators[0].decay);
+                    param_knob(cx, &params.oscillators[0].sustain);
+                    param_knob(cx, &params.oscillators[0].release);
+                });
             });
         })
     }

@@ -1,0 +1,14 @@
+[package]
+name = "fun-dsp-reverb"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+rift-plugin = { workspace = true }
+rift-plugin-gui = { workspace = true }
+rift-plugin-vizia = { workspace = true }
+rift-plugin-accumulator = { workspace = true}
+fundsp = { workspace = true }
