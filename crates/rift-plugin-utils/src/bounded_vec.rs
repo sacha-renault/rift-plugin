@@ -212,6 +212,18 @@ where
     }
 }
 
+impl<T, const N: usize> TryFrom<Vec<T>> for BoundedVec<T, N> {
+    type Error = &'static str;
+
+    fn try_from(value: Vec<T>) -> Result<Self, Self::Error> {
+        if value.len() > N {
+            Err("N is too small")
+        } else {
+            Ok(Self { inner: value })
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
