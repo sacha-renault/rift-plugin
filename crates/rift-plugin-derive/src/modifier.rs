@@ -7,11 +7,15 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{ItemTrait, Token, TraitItem, TraitItemFn, parse::Parse, parse::ParseStream};
+use syn::{
+    GenericParam, Generics, ItemTrait, Token, TraitItem, TraitItemFn, TypeParam, WhereClause,
+    WherePredicate, parse::Parse, parse::ParseStream, punctuated::Punctuated,
+};
 
-/// Arguments of `#[modifiers(for <Type>)]`.
+/// Arguments of `#[modifiers(for <Type> [where ...])]`.
 struct Args {
     self_ty: syn::Type,
+    generics: Generics,
 }
 
 impl Parse for Args {
@@ -19,16 +23,68 @@ impl Parse for Args {
         let _: Token![for] = input.parse()?;
         let self_ty = input.parse()?;
 
+        let where_clause: Option<WhereClause> = if input.peek(Token![where]) {
+            Some(input.parse()?)
+        } else {
+            None
+        };
+
         if !input.is_empty() {
-            return Err(input.error("expected `for <Type>`"));
+            return Err(input.error("expected `for <Type>` optionally followed by `where ...`"));
         }
 
-        Ok(Self { self_ty })
+        Ok(Self {
+            self_ty,
+            generics: generics_from(&where_clause),
+        })
+    }
+}
+
+/// Derives the impl's generic parameters from the free types bound by the
+/// user-supplied optional where clause.
+fn generics_from(where_clause: &Option<WhereClause>) -> Generics {
+    let Some(where_clause) = where_clause else {
+        return Generics::default();
+    };
+
+    let mut params: Punctuated<GenericParam, Token![,]> = Punctuated::new();
+    let mut seen: Vec<syn::Ident> = Vec::new();
+    for predicate in &where_clause.predicates {
+        let WherePredicate::Type(predicate) = predicate else {
+            continue;
+        };
+        let syn::Type::Path(type_path) = &predicate.bounded_ty else {
+            continue;
+        };
+        if type_path.qself.is_some() || type_path.path.segments.len() != 1 {
+            continue;
+        }
+        let Some(segment) = type_path.path.segments.first() else {
+            continue;
+        };
+        if !matches!(segment.arguments, syn::PathArguments::None) || seen.contains(&segment.ident) {
+            continue;
+        }
+        seen.push(segment.ident.clone());
+        params.push(GenericParam::Type(TypeParam {
+            attrs: Vec::new(),
+            ident: segment.ident.clone(),
+            colon_token: None,
+            bounds: Punctuated::new(),
+            eq_token: None,
+            default: None,
+        }));
+    }
+
+    Generics {
+        where_clause: Some(where_clause.clone()),
+        params,
+        ..Default::default()
     }
 }
 
 pub(crate) fn modifiers(attr: TokenStream, item: TokenStream) -> syn::Result<TokenStream> {
-    let Args { self_ty } = syn::parse2(attr)?;
+    let Args { self_ty, generics } = syn::parse2(attr)?;
     let mut trait_def: ItemTrait = syn::parse2(item)?;
 
     // Methods split out of the trait into the concrete impl.
@@ -69,11 +125,12 @@ pub(crate) fn modifiers(attr: TokenStream, item: TokenStream) -> syn::Result<Tok
     }
 
     let trait_ident = &trait_def.ident;
+    let where_clause = &generics.where_clause;
     let impl_block = if concrete.is_empty() {
         TokenStream::new()
     } else {
         quote! {
-            impl #trait_ident for #self_ty {
+            impl #generics #trait_ident for #self_ty #where_clause {
                 #(#concrete)*
             }
         }
