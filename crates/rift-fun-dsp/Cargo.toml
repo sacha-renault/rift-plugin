@@ -10,3 +10,4 @@ rift-plugin-buffers = { workspace = true, features = ["internal"] }
 rift-plugin-utils = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-dsp = { workspace = true }
+rift-plugin-params = { workspace = true }

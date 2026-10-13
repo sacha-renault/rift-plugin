@@ -1,7 +1,7 @@
 use fundsp::prelude32::*;
 use rift_plugin_dsp::oscillator::OscillatorVoice;
 use rift_plugin_types::{MidiMessage, MidiMessageKind};
-use rift_plugin_utils::BoundedVec;
+use rift_plugin_utils::{BoundedVec, DEFAULT_SAMPLERATE};
 
 mod adsr;
 
@@ -26,23 +26,25 @@ pub trait VoiceSource {
 
     /// Re-initialises the voice to play `note` from a clean state, reusing its
     /// already-allocated state.
-    fn reset(&mut self, note: u8, config: &Self::Config);
+    fn reset(&mut self, note: u8);
 
     /// Sample rate in Hz, extracted from the voice configuration. Used to
     /// advance each voice's [`Adsr`].
-    fn sample_rate(config: &Self::Config) -> f32;
+    fn set_samplerate(&mut self, samplerate: f32);
 }
 
 impl VoiceSource for OscillatorVoice {
-    type Config = f32;
-    fn new(&samplerate: &Self::Config) -> Self {
-        OscillatorVoice::new(samplerate, 0)
+    type Config = ();
+    fn new(_: &Self::Config) -> Self {
+        OscillatorVoice::new(DEFAULT_SAMPLERATE as f32, 0)
     }
-    fn reset(&mut self, note: u8, &samplerate: &Self::Config) {
-        OscillatorVoice::reset(self, samplerate, note);
+
+    fn reset(&mut self, note: u8) {
+        OscillatorVoice::reset(self, note);
     }
-    fn sample_rate(&samplerate: &Self::Config) -> f32 {
-        samplerate
+
+    fn set_samplerate(&mut self, samplerate: f32) {
+        OscillatorVoice::set_samplerate(self, samplerate);
     }
 }
 
@@ -82,9 +84,12 @@ where
         );
         adsr.set_sample_rate(sample_rate);
 
+        let mut inner = T::new(config);
+        inner.set_samplerate(sample_rate);
+
         Self {
             note: 0,
-            inner: T::new(config),
+            inner,
             adsr,
             processed_samples: 0,
             velocity: 0,
@@ -93,8 +98,8 @@ where
     }
 
     /// Restarts the slot on `note` without allocating a new voice.
-    fn trigger(&mut self, note: u8, velocity: u8, config: &T::Config) {
-        self.inner.reset(note, config);
+    fn trigger(&mut self, note: u8, velocity: u8) {
+        self.inner.reset(note);
         self.note = note;
         self.velocity = velocity;
         self.processed_samples = 0;
@@ -107,8 +112,6 @@ pub struct PolyVoice<V>
 where
     V: VoiceSource,
 {
-    config: V::Config,
-
     /// Fixed pool of voices, allocated once. Slots are reused across notes.
     voices: [VoiceSlot<V>; 256],
     /// Indices into `voices` that are currently sounding, in trigger order.
@@ -121,7 +124,7 @@ where
 {
     /// Creates a poly voice with a short, click-free default envelope
     /// (10 ms attack, 100 ms decay, full sustain, 100 ms release).
-    pub fn new(config: V::Config) -> Self {
+    pub fn new(config: &V::Config) -> Self {
         Self::with_adsr(
             config,
             var(&shared(0.01)),
@@ -135,21 +138,29 @@ where
     /// ADSR parameters. `attack`, `decay` and `release` are times in seconds;
     /// `sustain` is a level in `0..=1`.
     pub fn with_adsr(
-        config: V::Config,
+        config: &V::Config,
         attack: An<Var>,
         decay: An<Var>,
         sustain: An<Var>,
         release: An<Var>,
     ) -> Self {
-        let sample_rate = V::sample_rate(&config);
+        let sample_rate = DEFAULT_SAMPLERATE as f32;
         let voices = std::array::from_fn(|_| {
-            VoiceSlot::new(&config, &attack, &decay, &sustain, &release, sample_rate)
+            VoiceSlot::new(config, &attack, &decay, &sustain, &release, sample_rate)
         });
 
         Self {
-            config,
             voices,
             active_voices: BoundedVec::new(),
+        }
+    }
+
+    /// Forwards the sample rate to every voice and its envelope. Call this once
+    /// the real audio sample rate is known.
+    pub fn set_samplerate(&mut self, samplerate: f32) {
+        for voice in &mut self.voices {
+            voice.inner.set_samplerate(samplerate);
+            voice.adsr.set_sample_rate(samplerate);
         }
     }
 
@@ -165,7 +176,7 @@ where
                 let Some(slot) = self.free_slot() else {
                     return;
                 };
-                self.voices[slot].trigger(note, velocity, &self.config);
+                self.voices[slot].trigger(note, velocity);
                 self.active_voices.push(slot);
             }
             MidiMessageKind::NoteOff { note, .. } => {
