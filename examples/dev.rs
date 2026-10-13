@@ -9,18 +9,6 @@ enum WaveType {
 }
 
 #[derive(Params)]
-pub struct OscillatorParam {
-    #[param(name = "Frequency", range = linear(0, 1), default = 20.0)]
-    pub frequency: FloatParam,
-
-    #[param(name = "Wave", default = WaveType::Square)]
-    pub wave: EnumParam<WaveType>,
-
-    #[nested]
-    pub nested_params: NestedParams,
-}
-
-#[derive(Params)]
 pub struct NestedParams {
     #[param(name = "Gain", range = linear(0, 2), default = 1.0)]
     pub gain: FloatParam,
