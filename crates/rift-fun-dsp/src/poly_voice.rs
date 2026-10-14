@@ -4,9 +4,11 @@ use rift_plugin_utils::{BoundedVec, DEFAULT_SAMPLERATE};
 
 mod adsr;
 mod oscillator_voice;
+mod voice_slot;
 
 pub use self::adsr::Adsr;
 pub use self::oscillator_voice::OscillatorVoice;
+use self::voice_slot::{VoiceSlot, VoiceSlotInfo};
 
 /// A single voice of polyphony.
 ///
@@ -31,59 +33,6 @@ pub trait VoiceSource {
     /// Sample rate in Hz, extracted from the voice configuration. Used to
     /// advance each voice's [`Adsr`].
     fn set_samplerate(&mut self, samplerate: f32);
-}
-
-/// One slot of the voice pool: a reusable voice plus its envelope and gate.
-struct VoiceSlot<T> {
-    note: u8,
-    inner: T,
-    adsr: Adsr,
-    processed_samples: u64,
-    velocity: u8,
-}
-
-impl<T> VoiceSlot<T>
-where
-    T: VoiceSource,
-{
-    /// Builds an idle slot whose envelope is driven by the shared ADSR
-    /// parameters.
-    fn new(
-        config: &T::Config,
-        attack: &An<Var>,
-        decay: &An<Var>,
-        sustain: &An<Var>,
-        release: &An<Var>,
-        sample_rate: f32,
-    ) -> Self {
-        let mut adsr = Adsr::new(
-            attack.clone(),
-            decay.clone(),
-            sustain.clone(),
-            release.clone(),
-        );
-        adsr.set_sample_rate(sample_rate);
-
-        let mut inner = T::new(config);
-        inner.set_samplerate(sample_rate);
-
-        Self {
-            note: 0,
-            inner,
-            adsr,
-            processed_samples: 0,
-            velocity: 0,
-        }
-    }
-
-    /// Restarts the slot on `note` without allocating a new voice.
-    fn trigger(&mut self, note: u8, velocity: u8) {
-        self.inner.reset(note);
-        self.note = note;
-        self.velocity = velocity;
-        self.processed_samples = 0;
-        self.adsr.trigger();
-    }
 }
 
 pub struct PolyVoice<V>
@@ -137,8 +86,7 @@ where
     /// the real audio sample rate is known.
     pub fn set_samplerate(&mut self, samplerate: f32) {
         for voice in &mut self.voices {
-            voice.inner.set_samplerate(samplerate);
-            voice.adsr.set_sample_rate(samplerate);
+            voice.set_samplerate(samplerate);
         }
     }
 
@@ -153,7 +101,7 @@ where
         self.active_voices
             .iter()
             .copied()
-            .find(|&slot| self.voices[slot].note == note)
+            .find(|&slot| self.voices[slot].note() == note)
     }
 
     pub fn event(&mut self, midi: MidiMessage) {
@@ -178,7 +126,7 @@ where
                 // Hand the voice over to its envelope, which releases and
                 // eventually marks it `Idle`.
                 for &slot in self.active_voices.iter() {
-                    if self.voices[slot].note == note {
+                    if self.voices[slot].info.note == note {
                         self.voices[slot].adsr.release();
                     }
                 }
@@ -187,10 +135,10 @@ where
         }
     }
 
-    /// F: FnMut(voice: &mut V, adsr_gain: f32, velocity: u8),
+    /// F: FnMut(voice: &mut V, adsr_gain: f32, info: VoiceSlotInfo),
     pub fn tick<F>(&mut self, mut f: F)
     where
-        F: FnMut(&mut V, f32, u8),
+        F: FnMut(&mut V, f32, VoiceSlotInfo),
     {
         for slot in self.active_voices.iter().copied() {
             let voice = &mut self.voices[slot];
@@ -201,9 +149,9 @@ where
 
             let adsr_gain = voice.adsr.tick();
 
-            f(&mut voice.inner, adsr_gain, voice.velocity);
+            f(&mut voice.inner, adsr_gain, voice.info);
 
-            voice.processed_samples += 1;
+            voice.info.processed_samples += 1;
         }
 
         // Drop the slots whose envelope has fully released.
