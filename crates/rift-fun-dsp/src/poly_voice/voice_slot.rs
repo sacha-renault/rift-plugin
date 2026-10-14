@@ -5,6 +5,8 @@ use fundsp::prelude32::*;
 pub struct VoiceSlotInfo {
     /// This represent the number of samples that was processed on this note
     /// since the note was pressed / `Held`. This is reseted on every trigger.
+    /// This is 0-based counting, which means you can have processed_samples == 0,
+    /// meaning this is the first every sample being processed for this note.
     pub processed_samples: u64,
     pub note: u8,
     pub velocity: u8,
@@ -15,6 +17,12 @@ impl VoiceSlotInfo {
     pub fn velocity_scaled(&self) -> f32 {
         const MAX_VELOCITY: f32 = u8::MAX as f32;
         self.velocity as f32 / MAX_VELOCITY
+    }
+
+    /// Return true if this is the first sample processed
+    /// for this note.
+    pub fn first_sample(&self) -> bool {
+        self.processed_samples == 0
     }
 }
 
