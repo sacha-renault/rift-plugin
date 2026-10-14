@@ -5,8 +5,8 @@ mod enum_param;
 mod modifier;
 mod params;
 
-#[proc_macro_derive(DeriveEnumValues, attributes(enum_values))]
-pub fn derive_enum_values(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(EnumValues, attributes(enum_values))]
+pub fn enum_values(input: TokenStream) -> TokenStream {
     enum_param::derive_enum_values(input)
 }
 
