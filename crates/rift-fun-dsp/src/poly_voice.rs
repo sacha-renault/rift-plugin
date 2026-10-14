@@ -6,7 +6,6 @@ mod adsr;
 mod oscillator_voice;
 
 pub use self::adsr::Adsr;
-use self::adsr::{ACTIVE, INACTIVE, RELEASED};
 pub use self::oscillator_voice::OscillatorVoice;
 
 /// A single voice of polyphony.
@@ -41,9 +40,6 @@ struct VoiceSlot<T> {
     adsr: Adsr,
     processed_samples: u64,
     velocity: u8,
-
-    /// 1.0 = active ; 0,0 = inactive ; 2.0 = released (about to get inactive)
-    active: Shared,
 }
 
 impl<T> VoiceSlot<T>
@@ -60,13 +56,11 @@ where
         release: &An<Var>,
         sample_rate: f32,
     ) -> Self {
-        let active = Shared::new(INACTIVE);
         let mut adsr = Adsr::new(
             attack.clone(),
             decay.clone(),
             sustain.clone(),
             release.clone(),
-            var(&active),
         );
         adsr.set_sample_rate(sample_rate);
 
@@ -79,7 +73,6 @@ where
             adsr,
             processed_samples: 0,
             velocity: 0,
-            active,
         }
     }
 
@@ -89,8 +82,7 @@ where
         self.note = note;
         self.velocity = velocity;
         self.processed_samples = 0;
-        self.adsr.reset();
-        self.active.set_value(ACTIVE);
+        self.adsr.trigger();
     }
 }
 
@@ -184,10 +176,10 @@ where
             }
             MidiMessageKind::NoteOff { note, .. } => {
                 // Hand the voice over to its envelope, which releases and
-                // eventually marks it `INACTIVE`.
+                // eventually marks it `Idle`.
                 for &slot in self.active_voices.iter() {
                     if self.voices[slot].note == note {
-                        self.voices[slot].active.set(RELEASED);
+                        self.voices[slot].adsr.release();
                     }
                 }
             }
@@ -203,7 +195,7 @@ where
         for slot in self.active_voices.iter().copied() {
             let voice = &mut self.voices[slot];
 
-            if voice.active.value() == INACTIVE {
+            if !voice.adsr.is_sounding() {
                 continue;
             }
 
@@ -217,7 +209,7 @@ where
         // Drop the slots whose envelope has fully released.
         let voices = &self.voices;
         self.active_voices
-            .retain(|&slot| voices[slot].active.value() != INACTIVE);
+            .retain(|&slot| voices[slot].adsr.is_sounding());
     }
 }
 
