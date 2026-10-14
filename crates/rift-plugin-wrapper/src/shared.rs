@@ -38,7 +38,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
         // this allocation, so it must not move afterwards.
         let params = Arc::new(P::Params::default());
         let host_params = Arc::new(ParamsWrapper::new(params.all_params()));
-        let data = P::SharedData::default();
+        let data = P::SharedData::create(params.clone());
 
         Self {
             params,
@@ -50,3 +50,16 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
 }
 
 impl<P: ClapPlugin> PluginShared<'_> for WrapperShared<P> {}
+
+pub trait FromParams<P: UserParams> {
+    fn create(params: Arc<P>) -> Self;
+}
+
+impl<T, P: UserParams> FromParams<P> for T
+where
+    T: Default,
+{
+    fn create(_: Arc<P>) -> Self {
+        Self::default()
+    }
+}
