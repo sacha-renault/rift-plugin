@@ -16,7 +16,7 @@ use rift_plugin_vizia::widgets::*;
 const WIDTH: u32 = 1000;
 const HEIGHT: u32 = 680;
 
-#[derive(Default, DeriveEnumValues)]
+#[derive(Default, EnumValues)]
 pub enum WaveType {
     #[default]
     Square,
@@ -24,7 +24,7 @@ pub enum WaveType {
     Sine,
 }
 
-#[derive(Default, DeriveEnumValues)]
+#[derive(Default, EnumValues)]
 pub enum FilterKind {
     #[default]
     LowPass,
