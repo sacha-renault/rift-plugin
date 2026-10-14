@@ -9,6 +9,8 @@ permissions:
   contents: read
   issues: write
 
+# This pipeline has blindspots
+# Any GH deps or custom patch isn't checked at all
 jobs:
   audit:
     name: cargo audit
