@@ -34,7 +34,7 @@ struct SharedData {
 }
 
 impl FromParams<ReverbParams> for SharedData {
-    fn create(_: Arc<ReverbParams>) -> Self {
+    fn from_params(_: Arc<ReverbParams>) -> Self {
         Self {
             acc: Arc::new(AudioAccumulator::new(2, 44100)),
         }
