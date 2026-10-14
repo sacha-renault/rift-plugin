@@ -2,13 +2,15 @@ use fundsp::prelude32::*;
 use rift_plugin_types::{MidiMessage, MidiMessageKind};
 use rift_plugin_utils::{BoundedVec, DEFAULT_SAMPLERATE};
 
+use self::voice_slot::VoiceSlot;
+
 mod adsr;
 mod oscillator_voice;
 mod voice_slot;
 
 pub use self::adsr::Adsr;
 pub use self::oscillator_voice::OscillatorVoice;
-use self::voice_slot::{VoiceSlot, VoiceSlotInfo};
+pub use self::voice_slot::VoiceSlotInfo;
 
 /// A single voice of polyphony.
 ///
@@ -126,7 +128,7 @@ where
                 // Hand the voice over to its envelope, which releases and
                 // eventually marks it `Idle`.
                 for &slot in self.active_voices.iter() {
-                    if self.voices[slot].info.note == note {
+                    if self.voices[slot].note() == note {
                         self.voices[slot].adsr.release();
                     }
                 }
