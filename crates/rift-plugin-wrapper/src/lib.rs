@@ -20,6 +20,8 @@ pub mod shared;
 
 pub use factory::PluginWrapper;
 
+pub use crate::shared::FromParams;
+
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
     /// These are automatically synchronized between the GUI and Audio threads.
@@ -29,7 +31,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     type Params: UserParams + Default + Send + Sync + 'static;
 
     /// Shared data (non param) between audio thread and gui thread.
-    type SharedData: Default + Send + Sync + 'static;
+    type SharedData: FromParams<Self::Params> + Send + Sync + 'static;
 
     /// The automatic actions the wrapper performs on incoming events once per block,
     /// before [`Self::process`] is called.

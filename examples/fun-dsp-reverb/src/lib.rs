@@ -33,8 +33,8 @@ struct SharedData {
     acc: Arc<AudioAccumulator>,
 }
 
-impl Default for SharedData {
-    fn default() -> Self {
+impl FromParams<ReverbParams> for SharedData {
+    fn create(_: Arc<ReverbParams>) -> Self {
         Self {
             acc: Arc::new(AudioAccumulator::new(2, 44100)),
         }
