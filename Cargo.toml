@@ -33,6 +33,7 @@ clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
 
 raw-window-handle = "0.6"
 crossbeam-queue = "0.3.12"
+crossbeam-channel = "0.5.17"
 parking_lot = "0.12.5"
 arc-swap = "1"
 rustfft = "6.4.1"
