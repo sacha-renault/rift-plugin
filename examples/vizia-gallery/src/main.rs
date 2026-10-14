@@ -84,6 +84,10 @@ impl GuiContext for StandaloneContext {
     fn pop_in_gui(&self) -> Option<GuiTasks> {
         None
     }
+
+    fn is_overflow(&self) -> bool {
+        false
+    }
 }
 
 fn main() {

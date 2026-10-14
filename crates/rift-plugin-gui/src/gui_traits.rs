@@ -16,6 +16,7 @@ pub trait GuiContext: Send + Sync {
     fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
     fn is_playing(&self) -> Arc<AtomicBool>;
     fn pop_in_gui(&self) -> Option<GuiTasks>;
+    fn is_overflow(&self) -> bool;
 }
 
 pub trait ClapGui {
