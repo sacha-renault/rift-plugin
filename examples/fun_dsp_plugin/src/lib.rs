@@ -127,13 +127,12 @@ impl ClapPlugin for FunDspPlugin {
                 let pan = oscp.pan.value();
                 let gain = oscp.gain.value();
 
-                osc.tick(|voice, adsr_gain, velocity| {
+                osc.tick(|voice, adsr_gain, info| {
                     let (value, hint) =
                         table.read(voice.table_hint(), voice.frequency(), voice.next_phase());
                     voice.set_table_hint(hint);
 
-                    const MAX_VELOCITY: f32 = u8::MAX as f32;
-                    let v = adsr_gain * gain * value * (velocity as f32 / MAX_VELOCITY);
+                    let v = adsr_gain * gain * value * info.velocity_scaled();
 
                     frame[0] += v * (0.5 - pan).clamp(0f32, 1f32);
                     frame[1] += v * (0.5 + pan).clamp(0f32, 1f32);
