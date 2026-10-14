@@ -32,7 +32,7 @@ pub mod prelude {
     pub use rift_plugin_types::transport::*;
     pub use rift_plugin_types::*;
     pub use rift_plugin_utils as utils;
-    pub use rift_plugin_utils::{ConsumerCell, MultiChannel};
+    pub use rift_plugin_utils::{BackgroundExecutor, ConsumerCell, MultiChannel};
     pub use rift_plugin_wrapper::*;
 
     pub use rift_plugin_derive::{DeriveEnumValues, Params};
