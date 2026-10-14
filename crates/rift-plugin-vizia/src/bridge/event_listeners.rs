@@ -33,4 +33,8 @@ pub fn pump(cx: &Context, host: &dyn GuiContext) {
             GuiTasks::ParamChanged { id, value } => registry.apply_host_value(id, value),
         }
     }
+
+    if host.is_overflow() {
+        registry.refresh_param_values();
+    }
 }

@@ -62,4 +62,8 @@ impl GuiContext for GuiContextImpl {
     fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiTasks> {
         self.states.pop_in_gui()
     }
+
+    fn is_overflow(&self) -> bool {
+        self.states.overflows().take_gui_overflow()
+    }
 }

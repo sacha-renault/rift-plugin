@@ -57,6 +57,16 @@ impl ParamRegistry {
             signal.set(ptr.normalize(plain));
         }
     }
+
+    /// Refresh all param values. This can be required if
+    /// the task QUEUE between Audio and GUI thread full
+    /// and event are dropped.
+    pub(crate) fn refresh_param_values(&self) {
+        for entry in self.entries.borrow().values() {
+            let value = entry.ptr.normalized();
+            entry.signal.set_if_changed(value);
+        }
+    }
 }
 
 pub fn register_param<P: Param>(cx: &mut Context, param: &P) -> Signal<f32> {
