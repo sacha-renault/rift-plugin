@@ -1,128 +1,25 @@
 use fundsp::prelude32::{An, Shared, var};
 
-use clack_extensions::params::*;
-use clack_plugin::utils::ClapId;
 use fundsp::shared::Var;
 
-use super::ptr::ParamPtr;
-use super::traits::{Param, TypedParam};
+use crate::atomic_param::{Atomic, AtomicParam};
+use crate::param_float::_Float;
 
-use crate::{EnumValues, Scale};
-
-#[derive(bon::Builder)]
-pub struct SharedFloatParam {
-    /// The name of the param will
-    /// be initialized in the derive with it's clap ID
-    /// and module.
-    #[builder(default)]
-    name: String,
-
-    module: Option<String>,
-
-    #[builder(default)]
-    pub(crate) default: f32,
-
-    #[builder(skip = Shared::new(default))]
-    pub(crate) value: Shared,
-
-    #[builder(default = "")]
-    pub(crate) unit: &'static str,
-
-    #[builder(default = 0.0)]
-    pub(crate) min_value: f32,
-
-    #[builder(default = 1.0)]
-    pub(crate) max_value: f32,
-
-    #[builder(default)]
-    pub(crate) scale: Scale,
-
-    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
-    pub(crate) flags: ParamInfoFlags,
-
-    #[builder(default = ClapId::new(0))]
-    pub(crate) id: ClapId,
-}
-
-impl TypedParam for SharedFloatParam {
-    type Type = f32;
-
-    #[inline]
-    fn value(&self) -> Self::Type {
-        self.value.value()
+impl Atomic<f32> for Shared {
+    fn new(v: f32) -> Self {
+        Self::new(v)
     }
 
-    #[inline]
-    fn set_value(&self, value: Self::Type) {
-        self.value.set(value.clamp(self.min_value, self.max_value));
-    }
-}
-
-impl crate::traits::__private::Sealed for SharedFloatParam {}
-
-impl Param for SharedFloatParam {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn module(&self) -> Option<&str> {
-        self.module.as_deref()
-    }
-
-    fn id(&self) -> ClapId {
-        self.id
-    }
-
-    fn unit(&self) -> &str {
-        self.unit
-    }
-
-    fn set_plain(&self, value: f32) {
-        self.set_value(value);
-    }
-
-    fn plain(&self) -> f32 {
+    fn get(&self) -> f32 {
         self.value()
     }
 
-    fn default_plain(&self) -> f32 {
-        self.default
-    }
-
-    fn normalized(&self) -> f32 {
-        let value = self.value();
-        self.normalize(value)
-    }
-
-    fn set_normalized(&self, normalized: f32) {
-        self.set_value(self.denormalize(normalized));
-    }
-
-    fn flags(&self) -> ParamInfoFlags {
-        self.flags
-    }
-
-    fn min_value(&self) -> f32 {
-        self.min_value
-    }
-
-    fn max_value(&self) -> f32 {
-        self.max_value
-    }
-
-    fn normalize(&self, value: f32) -> f32 {
-        self.scale.normalize(value, self.min_value, self.max_value)
-    }
-
-    fn denormalize(&self, normalized: f32) -> f32 {
-        self.scale
-            .denormalize(normalized, self.min_value, self.max_value)
-    }
-
-    fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn Param)
+    fn set(&self, v: f32) {
+        self.set_value(v);
     }
 }
+
+pub type SharedFloatParam = AtomicParam<_Float<Shared>>;
 
 impl SharedFloatParam {
     /// Returns a fundsp [`Var`] audio node that outputs the current value of
@@ -160,33 +57,6 @@ impl SharedFloatParam {
     /// let mono_filter = || (pass() | params.cutoff.var() | dc(0.5f32)) >> lowpass();
     /// ```
     pub fn var(&self) -> An<Var> {
-        var(&self.value)
-    }
-
-    pub fn read_bool(&self) -> bool {
-        self.normalized() > 0.5
-    }
-
-    pub fn set_bool(&self, v: bool) {
-        let v = self.denormalize(if v { 1. } else { 0. });
-        self.set_value(v);
-    }
-
-    pub fn read_int(&self) -> i32 {
-        self.value().floor() as i32
-    }
-
-    pub fn set_int(&self, v: i32) {
-        self.set_value(v as f32);
-    }
-
-    pub fn read_enum<E: EnumValues>(&self) -> E {
-        let enum_count = E::count();
-        let index = self.normalized() * enum_count as f32;
-
-        match E::from_index((index as u32).clamp(0, enum_count - 1)) {
-            Some(v) => v,
-            None => panic!("Normalized value should always be mapped to enum values ..."),
-        }
+        var(&self.storage)
     }
 }

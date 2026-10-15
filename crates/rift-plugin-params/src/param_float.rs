@@ -1,135 +1,68 @@
-use std::sync::atomic::Ordering;
+use std::marker::PhantomData;
+use std::sync::atomic::{AtomicU32, Ordering};
 
-use clack_extensions::params::*;
-use clack_plugin::utils::ClapId;
+use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
+use crate::range::FloatRange;
 
-use super::ptr::ParamPtr;
-use super::traits::{Param, TypedParam};
+/// Marker for a float parameter backed by `S`.
+pub struct _Float<S>(PhantomData<fn() -> S>);
 
-use crate::Scale;
-use crate::atomic_floats::AtomicF32;
-
-#[derive(bon::Builder)]
-pub struct FloatParam {
-    #[allow(unused)]
-    #[builder(default)]
-    pub(crate) default: f32,
-
-    #[builder(skip = AtomicF32::new(default))]
-    pub(crate) value: AtomicF32,
-
-    /// The name of the param will
-    /// be initialized in the derive with it's clap ID
-    /// and module.
-    #[builder(default)]
-    name: String,
-
-    module: Option<String>,
-
-    #[builder(default = "")]
-    pub(crate) unit: &'static str,
-
-    #[builder(default = 0.0)]
-    pub(crate) min_value: f32,
-
-    #[builder(default = 1.0)]
-    pub(crate) max_value: f32,
-
-    #[builder(default)]
-    pub(crate) scale: Scale,
-
-    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
-    pub(crate) flags: ParamInfoFlags,
-
-    #[builder(default = ClapId::new(0))]
-    pub(crate) id: ClapId,
-}
-
-impl TypedParam for FloatParam {
-    type Type = f32;
-
-    fn value(&self) -> Self::Type {
-        self.value.load(Ordering::Relaxed)
+impl Atomic<f32> for AtomicU32 {
+    fn new(v: f32) -> Self {
+        Self::new(v.to_bits())
     }
 
-    #[inline]
-    fn set_value(&self, value: Self::Type) {
-        self.value.store(
-            value.clamp(self.min_value, self.max_value),
-            Ordering::Relaxed,
-        );
+    fn get(&self) -> f32 {
+        f32::from_bits(self.load(Ordering::Relaxed))
+    }
+
+    fn set(&self, v: f32) {
+        self.store(v.to_bits(), Ordering::Relaxed);
     }
 }
 
-impl crate::traits::__private::Sealed for FloatParam {}
+impl<S: Atomic<f32> + 'static> ParamKind for _Float<S> {
+    type Value = f32;
+    type Storage = S;
+    type Range = FloatRange;
 
-impl Param for FloatParam {
-    fn name(&self) -> &str {
-        &self.name
+    fn to_f32(v: Self::Value) -> f32 {
+        v
     }
 
-    fn module(&self) -> Option<&str> {
-        self.module.as_deref()
+    fn from_f32(v: f32) -> Self::Value {
+        v
     }
 
-    fn id(&self) -> ClapId {
-        self.id
+    fn min(range: &FloatRange) -> f32 {
+        range.min
     }
 
-    fn unit(&self) -> &str {
-        self.unit
+    fn max(range: &FloatRange) -> f32 {
+        range.max
     }
 
-    fn set_plain(&self, value: f32) {
-        self.set_value(value);
+    fn normalize(range: &FloatRange, value: f32) -> f32 {
+        range.scale.normalize(value, range.min, range.max)
     }
 
-    fn plain(&self) -> f32 {
-        self.value.load(Ordering::Relaxed)
+    fn denormalize(range: &FloatRange, normalized: f32) -> f32 {
+        range.scale.denormalize(normalized, range.min, range.max)
     }
 
-    fn default_plain(&self) -> f32 {
-        self.default
-    }
-
-    fn normalized(&self) -> f32 {
-        let value = self.plain();
-        self.normalize(value)
-    }
-
-    fn set_normalized(&self, normalized: f32) {
-        self.set_plain(self.denormalize(normalized));
-    }
-
-    fn flags(&self) -> ParamInfoFlags {
-        self.flags
-    }
-
-    fn min_value(&self) -> f32 {
-        self.min_value
-    }
-
-    fn max_value(&self) -> f32 {
-        self.max_value
-    }
-
-    fn normalize(&self, value: f32) -> f32 {
-        self.scale.normalize(value, self.min_value, self.max_value)
-    }
-
-    fn denormalize(&self, normalized: f32) -> f32 {
-        self.scale
-            .denormalize(normalized, self.min_value, self.max_value)
-    }
-
-    fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn Param)
+    fn clamp(range: &FloatRange, value: f32) -> f32 {
+        value.clamp(range.min, range.max)
     }
 }
+
+pub type FloatParam = AtomicParam<_Float<AtomicU32>>;
 
 #[cfg(test)]
 mod tests {
-    use crate::assert_approx_eq;
+    use clack_extensions::params::ParamInfoFlags;
+    use clack_plugin::utils::ClapId;
+
+    use crate::{Param, TypedParam, assert_approx_eq};
 
     use super::*;
 
@@ -138,10 +71,8 @@ mod tests {
         let param = FloatParam::builder()
             .unit("dB")
             .default(0.)
-            .min_value(-1.)
-            .max_value(1.)
+            .range(FloatRange::linear(-1., 1.))
             .flags(ParamInfoFlags::IS_AUTOMATABLE)
-            .scale(Scale::Linear)
             .build();
 
         assert_eq!(param.unit(), "dB");
@@ -166,8 +97,7 @@ mod tests {
         let param = FloatParam::builder()
             .unit("dB")
             .default(0.)
-            .min_value(-1.)
-            .max_value(1.)
+            .range(FloatRange::linear(-1., 1.))
             .build();
 
         let ptr = param.as_ptr();
@@ -181,8 +111,7 @@ mod tests {
         let param = FloatParam::builder()
             .unit("dB")
             .default(0.)
-            .min_value(-1.)
-            .max_value(1.)
+            .range(FloatRange::linear(-1., 1.))
             .build();
 
         param.set_value(0.5);

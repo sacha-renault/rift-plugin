@@ -1,128 +1,65 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use clack_extensions::params::*;
-use clack_plugin::utils::ClapId;
+use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
 
-use super::ptr::ParamPtr;
-use super::traits::{Param, TypedParam};
+/// Marker for [`BoolParam`].
+pub struct _Bool;
 
-#[derive(bon::Builder)]
-pub struct BoolParam {
-    /// Default value for the param
-    #[allow(unused)]
-    #[builder(default)]
-    default: bool,
-
-    #[builder(skip = AtomicBool::new(default))]
-    value: AtomicBool,
-
-    /// The name of the param will
-    /// be initialized in the derive with it's clap ID
-    /// and module.
-    #[builder(default)]
-    name: String,
-
-    module: Option<String>,
-
-    #[builder(default = "")]
-    unit: &'static str,
-
-    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
-    flags: ParamInfoFlags,
-
-    #[builder(default = ClapId::new(0))]
-    id: ClapId,
-}
-
-impl TypedParam for BoolParam {
-    type Type = bool;
-
-    fn value(&self) -> Self::Type {
-        self.value.load(Ordering::Relaxed)
+impl Atomic<bool> for AtomicBool {
+    fn new(v: bool) -> Self {
+        Self::new(v)
     }
 
-    #[inline]
-    fn set_value(&self, value: Self::Type) {
-        self.value.store(value, Ordering::Relaxed);
+    fn get(&self) -> bool {
+        self.load(Ordering::Relaxed)
+    }
+
+    fn set(&self, v: bool) {
+        self.store(v, Ordering::Relaxed);
     }
 }
 
-impl crate::traits::__private::Sealed for BoolParam {}
+impl ParamKind for _Bool {
+    type Value = bool;
+    type Storage = AtomicBool;
+    // A bool has no configurable range or curve.
+    type Range = ();
 
-impl Param for BoolParam {
-    fn name(&self) -> &str {
-        &self.name
+    fn to_f32(v: Self::Value) -> f32 {
+        if v { 1.0 } else { 0.0 }
     }
 
-    fn module(&self) -> Option<&str> {
-        self.module.as_deref()
+    fn from_f32(v: f32) -> Self::Value {
+        v >= 0.5
     }
 
-    fn id(&self) -> ClapId {
-        self.id
-    }
-
-    fn unit(&self) -> &str {
-        self.unit
-    }
-
-    fn set_plain(&self, value: f32) {
-        self.set_value(value >= 0.5);
-    }
-
-    fn plain(&self) -> f32 {
-        if self.value.load(Ordering::Relaxed) {
-            1.0
-        } else {
-            0.0
-        }
-    }
-
-    fn default_plain(&self) -> f32 {
-        if self.default { 1.0 } else { 0.0 }
-    }
-
-    fn normalized(&self) -> f32 {
-        self.plain()
-    }
-
-    fn set_normalized(&self, normalized: f32) {
-        self.set_plain(normalized);
-    }
-
-    fn flags(&self) -> ParamInfoFlags {
-        self.flags
-    }
-
-    fn min_value(&self) -> f32 {
+    fn min(_: &()) -> f32 {
         0.0
     }
 
-    fn max_value(&self) -> f32 {
+    fn max(_: &()) -> f32 {
         1.0
     }
 
-    #[inline]
-    fn normalize(&self, value: f32) -> f32 {
-        // bool param already have
-        // normalized value (0.0 or 1.0)
+    fn normalize(_: &(), value: f32) -> f32 {
+        // The plain value already is 0.0 or 1.0.
         value
     }
 
-    #[inline]
-    fn denormalize(&self, normalized: f32) -> f32 {
-        // bool param already have
-        // normalized value (0.0 or 1.0)
+    fn denormalize(_: &(), normalized: f32) -> f32 {
         normalized
-    }
-
-    fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn Param)
     }
 }
 
+pub type BoolParam = AtomicParam<_Bool>;
+
 #[cfg(test)]
 mod tests {
+    use clack_extensions::params::ParamInfoFlags;
+    use clack_plugin::utils::ClapId;
+
+    use crate::{Param, TypedParam};
+
     use super::*;
 
     #[test]
