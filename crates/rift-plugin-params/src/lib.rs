@@ -14,6 +14,7 @@ mod param_int;
 mod param_string;
 mod param_swap;
 mod ptr;
+mod range;
 mod scale;
 mod traits;
 
@@ -36,6 +37,7 @@ pub use param_int::IntParam;
 pub use param_string::{StringParam, StringParamValue};
 pub use param_swap::{SwapParam, SwapParamValue};
 pub use ptr::ParamPtr;
+pub use range::{FloatRange, IntRange};
 pub use scale::Scale;
 pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
 

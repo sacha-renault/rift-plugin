@@ -1,9 +1,10 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 
+use crate::Scale;
 use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
-use crate::scale::Linear;
-use crate::{Param, TypedParam};
+use crate::range::IntRange;
 
+/// Marker for [`IntParam`].
 pub struct _Int;
 
 impl Atomic<i32> for AtomicI32 {
@@ -21,9 +22,9 @@ impl Atomic<i32> for AtomicI32 {
 }
 
 impl ParamKind for _Int {
-    type Scale = Linear;
-    type Storage = AtomicI32;
     type Value = i32;
+    type Storage = AtomicI32;
+    type Range = IntRange;
 
     fn to_f32(v: Self::Value) -> f32 {
         v as f32
@@ -33,26 +34,24 @@ impl ParamKind for _Int {
         v.round() as i32
     }
 
-    fn default_min() -> Self::Value {
-        0
+    fn min(range: &IntRange) -> f32 {
+        range.min as f32
     }
 
-    fn default_max() -> Self::Value {
-        1
-    }
-}
-
-impl TypedParam for IntParam {
-    type Type = i32;
-
-    fn value(&self) -> Self::Type {
-        _Int::from_f32(self.plain())
+    fn max(range: &IntRange) -> f32 {
+        range.max as f32
     }
 
-    fn set_value(&self, value: Self::Type) {
-        // Might be better to use i32 clamping ...
-        // ok for now
-        self.set_plain(_Int::to_f32(value))
+    fn normalize(range: &IntRange, value: f32) -> f32 {
+        Scale::Linear.normalize(value, range.min as f32, range.max as f32)
+    }
+
+    fn denormalize(range: &IntRange, normalized: f32) -> f32 {
+        Scale::Linear.denormalize(normalized, range.min as f32, range.max as f32)
+    }
+
+    fn clamp(range: &IntRange, value: i32) -> i32 {
+        value.clamp(range.min, range.max)
     }
 }
 
@@ -63,7 +62,7 @@ mod tests {
     use clack_extensions::params::ParamInfoFlags;
     use clack_plugin::utils::ClapId;
 
-    use crate::assert_approx_eq;
+    use crate::{Param, TypedParam, assert_approx_eq};
 
     use super::*;
 
@@ -72,8 +71,7 @@ mod tests {
         let param = IntParam::builder()
             .unit("st")
             .default(0)
-            .min_value(-12)
-            .max_value(12)
+            .range(IntRange::linear(-12, 12))
             .flags(ParamInfoFlags::IS_AUTOMATABLE)
             .build();
 
@@ -92,8 +90,7 @@ mod tests {
     fn set_value_typed() {
         let param = IntParam::builder()
             .default(0)
-            .min_value(-10)
-            .max_value(10)
+            .range(IntRange::linear(-10, 10))
             .build();
 
         param.set_value(7);
@@ -101,11 +98,23 @@ mod tests {
     }
 
     #[test]
+    fn set_value_keeps_full_precision() {
+        let param = IntParam::builder()
+            .default(0)
+            .range(IntRange::linear(0, 20_000_000))
+            .build();
+
+        // 2^24 + 1 is not representable in `f32`; the typed path must not
+        // round-trip the value through it.
+        param.set_value(16_777_217);
+        assert_eq!(param.value(), 16_777_217);
+    }
+
+    #[test]
     fn set_plain_clamps() {
         let param = IntParam::builder()
             .default(0)
-            .min_value(0)
-            .max_value(5)
+            .range(IntRange::linear(0, 5))
             .build();
 
         param.set_plain(10.0);
@@ -116,11 +125,24 @@ mod tests {
     }
 
     #[test]
-    fn set_plain_truncates_float() {
+    fn set_plain_clamps_large_values_in_the_int_domain() {
         let param = IntParam::builder()
             .default(0)
-            .min_value(0)
-            .max_value(10)
+            .range(IntRange::linear(0, 1_000_000))
+            .build();
+
+        param.set_plain(1e30);
+        assert_eq!(param.value(), 1_000_000);
+
+        param.set_plain(-1e30);
+        assert_eq!(param.value(), 0);
+    }
+
+    #[test]
+    fn set_plain_rounds_float() {
+        let param = IntParam::builder()
+            .default(0)
+            .range(IntRange::linear(0, 10))
             .build();
 
         param.set_plain(3.9);
@@ -131,8 +153,7 @@ mod tests {
     fn normalize_denormalize_roundtrip() {
         let param = IntParam::builder()
             .default(0)
-            .min_value(-12)
-            .max_value(12)
+            .range(IntRange::linear(-12, 12))
             .build();
 
         assert_approx_eq!(param.normalize(0.0), 0.5);
@@ -148,8 +169,7 @@ mod tests {
     fn ptr_change_param() {
         let param = IntParam::builder()
             .default(0)
-            .min_value(0)
-            .max_value(10)
+            .range(IntRange::linear(0, 10))
             .build();
 
         let ptr = param.as_ptr();

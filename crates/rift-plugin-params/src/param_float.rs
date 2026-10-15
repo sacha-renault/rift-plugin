@@ -2,8 +2,9 @@ use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
-use crate::{Param, Scale, TypedParam};
+use crate::range::FloatRange;
 
+/// Marker for a float parameter backed by `S`.
 pub struct _Float<S>(PhantomData<fn() -> S>);
 
 impl Atomic<f32> for AtomicU32 {
@@ -21,36 +22,36 @@ impl Atomic<f32> for AtomicU32 {
 }
 
 impl<S: Atomic<f32> + 'static> ParamKind for _Float<S> {
-    type Scale = Scale;
-    type Storage = S;
     type Value = f32;
-
-    fn from_f32(v: f32) -> Self::Value {
-        v
-    }
+    type Storage = S;
+    type Range = FloatRange;
 
     fn to_f32(v: Self::Value) -> f32 {
         v
     }
 
-    fn default_min() -> Self::Value {
-        0.
+    fn from_f32(v: f32) -> Self::Value {
+        v
     }
 
-    fn default_max() -> Self::Value {
-        1.
-    }
-}
-
-impl TypedParam for FloatParam {
-    type Type = f32;
-
-    fn value(&self) -> Self::Type {
-        self.plain()
+    fn min(range: &FloatRange) -> f32 {
+        range.min
     }
 
-    fn set_value(&self, value: Self::Type) {
-        self.set_plain(value);
+    fn max(range: &FloatRange) -> f32 {
+        range.max
+    }
+
+    fn normalize(range: &FloatRange, value: f32) -> f32 {
+        range.scale.normalize(value, range.min, range.max)
+    }
+
+    fn denormalize(range: &FloatRange, normalized: f32) -> f32 {
+        range.scale.denormalize(normalized, range.min, range.max)
+    }
+
+    fn clamp(range: &FloatRange, value: f32) -> f32 {
+        value.clamp(range.min, range.max)
     }
 }
 
@@ -61,7 +62,7 @@ mod tests {
     use clack_extensions::params::ParamInfoFlags;
     use clack_plugin::utils::ClapId;
 
-    use crate::{Param, assert_approx_eq};
+    use crate::{Param, TypedParam, assert_approx_eq};
 
     use super::*;
 
@@ -70,10 +71,8 @@ mod tests {
         let param = FloatParam::builder()
             .unit("dB")
             .default(0.)
-            .min_value(-1.)
-            .max_value(1.)
+            .range(FloatRange::linear(-1., 1.))
             .flags(ParamInfoFlags::IS_AUTOMATABLE)
-            .scale(Scale::Linear)
             .build();
 
         assert_eq!(param.unit(), "dB");
@@ -98,8 +97,7 @@ mod tests {
         let param = FloatParam::builder()
             .unit("dB")
             .default(0.)
-            .min_value(-1.)
-            .max_value(1.)
+            .range(FloatRange::linear(-1., 1.))
             .build();
 
         let ptr = param.as_ptr();
@@ -113,8 +111,7 @@ mod tests {
         let param = FloatParam::builder()
             .unit("dB")
             .default(0.)
-            .min_value(-1.)
-            .max_value(1.)
+            .range(FloatRange::linear(-1., 1.))
             .build();
 
         param.set_value(0.5);
