@@ -15,6 +15,7 @@
 
 ## Parameters
 
+- [x] Enum text formatting: `ParamKind::write_text` now lets an enum print its variant name (was showing the index).
 - [ ] Persist notifications the host must not see. Persist changes must only go through `GuiParamEventKind::ValueLess`. A `Value(_)` or gesture for a persist id leaks a `ParamValueEvent` through `GuiParamEvent::maybe_to_raw()` (`crates/rift-plugin-wrapper/src/processor.rs:106`), for an id the host does not own. Add a dedicated entry point, for example `GuiContext::persist_changed(id)`.
 - [ ] Unique ids across params and persist. Both use `param_id(module, name)`, but `ParamsWrapper::new` only panics on duplicate param ids (`crates/rift-plugin-params/src/params_wrapper.rs:20`). A persist field and a param can collide and make `on_param_change` ambiguous. Validate the union in the derive and keep persist out of `all_params()`.
 - [ ] Notify the audio thread on state load. `state.rs::load` writes params and persist directly, so the audio thread sees them but nothing tells it the derived persist state changed. Push `ValueLess` for the persisted ids on load, or set a dirty flag the process loop checks.

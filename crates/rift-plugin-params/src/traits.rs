@@ -69,9 +69,7 @@ pub trait Param: __private::Sealed {
     /// Format a plain value into text with optional unit suffix.
     ///
     /// By default, this simply writes `{value}{unit}`. Custom implementations should handle rounding and special cases (e.g., "120.00 Hz" vs "120 Hz").
-    fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
-        write!(writer, "{}{}", value, self.unit())
-    }
+    fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result;
 
     /// Format the current plain parameter value into a `String`.
     fn to_text(&self) -> String {
@@ -291,6 +289,7 @@ pub(crate) mod __private {
 mod tests {
     use super::*;
     use crate::FloatParam;
+    use crate::range::FloatRange;
     use clack_plugin::utils::ClapId;
 
     /// A hand-written stand-in for a `#[derive(Params)]` struct.
@@ -310,8 +309,7 @@ mod tests {
             FloatParam::builder()
                 .id(ClapId::new(id))
                 .name(name.to_string())
-                .min_value(0.0)
-                .max_value(1.0)
+                .range(FloatRange::linear(0.0, 1.0))
                 .build()
         };
 
