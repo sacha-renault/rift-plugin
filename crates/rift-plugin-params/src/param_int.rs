@@ -1,130 +1,68 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 
-use clack_extensions::params::*;
-use clack_plugin::utils::ClapId;
+use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
+use crate::scale::Linear;
+use crate::{Param, TypedParam};
 
-use super::ptr::ParamPtr;
-use super::traits::{Param, TypedParam};
+pub struct _Int;
 
-#[derive(bon::Builder)]
-pub struct IntParam {
-    /// Default value for the param
-    #[allow(unused)]
-    #[builder(default)]
-    pub(crate) default: i32,
+impl Atomic<i32> for AtomicI32 {
+    fn new(v: i32) -> Self {
+        Self::new(v)
+    }
 
-    #[builder(skip = AtomicI32::new(default))]
-    pub(crate) value: AtomicI32,
+    fn get(&self) -> i32 {
+        self.load(Ordering::Relaxed)
+    }
 
-    /// The name of the param will
-    /// be initialized in the derive with it's clap ID
-    /// and module.
-    #[builder(default)]
-    name: String,
+    fn set(&self, v: i32) {
+        self.store(v, Ordering::Relaxed);
+    }
+}
 
-    module: Option<String>,
+impl ParamKind for _Int {
+    type Scale = Linear;
+    type Storage = AtomicI32;
+    type Value = i32;
 
-    #[builder(default = "")]
-    pub(crate) unit: &'static str,
+    fn to_f32(v: Self::Value) -> f32 {
+        v as f32
+    }
 
-    #[builder(default = 0)]
-    pub(crate) min_value: i32,
+    fn from_f32(v: f32) -> Self::Value {
+        v.round() as i32
+    }
 
-    #[builder(default = 1)]
-    pub(crate) max_value: i32,
+    fn default_min() -> Self::Value {
+        0
+    }
 
-    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
-    pub(crate) flags: ParamInfoFlags,
-
-    #[builder(default = ClapId::new(0))]
-    pub(crate) id: ClapId,
+    fn default_max() -> Self::Value {
+        1
+    }
 }
 
 impl TypedParam for IntParam {
     type Type = i32;
 
     fn value(&self) -> Self::Type {
-        self.value.load(Ordering::Relaxed)
+        _Int::from_f32(self.plain())
     }
 
-    #[inline]
     fn set_value(&self, value: Self::Type) {
-        self.value.store(
-            value.clamp(self.min_value, self.max_value),
-            Ordering::Relaxed,
-        );
+        // Might be better to use i32 clamping ...
+        // ok for now
+        self.set_plain(_Int::to_f32(value))
     }
 }
 
-impl crate::traits::__private::Sealed for IntParam {}
-
-impl Param for IntParam {
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn module(&self) -> Option<&str> {
-        self.module.as_deref()
-    }
-
-    fn id(&self) -> ClapId {
-        self.id
-    }
-
-    fn unit(&self) -> &str {
-        self.unit
-    }
-
-    fn set_plain(&self, value: f32) {
-        self.set_value(value as i32);
-    }
-
-    fn plain(&self) -> f32 {
-        self.value.load(Ordering::Relaxed) as f32
-    }
-
-    fn default_plain(&self) -> f32 {
-        self.default as f32
-    }
-
-    fn normalized(&self) -> f32 {
-        let value = self.plain();
-        self.normalize(value)
-    }
-
-    fn set_normalized(&self, normalized: f32) {
-        self.set_plain(self.denormalize(normalized));
-    }
-
-    fn min_value(&self) -> f32 {
-        self.min_value as f32
-    }
-
-    fn max_value(&self) -> f32 {
-        self.max_value as f32
-    }
-
-    fn flags(&self) -> ParamInfoFlags {
-        self.flags
-    }
-
-    fn normalize(&self, value: f32) -> f32 {
-        let range = (self.max_value - self.min_value) as f32;
-        (value - self.min_value as f32) / range
-    }
-
-    fn denormalize(&self, normalized: f32) -> f32 {
-        let range = (self.max_value - self.min_value) as f32;
-        normalized * range + self.min_value as f32
-    }
-
-    fn as_ptr(&self) -> ParamPtr {
-        ParamPtr::new(self as *const dyn Param)
-    }
-}
+pub type IntParam = AtomicParam<_Int>;
 
 #[cfg(test)]
 mod tests {
+    use clack_extensions::params::ParamInfoFlags;
+    use clack_plugin::utils::ClapId;
+
     use crate::assert_approx_eq;
 
     use super::*;
@@ -186,7 +124,7 @@ mod tests {
             .build();
 
         param.set_plain(3.9);
-        assert_eq!(param.value(), 3);
+        assert_eq!(param.value(), 4);
     }
 
     #[test]

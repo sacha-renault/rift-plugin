@@ -32,6 +32,11 @@
 //!
 //! If the curve constrains its argument (e.g. `base > 0`), validate it.
 
+pub trait Scaling {
+    fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32;
+    fn normalize(&self, value: f32, min: f32, max: f32) -> f32;
+}
+
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Scale {
     #[default]
@@ -47,8 +52,8 @@ pub enum Scale {
     Exponential(f32),
 }
 
-impl Scale {
-    pub fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32 {
+impl Scaling for Scale {
+    fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32 {
         let normalized = if normalized.is_nan() {
             0f32 // fallback in case the value is nan ...
         } else {
@@ -63,7 +68,7 @@ impl Scale {
         min + t * (max - min)
     }
 
-    pub fn normalize(&self, value: f32, min: f32, max: f32) -> f32 {
+    fn normalize(&self, value: f32, min: f32, max: f32) -> f32 {
         if value.is_nan() {
             return 0f32; // fallback ...
         }
@@ -75,6 +80,19 @@ impl Scale {
             Self::Skew(s) => t.powf(1.0 / s),
             Self::Exponential(f) => (1f32 + t * (f - 1f32)).ln() / f.ln(),
         }
+    }
+}
+
+#[derive(Clone, Copy, Default)]
+pub struct Linear;
+
+impl Scaling for Linear {
+    fn denormalize(&self, normalized: f32, min: f32, max: f32) -> f32 {
+        Scale::Linear.denormalize(normalized, min, max)
+    }
+
+    fn normalize(&self, value: f32, min: f32, max: f32) -> f32 {
+        Scale::Linear.normalize(value, min, max)
     }
 }
 

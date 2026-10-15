@@ -1,11 +1,12 @@
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicU32, Ordering};
 
-use clack_extensions::params::*;
-use clack_plugin::utils::ClapId;
+use clack_extensions::params::ParamInfoFlags;
 
-use super::param_int::IntParam;
-use super::ptr::ParamPtr;
-use super::traits::{Param, TypedParam};
+use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
+use crate::scale::Linear;
+
+use super::traits::TypedParam;
 
 pub trait EnumValues: std::fmt::Display + Default + Sized + Copy + 'static {
     fn to_index(self) -> u32;
@@ -13,207 +14,81 @@ pub trait EnumValues: std::fmt::Display + Default + Sized + Copy + 'static {
     fn count() -> u32;
 }
 
-pub struct EnumParam<E: EnumValues> {
-    inner: IntParam,
-    _p: PhantomData<E>,
-}
+pub struct _Enum<E: EnumValues>(PhantomData<fn() -> E>);
 
-impl<E: EnumValues> EnumParam<E> {
-    /// Notes: IMPORTANT, default flags are EMPTY
-    pub fn new(default: E) -> Self {
-        let total = E::count() as i32;
-        let default = default.to_index() as i32;
-        let inner = IntParam::builder()
-            .default(default)
-            .max_value(total - 1)
-            // Kinda have to make them empty, since
-            // We use union in the with_ setter, otherwise we have problems
-            .flags(ParamInfoFlags::empty())
-            .build();
-        Self {
-            inner,
-            _p: PhantomData,
-        }
+impl Atomic<u32> for AtomicU32 {
+    fn new(v: u32) -> Self {
+        Self::new(v)
     }
 
-    pub fn with_flags(mut self, param_flags: ParamInfoFlags) -> Self {
-        self.inner.flags = self.inner.flags.union(param_flags);
-        self
+    fn get(&self) -> u32 {
+        self.load(Ordering::Relaxed)
     }
 
-    /// Entry point for the derive macro; mirrors the `bon` builders of the
-    /// other parameter types.
-    pub fn builder() -> EnumParamBuilder<E> {
-        EnumParamBuilder {
-            id: ClapId::new(0),
-            name: String::new(),
-            module: None,
-            default: E::default(),
-            unit: "",
-            // Enum flags default to empty; `with_flags` unions on top.
-            flags: ParamInfoFlags::empty(),
-        }
+    fn set(&self, v: u32) {
+        self.store(v, Ordering::Relaxed);
     }
 }
 
-/// Builder for [`EnumParam`], mirroring the `bon`-generated builders of the
-/// other parameter types (same setters, same `build`).
-pub struct EnumParamBuilder<E: EnumValues> {
-    id: ClapId,
-    name: String,
-    module: Option<String>,
-    default: E,
-    unit: &'static str,
-    flags: ParamInfoFlags,
-}
+impl<E: EnumValues> ParamKind for _Enum<E> {
+    type Scale = Linear;
+    type Storage = AtomicU32;
+    type Value = u32;
 
-impl<E: EnumValues> EnumParamBuilder<E> {
-    pub fn id(mut self, id: ClapId) -> Self {
-        self.id = id;
-        self
+    fn to_f32(v: Self::Value) -> f32 {
+        v as f32
     }
 
-    pub fn name(mut self, name: String) -> Self {
-        self.name = name;
-        self
+    fn from_f32(v: f32) -> Self::Value {
+        v.round() as u32
     }
 
-    pub fn maybe_module(mut self, module: Option<String>) -> Self {
-        self.module = module;
-        self
+    fn default_min() -> Self::Value {
+        0
     }
 
-    pub fn default(mut self, default: E) -> Self {
-        self.default = default;
-        self
-    }
-
-    pub fn unit(mut self, unit: &'static str) -> Self {
-        self.unit = unit;
-        self
-    }
-
-    pub fn flags(mut self, flags: ParamInfoFlags) -> Self {
-        self.flags = flags;
-        self
-    }
-
-    pub fn build(self) -> EnumParam<E> {
-        let total = E::count() as i32;
-        let inner = IntParam::builder()
-            .id(self.id)
-            .name(self.name)
-            .maybe_module(self.module)
-            .default(self.default.to_index() as i32)
-            .min_value(0)
-            .max_value(total - 1)
-            .unit(self.unit)
-            .flags(self.flags)
-            .build();
-
-        EnumParam {
-            inner,
-            _p: PhantomData,
-        }
+    fn default_max() -> Self::Value {
+        E::count() - 1
     }
 }
 
 impl<E: EnumValues> TypedParam for EnumParam<E> {
     type Type = E;
 
-    fn set_value(&self, value: Self::Type) {
-        self.set_plain(value.to_index() as f32);
-    }
-
     fn value(&self) -> Self::Type {
-        let enum_idx = self.plain().round() as u32;
-        if let Some(v) = E::from_index(enum_idx) {
-            v
-        } else {
-            // This isn't supposed to ever happen
-            let msg = "E::from_index in EnumParam::value returned variant NONE. This is not supposed to ever happen. FIx this";
-
-            if cfg!(debug_assertions) {
-                panic!("{msg}")
-            } else {
-                log::error!("{msg}");
+        let index = self.storage.get();
+        match E::from_index(index) {
+            Some(v) => v,
+            None => {
+                debug_assert!(false, "Enum was out of bound");
                 E::default()
             }
         }
     }
-}
 
-impl<E: EnumValues> crate::traits::__private::Sealed for EnumParam<E> {}
-
-impl<E: EnumValues> Param for EnumParam<E> {
-    fn name(&self) -> &str {
-        self.inner.name()
-    }
-
-    fn module(&self) -> Option<&str> {
-        self.inner.module()
-    }
-
-    fn id(&self) -> ClapId {
-        self.inner.id()
-    }
-
-    fn unit(&self) -> &str {
-        self.inner.unit()
-    }
-
-    fn plain(&self) -> f32 {
-        self.inner.plain()
-    }
-
-    fn normalized(&self) -> f32 {
-        self.inner.normalized()
-    }
-
-    fn default_plain(&self) -> f32 {
-        self.inner.default_plain()
-    }
-
-    fn flags(&self) -> ParamInfoFlags {
-        self.inner.flags()
-    }
-
-    fn normalize(&self, value: f32) -> f32 {
-        self.inner.normalize(value)
-    }
-
-    fn denormalize(&self, normalized: f32) -> f32 {
-        self.inner.denormalize(normalized)
-    }
-
-    fn min_value(&self) -> f32 {
-        self.inner.min_value as f32
-    }
-
-    fn max_value(&self) -> f32 {
-        self.inner.max_value as f32
-    }
-
-    fn set_plain(&self, value: f32) {
-        self.inner.set_plain(value);
-    }
-
-    fn set_normalized(&self, normalized: f32) {
-        self.inner.set_normalized(normalized);
-    }
-
-    fn as_ptr(&self) -> ParamPtr {
-        self.inner.as_ptr()
-    }
-
-    fn value_to_text(&self, value: f32, writer: &mut dyn std::fmt::Write) -> std::fmt::Result {
-        let variant = E::from_index(value.round() as u32).unwrap_or_default();
-        writer.write_str(&format!("{variant}"))
+    fn set_value(&self, value: Self::Type) {
+        self.storage.set(value.to_index());
     }
 }
+
+impl<E: EnumValues> EnumParam<E> {
+    pub fn new(default: E) -> Self {
+        Self::builder().default(default.to_index()).build()
+    }
+
+    pub fn with_flags(mut self, flags: ParamInfoFlags) -> Self {
+        self.flags = flags;
+        self
+    }
+}
+
+pub type EnumParam<E> = AtomicParam<_Enum<E>>;
 
 #[cfg(test)]
 mod tests {
+
+    use crate::Param;
+
     use super::*;
 
     #[derive(Default, Debug, Clone, Copy, PartialEq)]
@@ -271,7 +146,7 @@ mod tests {
     fn set_plain_rounds_to_variant() {
         let param = EnumParam::new(TestEnum::A);
         param.set_plain(1.6);
-        assert_eq!(param.value(), TestEnum::B);
+        assert_eq!(param.value(), TestEnum::C);
     }
 
     #[test]
