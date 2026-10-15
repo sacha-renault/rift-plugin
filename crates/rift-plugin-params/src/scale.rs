@@ -14,20 +14,15 @@
 //!    (`normalize(denormalize(t)) == t`) and pin the endpoints
 //!    (`denormalize(0.0) == min`, `denormalize(1.0) == max`). Cover it with
 //!    `assert_scale_invariants` in the tests module, plus any shape specific check.
-//! 2. In `range.rs`, add a matching constructor on [`crate::FloatRange`] (e.g.
-//!    `FloatRange::log(min, max, base)`); the derive calls it by name.
-//! 3. In `rift-plugin-derive/src/params/parse.rs`, add one row to
-//!    `RANGE_VARIANTS`: `name` (the DSL keyword, e.g. `"log"`), `extra_args`
-//!    (each argument after the implicit `min, max`, e.g. `&["base"]`) and `build`
-//!    (validates the extra arguments).
-//! 4. Add a derive test (`.../params/tests.rs`) that the form expands, plus one
-//!    that a non-float param rejects it.
+//! 2. In `range.rs`, add a matching `const fn` on `crate::FloatRange` (e.g.
+//!    `FloatRange::log(min, max, base)`) with its own argument asserts. That is the
+//!    whole DSL surface: the derive forwards `range = log(..)` to
+//!    `<FloatRange|IntRange>::log(..)` inside a `const` block, so the asserts run
+//!    at compile time.
 //!
-//! Nothing else needs to change: `expand_range` builds the call as
-//! `<FloatRange|IntRange>::<variant>(...)` straight from the DSL keyword, and
-//! `validate_leaf` already rejects any curve on params that are not float.
-//!
-//! If the curve constrains its argument (e.g. `base > 0`), validate it.
+//! Nothing else needs to change: `expand_range` builds the call straight from the
+//! DSL keyword, and `validate_leaf` only rejects `range` on params that have no
+//! range type (bool, enum).
 
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Scale {

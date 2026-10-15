@@ -4,7 +4,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{Expr, ExprLit, ExprUnary, Lit, LitFloat, LitStr, PathArguments, Type, UnOp};
 
-use super::parse::{Field, Leaf, Nested, ParamKind, Params, ScaleArg};
+use super::parse::{Field, Leaf, Nested, ParamKind, Params, RangeSpec};
 
 /// Entry point: render the `new`/`Default`/`UserParams` implementations.
 pub(crate) fn expand(params: Params) -> TokenStream2 {
@@ -80,27 +80,13 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
     let name_lit = LitStr::new(&name, leaf.ident.span());
     let id_lit = LitStr::new(&id, leaf.ident.span());
 
-    let default = match &leaf.default {
-        Some(expr) => coerce_float(expr, leaf.kind),
-        None => quote! { ::core::default::Default::default() },
-    };
-
-    let range = leaf.range.as_ref().map(|(start, end)| {
-        let start = coerce_float(start, leaf.kind);
-        let end = coerce_float(end, leaf.kind);
-        quote! { .min_value(#start).max_value(#end) }
+    let default = leaf.default.as_ref().map(|expr| {
+        let expr = coerce_float(expr, leaf.kind);
+        quote! { .default(#expr) }
     });
 
-    let scale = leaf.scale.as_ref().map(|scale| match scale {
-        ScaleArg::Skew(factor) => {
-            let factor = coerce_float(factor, leaf.kind);
-            quote! { .scale(::rift_plugin::prelude::Scale::Skew(#factor)) }
-        }
-        ScaleArg::Exponential(factor) => {
-            let factor = coerce_float(factor, leaf.kind);
-            quote! { .scale(::rift_plugin::prelude::Scale::Exponential(#factor)) }
-        }
-    });
+    let range = leaf.range.as_ref().map(|range| expand_range(range, leaf));
+
     let unit = leaf.unit.as_ref().map(|unit| {
         let lit = LitStr::new(unit, leaf.ident.span());
         quote! { .unit(#lit) }
@@ -115,13 +101,30 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
             ))
             .name(::std::string::String::from(#name_lit))
             .maybe_module(__module.clone())
-            .default(#default)
+            #default
             #range
-            #scale
             #unit
             #flags
             .build()
     }
+}
+
+/// Render a `range = ...` into the kind-specific constructor call.
+///
+/// The call is wrapped in a `const` block so the constructor's asserts run at
+/// compile time.
+fn expand_range(range: &RangeSpec, leaf: &Leaf) -> TokenStream2 {
+    let range_ty = match leaf.kind {
+        ParamKind::Float => quote!(::rift_plugin::prelude::FloatRange),
+        ParamKind::Int => quote!(::rift_plugin::prelude::IntRange),
+        // Reject range for any other kind
+        ParamKind::Bool | ParamKind::Enum => unreachable!("range on a kind without one"),
+    };
+
+    let ctor = &range.ctor;
+    let args = range.args.iter().map(|arg| coerce_float(arg, leaf.kind));
+
+    quote! { .range(const { #range_ty::#ctor(#(#args),*) }) }
 }
 
 /// The construction of a nested struct (or array of structs), threading the
