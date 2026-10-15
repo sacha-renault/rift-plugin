@@ -180,6 +180,10 @@ mod tests {
         fn as_ptr(&self) -> ParamPtr {
             ParamPtr::new(self as *const dyn Param)
         }
+
+        fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
+            write!(writer, "{}{}", value, self.unit())
+        }
     }
 
     fn make_ptr(mock: &MockParam) -> ParamPtr {

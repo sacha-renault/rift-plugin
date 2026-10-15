@@ -116,6 +116,10 @@ impl<K: ParamKind> Param for AtomicParam<K> {
             .denormalize(normalized, self.min_value, self.max_value)
     }
 
+    fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {
+        write!(writer, "{}{}", value, self.unit())
+    }
+
     fn as_ptr(&self) -> ParamPtr {
         ParamPtr::new(self as *const dyn Param)
     }
