@@ -289,6 +289,7 @@ pub(crate) mod __private {
 mod tests {
     use super::*;
     use crate::FloatParam;
+    use crate::range::FloatRange;
     use clack_plugin::utils::ClapId;
 
     /// A hand-written stand-in for a `#[derive(Params)]` struct.
@@ -308,8 +309,7 @@ mod tests {
             FloatParam::builder()
                 .id(ClapId::new(id))
                 .name(name.to_string())
-                .min_value(0.0)
-                .max_value(1.0)
+                .range(FloatRange::linear(0.0, 1.0))
                 .build()
         };
 

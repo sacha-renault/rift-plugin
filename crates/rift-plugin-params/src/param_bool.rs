@@ -1,9 +1,8 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
-use crate::scale::Linear;
-use crate::{Param, TypedParam};
 
+/// Marker for [`BoolParam`].
 pub struct _Bool;
 
 impl Atomic<bool> for AtomicBool {
@@ -21,9 +20,10 @@ impl Atomic<bool> for AtomicBool {
 }
 
 impl ParamKind for _Bool {
-    type Scale = Linear;
-    type Storage = AtomicBool;
     type Value = bool;
+    type Storage = AtomicBool;
+    // A bool has no configurable range or curve.
+    type Range = ();
 
     fn to_f32(v: Self::Value) -> f32 {
         if v { 1.0 } else { 0.0 }
@@ -33,24 +33,21 @@ impl ParamKind for _Bool {
         v >= 0.5
     }
 
-    fn default_min() -> Self::Value {
-        false
+    fn min(_: &()) -> f32 {
+        0.0
     }
 
-    fn default_max() -> Self::Value {
-        true
-    }
-}
-
-impl TypedParam for BoolParam {
-    type Type = bool;
-
-    fn value(&self) -> Self::Type {
-        _Bool::from_f32(self.plain())
+    fn max(_: &()) -> f32 {
+        1.0
     }
 
-    fn set_value(&self, value: Self::Type) {
-        self.set_plain(_Bool::to_f32(value))
+    fn normalize(_: &(), value: f32) -> f32 {
+        // The plain value already is 0.0 or 1.0.
+        value
+    }
+
+    fn denormalize(_: &(), normalized: f32) -> f32 {
+        normalized
     }
 }
 
@@ -60,6 +57,8 @@ pub type BoolParam = AtomicParam<_Bool>;
 mod tests {
     use clack_extensions::params::ParamInfoFlags;
     use clack_plugin::utils::ClapId;
+
+    use crate::{Param, TypedParam};
 
     use super::*;
 
