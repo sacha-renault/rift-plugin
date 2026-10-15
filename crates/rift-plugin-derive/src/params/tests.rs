@@ -82,12 +82,27 @@ fn explicit_id_overrides_name() {
 fn int_literals_are_coerced_for_float_params() {
     let out = expand(ROOT);
 
-    assert!(out.contains("min_value(-(60.0)).max_value(6.0)"), "{out}");
-    // Absent `default` falls back to `Default::default()`.
+    // `-60` and `6` are coerced to float literals.
     assert!(
-        out.contains(".default(::core::default::Default::default())"),
+        out.contains(".range(const{::rift_plugin::prelude::FloatRange::linear(-(60.0),6.0)})"),
         "{out}"
     );
+}
+
+#[test]
+fn absent_default_is_left_to_the_builder() {
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = linear(0, 1))]
+            pub a: FloatParam,
+        }
+        "#,
+    );
+
+    // No `.default(...)` is emitted, so the builder's kind default applies (which
+    // is what lets an enum honor its own `#[default]` variant).
+    assert!(!out.contains(".default("), "{out}");
 }
 
 #[test]
@@ -195,7 +210,7 @@ fn rejects_range_on_bool() {
 }
 
 #[test]
-fn range_linear_has_no_scale_call() {
+fn range_linear_expands_to_a_linear_range() {
     let out = expand(
         r#"
         struct P {
@@ -205,9 +220,10 @@ fn range_linear_has_no_scale_call() {
         "#,
     );
 
-    assert!(out.contains("min_value(0.0).max_value(1.0)"), "{out}");
-    // Linear is the builder default, so no `.scale(...)` call is emitted.
-    assert!(!out.contains(".scale("), "{out}");
+    assert!(
+        out.contains(".range(const{::rift_plugin::prelude::FloatRange::linear(0.0,1.0)})"),
+        "{out}"
+    );
 }
 
 #[test]
@@ -221,10 +237,10 @@ fn range_skew_expands_bounds_and_curve() {
         "#,
     );
 
-    assert!(out.contains("min_value(20.0).max_value(20000.0)"), "{out}");
-    // Integer factor literals are coerced to floats for float params.
+    // Bounds and factor are coerced to floats, and the call is wrapped in a
+    // `const` block so the constructor asserts at compile time.
     assert!(
-        out.contains(".scale(::rift_plugin::prelude::Scale::Skew(3.0))"),
+        out.contains(".range(const{::rift_plugin::prelude::FloatRange::skew(20.0,20000.0,3.0)})"),
         "{out}"
     );
 }
@@ -240,46 +256,16 @@ fn range_exp_expands_bounds_and_curve() {
         "#,
     );
 
-    assert!(out.contains("min_value(20.0).max_value(20000.0)"), "{out}");
     assert!(
-        out.contains(".scale(::rift_plugin::prelude::Scale::Exponential(3.0))"),
+        out.contains(".range(const{::rift_plugin::prelude::FloatRange::exp(20.0,20000.0,3.0)})"),
         "{out}"
     );
 }
 
 #[test]
-fn rejects_non_positive_skew_literal() {
-    for source in [
-        "struct P { #[param(range = skew(0, 1, 0))] pub a: FloatParam }",
-        "struct P { #[param(range = skew(0, 1, 0.0))] pub a: FloatParam }",
-        "struct P { #[param(range = skew(0, 1, -2.0))] pub a: FloatParam }",
-    ] {
-        let err = super::parse::Params::from_derive_input(
-            &syn::parse_str::<DeriveInput>(source).unwrap(),
-        )
-        .unwrap_err();
-        assert!(err.to_string().contains("greater than 0"), "{err}");
-    }
-}
-
-#[test]
-fn rejects_bad_exp_literal() {
-    for source in [
-        "struct P { #[param(range = exp(0, 1, 0))] pub a: FloatParam }",
-        "struct P { #[param(range = exp(0, 1, 1.0))] pub a: FloatParam }",
-        "struct P { #[param(range = exp(0, 1, -2.0))] pub a: FloatParam }",
-    ] {
-        let err = super::parse::Params::from_derive_input(
-            &syn::parse_str::<DeriveInput>(source).unwrap(),
-        )
-        .unwrap_err();
-        assert!(err.to_string().contains("`exp` factor"), "{err}");
-    }
-}
-
-#[test]
-fn allows_non_literal_skew_factor() {
-    // Not a literal, so the macro cannot check it; validation is left to runtime.
+fn allows_const_skew_factor() {
+    // A `const` factor is fine; the constructor's assert still runs at compile
+    // time because the call is wrapped in a `const` block.
     let out = expand(
         r#"
         struct P {
@@ -288,11 +274,14 @@ fn allows_non_literal_skew_factor() {
         }
         "#,
     );
-    assert!(out.contains("Scale::Skew("), "{out}");
+    assert!(
+        out.contains("const{::rift_plugin::prelude::FloatRange::skew(0.0,1.0,(SKEW)asf32)}"),
+        "{out}"
+    );
 }
 
 #[test]
-fn int_range_is_linear_only() {
+fn int_range_expands_to_a_linear_range() {
     let out = expand(
         r#"
         struct P {
@@ -301,24 +290,11 @@ fn int_range_is_linear_only() {
         }
         "#,
     );
-    // Int bounds are not float-coerced, and no curve is attached.
-    assert!(out.contains("min_value(0).max_value(16)"), "{out}");
-    assert!(!out.contains(".scale("), "{out}");
-
-    for source in [
-        "struct P { #[param(range = skew(0, 16, 2.0))] pub steps: IntParam }",
-        "struct P { #[param(range = exp(0, 16, 2.0))] pub steps: IntParam }",
-    ] {
-        let err = super::parse::Params::from_derive_input(
-            &syn::parse_str::<DeriveInput>(source).unwrap(),
-        )
-        .unwrap_err();
-
-        assert!(
-            err.to_string().contains("only supported for float params"),
-            "{err}"
-        );
-    }
+    // Int bounds are not float-coerced, and there is no curve.
+    assert!(
+        out.contains(".range(const{::rift_plugin::prelude::IntRange::linear(0,16)})"),
+        "{out}"
+    );
 }
 
 #[test]
@@ -333,16 +309,21 @@ fn rejects_bare_range_syntax() {
 }
 
 #[test]
-fn rejects_unknown_range() {
-    let err = super::parse::Params::from_derive_input(
-        &syn::parse_str::<DeriveInput>(
-            "struct P { #[param(range = log(0, 1, 2))] pub cutoff: FloatParam }",
-        )
-        .unwrap(),
-    )
-    .unwrap_err();
-
-    assert!(err.to_string().contains("`range` expects"), "{err}");
+fn unknown_range_constructor_is_forwarded() {
+    // The macro forwards the name verbatim; an unknown one becomes a compile
+    // error on the generated `FloatRange::log(..)` call.
+    let out = expand(
+        r#"
+        struct P {
+            #[param(range = log(0, 1, 2))]
+            pub cutoff: FloatParam,
+        }
+        "#,
+    );
+    assert!(
+        out.contains("const{::rift_plugin::prelude::FloatRange::log("),
+        "{out}"
+    );
 }
 
 #[test]

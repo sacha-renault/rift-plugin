@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 
 use darling::FromField;
-use syn::{Data, DeriveInput, Expr, ExprLit, ExprUnary, Fields, Generics, Ident, Lit, Type, UnOp};
+use syn::{Data, DeriveInput, Expr, Fields, Generics, Ident, Path, Type};
 
 /// Receiver for `#[param(...)]` on a leaf field.
 #[derive(FromField)]
@@ -70,8 +70,7 @@ pub(crate) struct Leaf {
     pub id: Option<String>,
     pub unit: Option<String>,
     pub default: Option<Expr>,
-    pub range: Option<(Expr, Expr)>,
-    pub scale: Option<ScaleArg>,
+    pub range: Option<RangeSpec>,
     pub flags: Option<Expr>,
 }
 
@@ -81,17 +80,16 @@ impl Leaf {
     }
 }
 
-/// The curve encoded in a `range` declaration for a float param.
+/// A parsed `range = ...` declaration: the constructor to call (e.g. `linear`,
+/// `skew`, `exp`) and its arguments, forwarded verbatim to the kind's range type.
 ///
-/// `range = linear(...)` carries no curve; `range = skew(min, max, factor)` is a
-/// power curve and `range = exp(min, max, factor)` an exponential curve. The
-/// factor is stored as written and coerced to `f32` at expansion.
+/// Arguments are *not* validated here: the range constructors are `const fn`
+/// with their own asserts, and the generated call is wrapped in a `const` block,
+/// so a bad argument is a compile error.
 #[derive(Debug)]
-pub(crate) enum ScaleArg {
-    /// The `factor` of `range = skew(min, max, factor)`.
-    Skew(Expr),
-    /// The `factor` of `range = exp(min, max, factor)`.
-    Exponential(Expr),
+pub(crate) struct RangeSpec {
+    pub ctor: Path,
+    pub args: Vec<Expr>,
 }
 
 /// A `#[nested]` field: either a struct or an array of structs.
@@ -183,13 +181,7 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
         flags,
     } = ParamArgs::from_field(field)?;
 
-    let (range, scale) = match range.as_ref() {
-        Some(expr) => {
-            let (bounds, scale) = parse_range(expr)?;
-            (Some(bounds), scale)
-        }
-        None => (None, None),
-    };
+    let range = range.as_ref().map(parse_range).transpose()?;
 
     let leaf = Leaf {
         ident,
@@ -200,7 +192,6 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
         unit,
         default,
         range,
-        scale,
         flags,
     };
 
@@ -232,154 +223,37 @@ fn parse_nested(field: &syn::Field) -> syn::Result<Field> {
     }))
 }
 
-/// One accepted `range = ...` form.
-///
-/// Adding a curve means adding one entry to [`RANGE_VARIANTS`]: the name match,
-/// the arity check and the "expected" error text are all derived from the table.
-struct RangeVariant {
-    /// The DSL keyword, e.g. `skew`.
-    name: &'static str,
-    /// Argument names *after* the implicit `min, max`; used for arity and errors.
-    extra_args: &'static [&'static str],
-    /// Builds (and validates) the curve from `extra_args`, or `Ok(None)` for a
-    /// linear range.
-    ///
-    /// Validation only sees literals; anything the macro cannot evaluate is left
-    /// to `Scale` at runtime.
-    build: fn(&[Expr]) -> syn::Result<Option<ScaleArg>>,
-}
+/// The error for a `range` that is not a constructor call.
+const RANGE_EXPECTED: &str = "`range` expects a call such as `linear(min, max)`, \
+     `skew(min, max, factor)` or `exp(min, max, factor)`";
 
-/// Every accepted `range` form. `min` and `max` are implicit and always the
-/// first two arguments, so they are not listed in `extra_args`.
+/// Parse `range = <ctor>(<args...>)`.
 ///
-/// To add a form, follow the "Adding a new curve" procedure in the `scale`
-/// module of `rift-plugin-params`.
-const RANGE_VARIANTS: &[RangeVariant] = &[
-    RangeVariant {
-        name: "linear",
-        extra_args: &[],
-        build: |_| Ok(None),
-    },
-    RangeVariant {
-        name: "skew",
-        extra_args: &["factor"],
-        build: |extra| {
-            let factor = &extra[0];
-            if literal_f32(factor).is_some_and(|value| !(value.is_finite() && value > 0.0)) {
-                return Err(syn::Error::new_spanned(
-                    factor,
-                    "`skew` factor must be finite and greater than 0",
-                ));
-            }
-            Ok(Some(ScaleArg::Skew(factor.clone())))
-        },
-    },
-    RangeVariant {
-        name: "exp",
-        extra_args: &["factor"],
-        build: |extra| {
-            let factor = &extra[0];
-            if literal_f32(factor)
-                .is_some_and(|value| !(value.is_finite() && value > 0.0 && value != 1.0))
-            {
-                return Err(syn::Error::new_spanned(
-                    factor,
-                    "`exp` factor must be finite and greater than 0, and different to 1",
-                ));
-            }
-            Ok(Some(ScaleArg::Exponential(factor.clone())))
-        },
-    },
-];
-
-/// A `range = ...` value, parsed against [`RANGE_VARIANTS`].
-///
-/// `linear(min, max)` yields the plain bounds with no curve; `skew(min, max,
-/// factor)` additionally carries a power curve. Float params may use any form;
-/// int, bool and enum params may only use `linear` (see [`validate_leaf`]).
-fn parse_range(expr: &Expr) -> syn::Result<((Expr, Expr), Option<ScaleArg>)> {
+/// The constructor name and arguments are forwarded as-is. Their validity (a
+/// curve only makes sense on a float, `factor > 0`, …) is enforced by the range
+/// constructors at compile time; the macro only rejects `range` on a kind that
+/// has no range type at all (see [`validate_leaf`]).
+fn parse_range(expr: &Expr) -> syn::Result<RangeSpec> {
     let Expr::Call(call) = expr else {
-        return Err(syn::Error::new_spanned(expr, expected_range_message()));
+        return Err(syn::Error::new_spanned(expr, RANGE_EXPECTED));
     };
     let Expr::Path(func) = &*call.func else {
-        return Err(syn::Error::new_spanned(expr, expected_range_message()));
+        return Err(syn::Error::new_spanned(expr, RANGE_EXPECTED));
     };
 
-    let Some(variant) = RANGE_VARIANTS
-        .iter()
-        .find(|variant| func.path.is_ident(variant.name))
-    else {
-        return Err(syn::Error::new_spanned(func, expected_range_message()));
-    };
-
-    // `min` and `max` are always present; the rest is `extra_args`.
-    if call.args.len() != 2 + variant.extra_args.len() {
-        return Err(syn::Error::new_spanned(
-            &call.args,
-            expected_range_message(),
-        ));
-    }
-
-    let min = call.args[0].clone();
-    let max = call.args[1].clone();
-    let extra: Vec<Expr> = call.args.iter().skip(2).cloned().collect();
-
-    Ok(((min, max), (variant.build)(&extra)?))
-}
-
-/// The value of `expr` when it is a numeric literal (optionally negated).
-///
-/// Returns `None` for anything the macro cannot evaluate, so callers can only
-/// validate what is statically known.
-fn literal_f32(expr: &Expr) -> Option<f32> {
-    match expr {
-        Expr::Lit(ExprLit {
-            lit: Lit::Float(float),
-            ..
-        }) => float.base10_digits().parse::<f32>().ok(),
-        Expr::Lit(ExprLit {
-            lit: Lit::Int(int), ..
-        }) => int.base10_digits().parse::<f32>().ok(),
-        Expr::Unary(ExprUnary {
-            op: UnOp::Neg(_),
-            expr,
-            ..
-        }) => literal_f32(expr).map(|value| -value),
-        _ => None,
-    }
-}
-
-/// The shared "expected" error text, generated from [`RANGE_VARIANTS`] so it can
-/// never drift from the accepted forms.
-fn expected_range_message() -> String {
-    let forms: Vec<String> = RANGE_VARIANTS
-        .iter()
-        .map(|variant| {
-            let args = std::iter::once("min")
-                .chain(std::iter::once("max"))
-                .chain(variant.extra_args.iter().copied())
-                .collect::<Vec<_>>()
-                .join(", ");
-            format!("`{}({args})`", variant.name)
-        })
-        .collect();
-
-    format!("`range` expects {}", forms.join(" or "))
+    Ok(RangeSpec {
+        ctor: func.path.clone(),
+        args: call.args.iter().cloned().collect(),
+    })
 }
 
 fn validate_leaf(leaf: &Leaf) -> syn::Result<()> {
+    // `range` on a kind without a range type has nowhere to land, so it is the
+    // one `range` error the macro still reports itself.
     if leaf.range.is_some() && matches!(leaf.kind, ParamKind::Bool | ParamKind::Enum) {
         return Err(syn::Error::new_spanned(
             &leaf.ty,
             "`range` is only supported for `FloatParam` and `IntParam`",
-        ));
-    }
-
-    if leaf.scale.is_some() && leaf.kind != ParamKind::Float {
-        return Err(syn::Error::new_spanned(
-            &leaf.ty,
-            "a curved range (`skew` or `exp`) is only supported for float params \
-             (int, bool and enum params are always linear)",
         ));
     }
 
