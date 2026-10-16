@@ -29,7 +29,8 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
         self.shared.states.clone()
     }
 
-    fn notify_latency_changed(&mut self) {
+    fn notify_latency_changed(&mut self, latency: u32) {
+        self.states().set_latency(latency);
         if let Some(ext) = self.host.get_extension::<HostLatency>() {
             ext.changed(&mut self.host);
         } else {
@@ -68,10 +69,7 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
             use MainThreadTask::*;
 
             match task {
-                ChangeLatency(new_latency) => {
-                    states.set_latency(new_latency);
-                    self.notify_latency_changed();
-                }
+                ChangeLatency(new_latency) => self.notify_latency_changed(new_latency),
                 RequestRestart => self.host.request_restart(),
                 ParamContextMenu(ctx) => self.open_param_menu(ctx),
             }
