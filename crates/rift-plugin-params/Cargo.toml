@@ -10,6 +10,7 @@ fun-dsp = ["dep:fundsp"]
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
 arc-swap = { workspace = true }
+bitflags = { workspace = true }
 bon = { workspace = true }
 log = { workspace = true }
 serde = { workspace = true }
