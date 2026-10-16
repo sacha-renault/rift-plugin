@@ -25,3 +25,10 @@ pub use multi_channel::MultiChannel;
 pub const DEFAULT_SAMPLERATE: f64 = 48000.;
 
 pub use graveyard::{drop_rt_safe, init_graveyard, swap_in};
+
+// Drops routed through the graveyard must not allocate on the caller thread;
+// `assert_no_alloc` can only see that with its allocator installed, so the
+// graveyard tests do exactly that.
+#[cfg(test)]
+#[global_allocator]
+static ALLOCATOR: assert_no_alloc::AllocDisabler = assert_no_alloc::AllocDisabler;
