@@ -10,8 +10,9 @@
 - [x] Shared has a different meaning in clack and rift, yet the same name. Should change that because that's confusing asf.
 - [x] Don't use naive generator with infinite frequencies (i.e. if phase > 0.5 { -1. } else { 1. }) has it would create serious issues with later effects, like filters. (resolution ... Just use fundsp xx)
 - [ ] Need to add a way to do background jobs. (usage: a param has changed and a reset / init requires allocation and therefore needs to be processed on background task.)
-- [ ] Harden the graveyard (RT-safe off-thread drop). `crates/rift-plugin-utils/src/graveyard.rs`: add a `debug_assert!` in `drop_rt_safe` that the graveyard is initialized, so a forgotten `init_graveyard` fails in debug instead of silently leaking every value. Then prove the mechanism with tests: destructors run on the worker thread and never on the caller, values at the `SLOT_SIZE` / `SLOT_ALIGN` limits, a full queue and an uninitialized graveyard must both leak rather than dealloc on the caller, concurrent producers, plus Miri and `assert_no_alloc` runs. See the `TODO(rt-safety)` note at the top of the file.
-- [ ] 
+- [x] Harden the graveyard (RT-safe off-thread drop). `crates/rift-plugin-utils/src/graveyard.rs`: `drop_rt_safe` now `debug_assert!`s the graveyard is initialized, and tests cover: destructors run off the caller thread, concurrent producers, values exactly at the `SLOT_SIZE` / `SLOT_ALIGN` limits (plus `compile_fail` doctests for over-size / over-align), a full queue and an uninitialized graveyard both leaking, and an `assert_no_alloc` run. The routing decision is factored into `dispose`, so the leak paths are tested without touching the global.
+- [ ] Run the graveyard tests under Miri. Needs a nightly toolchain and a CI job; the unsafe slot write/drop is exactly what Miri should be checking.
+- [ ] Find a way graveyard can be init with user defined value.
 
 ## Parameters
 

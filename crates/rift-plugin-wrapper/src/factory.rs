@@ -8,6 +8,7 @@ use clack_extensions::note_ports::PluginNotePorts;
 use clack_extensions::params::PluginParams;
 use clack_extensions::state::PluginState;
 use clack_plugin::prelude::*;
+use rift_plugin_utils::init_graveyard;
 
 use crate::ClapPlugin;
 use crate::main_thread::WrapperMainThread;
@@ -65,6 +66,9 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
     }
 
     fn new_shared(_host: HostSharedHandle<'_>) -> Result<Self::Shared<'_>, PluginError> {
+        // Plugin is about to be initialized. Init graveyard
+        init_graveyard(2048);
+
         log::debug!("Create new WrapperShared");
         let shared = WrapperShared::default();
         Ok(shared)

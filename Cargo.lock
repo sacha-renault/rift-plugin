@@ -2152,6 +2152,7 @@ dependencies = [
 name = "rift-plugin-utils"
 version = "0.1.0"
 dependencies = [
+ "assert_no_alloc",
  "crossbeam-channel",
  "log",
  "serde",
@@ -2184,6 +2185,7 @@ dependencies = [
  "rift-plugin-gui",
  "rift-plugin-params",
  "rift-plugin-types",
+ "rift-plugin-utils",
  "serde_json",
 ]
 
