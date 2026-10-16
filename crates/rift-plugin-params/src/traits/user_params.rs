@@ -2,7 +2,7 @@ use clack_plugin::prelude::PluginError;
 use clack_plugin::utils::ClapId;
 
 use super::Param;
-use crate::ParamPtr;
+use crate::{ParamPtr, Tags};
 
 /// Implemented by the `#[derive(Params)]` structs written by the user.
 ///
@@ -19,15 +19,16 @@ pub trait UserParams {
     /// Every parameter reachable from this struct, in declaration order.
     fn all_params(&self) -> Vec<ParamPtr>;
 
-    fn params_by_tags<F>(&self, predicate: F) -> Vec<ClapId>
+    /// The [`ClapId`]s of every parameter whose [`tags`](Param::tags) satisfy
+    /// `predicate`.
+    fn params_by_tags<F>(&self, predicate: F) -> impl Iterator<Item = ClapId>
     where
-        F: Fn(u32) -> bool,
+        F: Fn(Tags) -> bool,
     {
         self.all_params()
-            .iter()
-            .filter(|param| predicate(param.tags().0))
-            .map(ParamPtr::id)
-            .collect()
+            .into_iter()
+            .filter(move |param| predicate(param.tags()))
+            .map(|param| param.id())
     }
 
     /// Write every reachable parameter into `out`, keyed by its stable

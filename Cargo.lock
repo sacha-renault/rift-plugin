@@ -967,6 +967,7 @@ dependencies = [
 name = "fun_dsp_plugin"
 version = "0.1.0"
 dependencies = [
+ "bitflags 2.13.2",
  "fundsp",
  "rift-fun-dsp",
  "rift-plugin",
@@ -2127,6 +2128,7 @@ name = "rift-plugin-params"
 version = "0.1.0"
 dependencies = [
  "arc-swap",
+ "bitflags 2.13.2",
  "bon",
  "clack-extensions",
  "clack-plugin",

@@ -126,5 +126,8 @@ pub trait Param: super::__private::Sealed {
     fn as_ptr(&self) -> ParamPtr;
 
     /// Get the tag associated to this param
+    ///
+    /// Tags is a very generic struct holding a u32.
+    /// Using a single bittags! is probably the best ...
     fn tags(&self) -> Tags;
 }
