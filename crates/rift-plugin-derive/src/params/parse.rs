@@ -23,6 +23,7 @@ struct ParamArgs {
     default: Option<Expr>,
     range: Option<Expr>,
     flags: Option<Expr>,
+    tags: Option<Expr>,
 }
 
 /// Receiver for `#[nested(...)]` on a nested field.
@@ -72,6 +73,7 @@ pub(crate) struct Leaf {
     pub default: Option<Expr>,
     pub range: Option<RangeSpec>,
     pub flags: Option<Expr>,
+    pub tags: Option<Expr>,
 }
 
 impl Leaf {
@@ -179,6 +181,7 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
         default,
         range,
         flags,
+        tags,
     } = ParamArgs::from_field(field)?;
 
     let range = range.as_ref().map(parse_range).transpose()?;
@@ -193,6 +196,7 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
         default,
         range,
         flags,
+        tags,
     };
 
     validate_leaf(&leaf)?;

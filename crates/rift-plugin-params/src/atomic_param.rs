@@ -3,6 +3,8 @@ use std::fmt;
 use clack_extensions::params::*;
 use clack_plugin::utils::ClapId;
 
+use crate::Tags;
+
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
@@ -72,9 +74,8 @@ pub struct AtomicParam<K: ParamKind> {
     /// be initialized in the derive with it's clap ID
     /// and module.
     #[builder(default)]
-    name: String,
-
-    module: Option<String>,
+    pub(crate) name: String,
+    pub(crate) module: Option<String>,
 
     #[builder(default = "")]
     pub(crate) unit: &'static str,
@@ -88,6 +89,9 @@ pub struct AtomicParam<K: ParamKind> {
 
     #[builder(default = ClapId::new(0))]
     pub(crate) id: ClapId,
+
+    #[builder(default, with = |v: impl Into<Tags>| v.into())]
+    pub(crate) tags: Tags,
 }
 
 impl<K: ParamKind> crate::traits::__private::Sealed for AtomicParam<K> {}
@@ -168,5 +172,9 @@ impl<K: ParamKind> Param for AtomicParam<K> {
 
     fn as_ptr(&self) -> ParamPtr {
         ParamPtr::new(self as *const dyn Param)
+    }
+
+    fn tags(&self) -> Tags {
+        self.tags
     }
 }

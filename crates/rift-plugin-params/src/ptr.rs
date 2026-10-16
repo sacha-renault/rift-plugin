@@ -1,8 +1,10 @@
 use clack_extensions::params::ParamInfoFlags;
 
+use crate::Tags;
+
 use super::traits::Param;
 
-/// A zero-cost wrapper around a raw pointer to a [`ClapParam`].
+/// A zero-cost wrapper around a raw pointer to a [`Param`].
 /// The underlying parameter lives in the host and outlives this wrapper.
 #[derive(Clone, Copy)]
 pub struct ParamPtr {
@@ -105,6 +107,11 @@ impl Param for ParamPtr {
         unsafe { (*self.ptr).max_value() }
     }
 
+    #[inline]
+    fn tags(&self) -> Tags {
+        unsafe { (*self.ptr).tags() }
+    }
+
     fn as_ptr(&self) -> ParamPtr {
         *self
     }
@@ -179,6 +186,9 @@ mod tests {
         }
         fn as_ptr(&self) -> ParamPtr {
             ParamPtr::new(self as *const dyn Param)
+        }
+        fn tags(&self) -> Tags {
+            Tags(0)
         }
 
         fn value_to_text(&self, value: f32, writer: &mut dyn core::fmt::Write) -> std::fmt::Result {

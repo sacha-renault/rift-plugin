@@ -92,6 +92,7 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
         quote! { .unit(#lit) }
     });
     let flags = leaf.flags.as_ref().map(|expr| quote! { .flags(#expr) });
+    let tags = leaf.tags.as_ref().map(|expr| quote! { .tags(#expr) });
 
     quote! {
         <#ty>::builder()
@@ -105,6 +106,7 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
             #range
             #unit
             #flags
+            #tags
             .build()
     }
 }
