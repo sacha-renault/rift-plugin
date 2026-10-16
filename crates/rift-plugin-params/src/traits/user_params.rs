@@ -21,6 +21,17 @@ pub trait UserParams {
 
     /// The [`ClapId`]s of every parameter whose [`tags`](Param::tags) satisfy
     /// `predicate`.
+    ///
+    /// [`Tags`] is a bare `u32`, so nothing stops you from tagging params with
+    /// two different flag structs, say `ParamFlags` and `ParamFlags2`, with the
+    /// bits laid out in a different order. It compiles, the compiler never
+    /// complains, and the results are then incoherent asf: we only ever AND bits
+    /// here, so we have no idea which struct a param was tagged with.
+    ///
+    /// Not fixing it by giving params another `<Tag>` either. There's already
+    /// enough blanket impl flying in every direction in this crate. Normally you
+    /// define a single tag struct and it never comes up, just extra care if you use
+    /// more than 1.
     fn params_by_tags<F>(&self, predicate: F) -> impl Iterator<Item = ClapId>
     where
         F: Fn(Tags) -> bool,
