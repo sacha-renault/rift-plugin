@@ -52,7 +52,12 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
                 return;
             }
 
-            let target = ContextMenuTarget::Param(param_id);
+            let target = if let Some(param_id) = param_id {
+                ContextMenuTarget::Param(param_id)
+            } else {
+                ContextMenuTarget::Global
+            };
+
             if let Err(err) = ext.popup(&mut self.host, target, screen, x, y) {
                 log::error!("Couldn't open popup {err}")
             }

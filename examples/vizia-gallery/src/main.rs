@@ -77,6 +77,8 @@ impl GuiContext for StandaloneContext {
 
     fn param_context_menu(&self, _param_id: ClapId, _x: i32, _y: i32, _screen: i32) {}
 
+    fn global_context_menu(&self, _x: i32, _y: i32, _screen: i32) {}
+
     fn is_playing(&self) -> Arc<AtomicBool> {
         self.is_playing.clone()
     }

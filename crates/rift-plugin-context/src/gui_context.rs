@@ -5,7 +5,7 @@ use rift_plugin_gui::{GuiContext, GuiParamEvent};
 
 use crate::PluginSharedState;
 use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
-use rift_plugin_params::ParamCollection;
+use rift_plugin_params::{ClapId, ParamCollection};
 
 pub struct GuiContextImpl {
     pub states: Arc<PluginSharedState>,
@@ -28,13 +28,29 @@ impl GuiContext for GuiContextImpl {
         self.params.clone()
     }
 
-    fn param_context_menu(
-        &self,
-        param_id: clack_plugin::prelude::ClapId,
-        x: i32,
-        y: i32,
-        screen: i32,
-    ) {
+    fn is_playing(&self) -> Arc<AtomicBool> {
+        self.states.is_playing.clone()
+    }
+
+    fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiTasks> {
+        self.states.pop_in_gui()
+    }
+
+    fn is_overflow(&self) -> bool {
+        self.states.overflows().take_gui_overflow()
+    }
+
+    fn global_context_menu(&self, x: i32, y: i32, screen: i32) {
+        self.context_menu(None, x, y, screen);
+    }
+
+    fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32) {
+        self.context_menu(Some(param_id), x, y, screen);
+    }
+}
+
+impl GuiContextImpl {
+    fn context_menu(&self, param_id: Option<ClapId>, x: i32, y: i32, screen: i32) {
         let ctx = ParamContextMenu {
             param_id,
             x,
@@ -53,17 +69,5 @@ impl GuiContext for GuiContextImpl {
         {
             log::error!("Couldn't push callback request");
         }
-    }
-
-    fn is_playing(&self) -> Arc<AtomicBool> {
-        self.states.is_playing.clone()
-    }
-
-    fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiTasks> {
-        self.states.pop_in_gui()
-    }
-
-    fn is_overflow(&self) -> bool {
-        self.states.overflows().take_gui_overflow()
     }
 }

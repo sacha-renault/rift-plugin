@@ -7,7 +7,7 @@ use rift_plugin_vizia::widgets::*;
 use crate::params::FunDspParams;
 
 pub fn build(params: Arc<FunDspParams>) -> Box<dyn GuiFactory> {
-    vizia_gui(480, 480, move |cx, _| {
+    vizia_gui(480, 480, move |cx, ctx| {
         VStack::new(cx, |cx| {
             Panel::new(cx, "Osc1", |cx| {
                 param_knob(cx, &params.oscillators[0].wt_position);
@@ -26,6 +26,10 @@ pub fn build(params: Arc<FunDspParams>) -> Box<dyn GuiFactory> {
                     param_knob(cx, &fparam.cutoff);
                     param_selector(cx, &fparam.kind);
                 }
+            });
+
+            Button::label(cx, "Click for context menu".to_string()).on_press(move |cx| {
+                ctx.global_context_menu(cx.mouse().cursor_x as i32, cx.mouse().cursor_y as i32, 0)
             });
         });
     })

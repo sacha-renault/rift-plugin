@@ -154,8 +154,10 @@ impl ClapPlugin for FunDspPlugin {
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
 
     const PARAM_MENU_ITEMS: &[MenuItem] = &[
-        MenuItem::title(c"USER MENU"),
-        MenuItem::entry(c"CANT CLICK THOSE", |_| {}).enabled_when(|_| false),
+        // MenuItem::title(c"USER MENU"),
+        // MenuItem::entry(c"CANT CLICK THOSE", |_| {}).enabled_when(|_| false),
         MenuItem::entry(c"PANIKKK", |_| panic!("PANIK")),
     ];
+
+    const GLOBAL_MENU_ITEMS: &[MenuItem] = Self::PARAM_MENU_ITEMS;
 }
