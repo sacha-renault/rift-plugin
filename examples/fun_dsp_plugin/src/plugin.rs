@@ -152,4 +152,10 @@ impl ClapPlugin for FunDspPlugin {
         .supported_dialects(NoteDialects::MIDI)
         .preferred_dialect(NoteDialect::Midi)];
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
+
+    const PARAM_MENU_ITEMS: &[MenuItem] = &[
+        MenuItem::title(c"USER MENU"),
+        MenuItem::entry(c"CANT CLICK THOSE", |_| {}).enabled_when(|_| false),
+        MenuItem::entry(c"PANIKKK", |_| panic!("PANIK")),
+    ];
 }

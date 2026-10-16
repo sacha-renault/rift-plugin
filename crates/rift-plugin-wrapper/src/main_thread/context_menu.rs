@@ -1,50 +1,20 @@
-use clack_extensions::context_menu::{
-    ContextMenuBuilder, ContextMenuTarget, PluginContextMenuImpl,
-};
-use clack_plugin::{plugin::PluginError, utils::ClapId};
+use clack_extensions::context_menu::ContextMenuTarget;
+use rift_plugin_context::MenuContext;
 
 use crate::{ClapPlugin, main_thread::WrapperMainThread};
+
+pub mod menu;
+pub mod menu_item;
 
 impl<'a, P> WrapperMainThread<'a, P>
 where
     P: ClapPlugin,
 {
-    fn populate_param_menu(
-        &self,
-        _: &mut ContextMenuBuilder,
-        _: ClapId,
-    ) -> Result<(), PluginError> {
-        // todo!()
-        Ok(())
-    }
-
-    fn populate_global_menu(&self, _: &mut ContextMenuBuilder) -> Result<(), PluginError> {
-        // todo!()
-        Ok(())
-    }
-}
-
-impl<'a, P> PluginContextMenuImpl for WrapperMainThread<'a, P>
-where
-    P: ClapPlugin,
-{
-    fn populate(
-        &mut self,
-        target: ContextMenuTarget,
-        builder: &mut ContextMenuBuilder,
-    ) -> Result<(), PluginError> {
-        log::debug!("POPULATE");
-        match target {
-            ContextMenuTarget::Global => self.populate_global_menu(builder),
-            ContextMenuTarget::Param(id) => self.populate_param_menu(builder, id),
-            _ => Ok(()),
-        }
-    }
-
-    fn perform(&mut self, _: ContextMenuTarget, _: ClapId) -> Result<(), PluginError> {
-        // todo!()
-        // maybe add new things later, for now host does it
-        log::debug!("perform");
-        Ok(())
+    fn menu_context(&self, target: ContextMenuTarget) -> MenuContext {
+        let param = match target {
+            ContextMenuTarget::Param(id) => Some(id),
+            _ => None,
+        };
+        MenuContext::builder().maybe_param(param).build()
     }
 }

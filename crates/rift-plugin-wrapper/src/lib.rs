@@ -21,6 +21,7 @@ pub mod shared;
 pub use factory::PluginWrapper;
 
 pub use crate::shared::FromParams;
+pub use main_thread::context_menu::menu_item::{ActionFn, IsCheckedFn, IsEnabledFn, MenuItem};
 
 pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// The parameters for the plugin.
@@ -169,6 +170,9 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     const MAIN_AUDIO_PORTS: MainAudioPort;
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
     const MIDI_PORTS: &[MidiPort<'_>] = &[];
+
+    const GLOBAL_MENU_ITEMS: &[MenuItem] = &[];
+    const PARAM_MENU_ITEMS: &[MenuItem] = &[];
 }
 
 // Opt-in, debug-only global allocator used by `assert_no_alloc` to catch
