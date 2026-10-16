@@ -12,3 +12,4 @@ rift-plugin-vizia = { workspace = true }
 rift-plugin-dsp = { workspace = true }
 rift-fun-dsp = { workspace = true }
 fundsp = { workspace = true }
+bitflags = { workspace = true }
