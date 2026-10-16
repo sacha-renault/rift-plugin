@@ -16,6 +16,7 @@ mod param_swap;
 mod ptr;
 mod range;
 mod scale;
+mod tags;
 mod traits;
 
 #[doc(hidden)]
@@ -39,6 +40,7 @@ pub use param_swap::{SwapParam, SwapParamValue};
 pub use ptr::ParamPtr;
 pub use range::{FloatRange, IntRange};
 pub use scale::Scale;
+pub use tags::Tags;
 pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]
