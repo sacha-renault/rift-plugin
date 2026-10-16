@@ -3,8 +3,9 @@
 //! The audio thread hands the value to a background "graveyard" thread that owns
 //! the destructor, so nothing frees on the audio thread. If there's nowhere to
 //! put it (no graveyard, or a full queue) we drop it on the caller instead:
-//! not RT-safe, but bounded, and loud in debug. Call [`init_graveyard`] once at
-//! startup.
+//! not RT-safe, but bounded. Only a *missing* graveyard is loud in debug (see
+//! [`drop_rt_safe`]); a full queue is silent unless `assert_no_alloc`'s allocator
+//! is installed. Call [`init_graveyard`] once at startup.
 
 use std::{mem::MaybeUninit, sync::OnceLock};
 
@@ -50,9 +51,6 @@ impl Garbage {
     }
 }
 
-// Only ever built from `T: Send`.
-unsafe impl Send for Garbage {}
-
 impl Drop for Garbage {
     fn drop(&mut self) {
         unsafe { (self.drop_fn)(self.data.0.as_mut_ptr() as *mut u8) }
@@ -60,9 +58,6 @@ impl Drop for Garbage {
 }
 
 /// Hands `g` to `queue`, or drops it right here if there's nowhere to put it.
-///
-/// Dropping on the caller isn't RT-safe, but it's bounded and, in debug, trips
-/// `assert_no_alloc`. A silent leak would be worse.
 fn dispose(queue: Option<&Sender<Garbage>>, g: Garbage) {
     match queue {
         // On `Full`, the error carries the value back, so dropping the error
@@ -76,15 +71,23 @@ static GRAVEYARD: OnceLock<Sender<Garbage>> = OnceLock::new();
 
 /// Spawns the graveyard thread. Call it once at startup; later calls are no-ops
 /// (the first `capacity` wins).
+///
+/// `capacity` is clamped to at least 1
 pub fn init_graveyard(capacity: usize) {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+
     GRAVEYARD.get_or_init(|| {
-        let (sender, rx) = bounded(capacity);
+        let (sender, rx) = bounded(capacity.max(1));
 
         std::thread::Builder::new()
             .name("graveyard".into())
             .spawn(move || {
                 for g in rx {
-                    std::mem::drop(g);
+                    // A panicking destructor must take the process down.
+                    let dropped = catch_unwind(AssertUnwindSafe(|| drop(g)));
+                    if dropped.is_err() {
+                        std::process::abort();
+                    }
                 }
             })
             .expect("failed to spawn graveyard thread");
@@ -138,6 +141,9 @@ pub fn drop_rt_safe<T: Send + 'static>(value: T) {
 /// in an other thread so there is no dealloc on the
 /// audio thread. This is useless for a type that doesn't
 /// deallocate.
+///
+/// Note: if drop of the old value of slot panics, it takes
+/// down the process.
 pub fn swap_in<T: Send + 'static>(slot: &mut T, mut new: T) {
     std::mem::swap(slot, &mut new);
     drop_rt_safe(new);
@@ -175,6 +181,9 @@ mod tests {
         }
     }
 
+    /// The graveyard is a process-wide `OnceLock`, so whichever test initializes
+    /// it first fixes the capacity for every test in this binary. Keep every call
+    /// on the same value, and above the 64 pushes `concurrent_producers...` makes.
     fn ensure_graveyard() {
         init_graveyard(256);
     }
@@ -315,5 +324,48 @@ mod tests {
         assert_no_alloc::assert_no_alloc(|| {
             drop_rt_safe(payload);
         });
+    }
+
+    /// Panics from its destructor, on the graveyard thread.
+    struct PanicOnDrop;
+
+    impl Drop for PanicOnDrop {
+        fn drop(&mut self) {
+            panic!("destructor panicked");
+        }
+    }
+
+    /// A panicking destructor must abort the whole process. Unwinding would only
+    /// kill the graveyard thread, after which every drop silently happens on the
+    /// audio thread. The abort can't be observed in-process, so re-run this test
+    /// binary as a child and check that it does not exit cleanly.
+    #[test]
+    fn panicking_destructor_aborts_the_process() {
+        const CHILD_ENV: &str = "RIFT_GRAVEYARD_ABORT_CHILD";
+
+        if std::env::var_os(CHILD_ENV).is_some() {
+            init_graveyard(8);
+            drop_rt_safe(PanicOnDrop);
+            // No abort means a regression: give the graveyard thread a moment,
+            // then exit cleanly so the parent fails instead of hanging.
+            thread::sleep(Duration::from_secs(2));
+            std::process::exit(0);
+        }
+
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([
+                "--exact",
+                "graveyard::tests::panicking_destructor_aborts_the_process",
+            ])
+            .env(CHILD_ENV, "1")
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .expect("failed to re-run the test binary");
+
+        assert!(
+            !status.success(),
+            "a panicking destructor must abort the process, but the child exited cleanly"
+        );
     }
 }
