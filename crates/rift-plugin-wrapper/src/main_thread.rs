@@ -9,7 +9,7 @@ use rift_plugin_gui::ClapGui;
 use crate::{ClapPlugin, shared::WrapperShared};
 use rift_plugin_context::{MainThreadTask, ParamContextMenu, PluginSharedState};
 
-mod context_menu;
+pub(crate) mod context_menu;
 mod latency;
 mod midi;
 mod params;

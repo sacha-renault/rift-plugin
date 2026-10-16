@@ -6,8 +6,9 @@ mod event_pre_process;
 mod event_source;
 mod midi_message;
 mod midi_port;
-pub mod transport;
 mod triple_buffer;
+
+pub mod transport;
 
 pub use audio_ports::{AudioPort, MainAudioPort, PAIR_PORT_ID};
 pub use event_pre_process::*;
