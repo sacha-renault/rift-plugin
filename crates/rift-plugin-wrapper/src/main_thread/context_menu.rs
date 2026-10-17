@@ -37,7 +37,7 @@ where
             } = param_ctx_menu;
 
             if !ext.can_popup(&mut self.host) {
-                log::error!("Couldn't open popup");
+                log::error!("Host doesn't support popup.");
                 return;
             }
 
@@ -48,10 +48,10 @@ where
             };
 
             if let Err(err) = ext.popup(&mut self.host, target, screen, x, y) {
-                log::error!("Couldn't open popup {err}")
+                log::error!("Error during popup: {err}")
             }
         } else {
-            log::error!("Error when requesting popup open")
+            log::error!("get_extension::<HostContextMenu>() failed")
         }
     }
 }
