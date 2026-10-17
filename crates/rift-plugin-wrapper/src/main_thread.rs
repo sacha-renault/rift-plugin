@@ -1,13 +1,12 @@
 use std::sync::Arc;
 
-use clack_extensions::context_menu::{ContextMenuTarget, HostContextMenu};
 use clack_extensions::latency::HostLatency;
 use clack_plugin::prelude::*;
 
 use rift_plugin_gui::ClapGui;
 
 use crate::{ClapPlugin, shared::WrapperShared};
-use rift_plugin_context::{MainThreadTask, ParamContextMenu, PluginSharedState};
+use rift_plugin_context::{MainThreadTask, PluginSharedState};
 
 pub(crate) mod context_menu;
 mod latency;
@@ -35,34 +34,6 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
             ext.changed(&mut self.host);
         } else {
             log::error!("Error when requesting latency change")
-        }
-    }
-
-    fn open_param_menu(&mut self, param_ctx_menu: ParamContextMenu) {
-        if let Some(ext) = self.host.get_extension::<HostContextMenu>() {
-            let ParamContextMenu {
-                param_id,
-                x,
-                y,
-                screen,
-            } = param_ctx_menu;
-
-            if !ext.can_popup(&mut self.host) {
-                log::error!("Couldn't open popup");
-                return;
-            }
-
-            let target = if let Some(param_id) = param_id {
-                ContextMenuTarget::Param(param_id)
-            } else {
-                ContextMenuTarget::Global
-            };
-
-            if let Err(err) = ext.popup(&mut self.host, target, screen, x, y) {
-                log::error!("Couldn't open popup {err}")
-            }
-        } else {
-            log::error!("Error when requesting popup open")
         }
     }
 }

@@ -5,17 +5,6 @@ use clack_plugin::{plugin::PluginError, utils::ClapId};
 
 use crate::{ClapPlugin, main_thread::WrapperMainThread};
 
-use super::menu_item::MenuItem;
-
-/// The menu `P` declares for `target`, or `None`
-fn menu_items<P: ClapPlugin>(target: ContextMenuTarget) -> Option<&'static [MenuItem]> {
-    match target {
-        ContextMenuTarget::Global => Some(P::GLOBAL_MENU_ITEMS),
-        ContextMenuTarget::Param(_) => Some(P::PARAM_MENU_ITEMS),
-        _ => None,
-    }
-}
-
 impl<'a, P> PluginContextMenuImpl for WrapperMainThread<'a, P>
 where
     P: ClapPlugin,
@@ -27,7 +16,7 @@ where
     ) -> Result<(), PluginError> {
         log::debug!("POPULATE");
 
-        let Some(items) = menu_items::<P>(target) else {
+        let Some(items) = self.menu_items(target) else {
             log::error!("No context menu to populate for target {target:?}");
             return Ok(());
         };
@@ -39,7 +28,7 @@ where
     fn perform(&mut self, target: ContextMenuTarget, action_id: ClapId) -> Result<(), PluginError> {
         log::debug!("perform");
 
-        let Some(items) = menu_items::<P>(target) else {
+        let Some(items) = self.menu_items(target) else {
             log::error!("No context menu to perform on for target {target:?}");
             return Ok(());
         };
