@@ -171,7 +171,12 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     const AUX_AUDIO_PORTS: &[AudioPort<'_>] = &[];
     const MIDI_PORTS: &[MidiPort<'_>] = &[];
 
+    /// Not consulted by FL Studio or Bitwig. FL also rejects the `Global` popup
+    /// target outright: `popup` returns `Err(ContextMenuError::ActionFailed)`.
     const GLOBAL_MENU_ITEMS: &[MenuItem] = &[];
+
+    /// Not consulted by FL Studio or Bitwig: they open their own parameter menu
+    /// and never call `PluginContextMenuImpl::populate`. This looks ignore by most hosts.
     const PARAM_MENU_ITEMS: &[MenuItem] = &[];
 }
 
