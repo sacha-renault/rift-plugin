@@ -167,11 +167,7 @@ impl AtomicQueueOverflows {
     }
 
     fn take_overflow(&self, mask: QueueOverflows) -> bool {
-        let previous = self.0.fetch_and(
-            QueueOverflows::from_bits_retain(!mask.bits()),
-            Ordering::Acquire,
-        );
-        previous.intersects(mask)
+        !self.0.fetch_clear(mask, Ordering::Acquire).is_empty()
     }
 
     pub fn set_main_overflow(&self) {
