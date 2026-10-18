@@ -151,13 +151,11 @@ bitflags::bitflags! {
 ///
 /// `set` is `Release` and `take` is `Acquire`, so a resync triggered by a
 /// `take` sees whatever the producer wrote before the drop.
-pub struct AtomicQueueOverflows(AtomicFlags<u8, QueueOverflows>);
+pub struct AtomicQueueOverflows(AtomicFlags<QueueOverflows>);
 
 impl Default for AtomicQueueOverflows {
     fn default() -> Self {
-        Self(AtomicFlags::<u8, QueueOverflows>::new(
-            QueueOverflows::empty(),
-        ))
+        Self(AtomicFlags::<QueueOverflows>::new(QueueOverflows::empty()))
     }
 }
 

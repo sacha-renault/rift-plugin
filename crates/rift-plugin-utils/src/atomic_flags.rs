@@ -10,7 +10,7 @@ use bitflags::Flags;
 
 /// Primitive bit type usable as the backing storage of [`AtomicFlags`].
 pub trait AtomicBits: Copy {
-    type Storage: Default;
+    type Storage;
     type Bits;
 
     fn new(bits: Self::Bits) -> Self::Storage;
@@ -101,17 +101,17 @@ impl_atomic_bits!(i32, AtomicI32);
 impl_atomic_bits!(i64, AtomicI64);
 impl_atomic_bits!(isize, AtomicIsize);
 
-pub struct AtomicFlags<T, F>
+pub struct AtomicFlags<F>
 where
-    T: AtomicBits,
-    F: Flags<Bits = T::Bits>,
+    F: Flags,
+    F::Bits: AtomicBits<Bits = F::Bits>,
     F: Copy,
 {
-    storage: T::Storage,
+    storage: <F::Bits as AtomicBits>::Storage,
     _p: PhantomData<fn() -> F>,
 }
 
-impl<F> AtomicFlags<F::Bits, F>
+impl<F> AtomicFlags<F>
 where
     F: Flags,
     F::Bits: AtomicBits<Bits = F::Bits>,
@@ -191,7 +191,7 @@ mod tests {
 
     #[test]
     fn store_and_load() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A);
+        let flags = AtomicFlags::new(TestFlags::A);
         assert_eq!(flags.load(Ordering::SeqCst), TestFlags::A);
 
         flags.store(TestFlags::B, Ordering::SeqCst);
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn take_removes_requested_flags_and_returns_taken() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::B);
 
         let taken = flags.take(TestFlags::A, Ordering::SeqCst);
         assert_eq!(taken, TestFlags::A);
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn peek_returns_requested_flags_without_clearing() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::B);
 
         assert_eq!(flags.peek(TestFlags::A, Ordering::SeqCst), TestFlags::A);
         assert_eq!(
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn fetch_operations() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A);
+        let flags = AtomicFlags::new(TestFlags::A);
 
         let previous = flags.fetch_or(TestFlags::B, Ordering::SeqCst);
         assert_eq!(previous, TestFlags::A);
@@ -249,7 +249,7 @@ mod tests {
 
     #[test]
     fn fetch_xor_and_swap_return_previous_state() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::B);
 
         let previous = flags.fetch_xor(TestFlags::B | TestFlags::C, Ordering::SeqCst);
         assert_eq!(previous, TestFlags::A | TestFlags::B);
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn fetch_nand_operates_on_the_raw_word() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::B);
 
         let previous = flags.fetch_nand(TestFlags::A, Ordering::SeqCst);
         assert_eq!(previous, TestFlags::A | TestFlags::B);
@@ -273,11 +273,11 @@ mod tests {
 
     #[test]
     fn clear_and_into_inner() {
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::B);
         flags.clear(Ordering::SeqCst);
         assert_eq!(flags.load(Ordering::SeqCst), TestFlags::empty());
 
-        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::C);
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::C);
         assert_eq!(flags.into_inner(), TestFlags::A | TestFlags::C);
     }
 }
