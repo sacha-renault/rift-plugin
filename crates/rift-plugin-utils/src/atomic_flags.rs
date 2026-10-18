@@ -93,7 +93,7 @@ where
     F: Flags<Bits = T::Bits>,
     F: Copy,
 {
-    inner: T::Storage,
+    storage: T::Storage,
     _p: PhantomData<fn() -> F>,
 }
 
@@ -105,37 +105,37 @@ where
 {
     pub fn new(flags: F) -> Self {
         Self {
-            inner: F::Bits::new(flags.bits()),
+            storage: F::Bits::new(flags.bits()),
             _p: PhantomData,
         }
     }
 
     pub fn store(&self, flags: F, ordering: Ordering) {
-        F::Bits::store(&self.inner, flags.bits(), ordering);
+        F::Bits::store(&self.storage, flags.bits(), ordering);
     }
 
     pub fn load(&self, ordering: Ordering) -> F {
-        F::from_bits_retain(F::Bits::load(&self.inner, ordering))
+        F::from_bits_retain(F::Bits::load(&self.storage, ordering))
     }
 
     pub fn fetch_and(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(F::Bits::fetch_and(&self.inner, flags.bits(), ordering))
+        F::from_bits_retain(F::Bits::fetch_and(&self.storage, flags.bits(), ordering))
     }
 
     pub fn fetch_or(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(F::Bits::fetch_or(&self.inner, flags.bits(), ordering))
+        F::from_bits_retain(F::Bits::fetch_or(&self.storage, flags.bits(), ordering))
     }
 
     pub fn fetch_xor(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(F::Bits::fetch_xor(&self.inner, flags.bits(), ordering))
+        F::from_bits_retain(F::Bits::fetch_xor(&self.storage, flags.bits(), ordering))
     }
 
     pub fn fetch_nand(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(F::Bits::fetch_nand(&self.inner, flags.bits(), ordering))
+        F::from_bits_retain(F::Bits::fetch_nand(&self.storage, flags.bits(), ordering))
     }
 
     pub fn swap(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(F::Bits::swap(&self.inner, flags.bits(), ordering))
+        F::from_bits_retain(F::Bits::swap(&self.storage, flags.bits(), ordering))
     }
 
     /// Removes the requested flags and returns the ones that were set.
@@ -157,7 +157,7 @@ where
     }
 
     pub fn into_inner(self) -> F {
-        F::from_bits_retain(F::Bits::into_inner(self.inner))
+        F::from_bits_retain(F::Bits::into_inner(self.storage))
     }
 }
 
