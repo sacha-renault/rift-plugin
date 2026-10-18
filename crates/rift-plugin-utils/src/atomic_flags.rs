@@ -111,6 +111,18 @@ where
     _p: PhantomData<fn() -> F>,
 }
 
+impl<F> Default for AtomicFlags<F>
+where
+    F: Flags,
+    F::Bits: AtomicBits<Bits = F::Bits>,
+    F: Copy,
+    F: Default,
+{
+    fn default() -> Self {
+        Self::new(F::default())
+    }
+}
+
 impl<F> AtomicFlags<F>
 where
     F: Flags,
