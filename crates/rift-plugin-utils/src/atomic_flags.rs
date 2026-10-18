@@ -75,33 +75,25 @@ where
 {
     pub fn new(flags: F) -> Self {
         Self {
-            inner: <F::Bits as AtomicBits>::new(flags.bits()),
+            inner: F::Bits::new(flags.bits()),
             _p: PhantomData,
         }
     }
 
     pub fn store(&self, flags: F, ordering: Ordering) {
-        <F::Bits as AtomicBits>::store(&self.inner, flags.bits(), ordering);
+        F::Bits::store(&self.inner, flags.bits(), ordering);
     }
 
     pub fn load(&self, ordering: Ordering) -> F {
-        F::from_bits_retain(<F::Bits as AtomicBits>::load(&self.inner, ordering))
+        F::from_bits_retain(F::Bits::load(&self.inner, ordering))
     }
 
     pub fn fetch_and(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(<F::Bits as AtomicBits>::fetch_and(
-            &self.inner,
-            flags.bits(),
-            ordering,
-        ))
+        F::from_bits_retain(F::Bits::fetch_and(&self.inner, flags.bits(), ordering))
     }
 
     pub fn fetch_or(&self, flags: F, ordering: Ordering) -> F {
-        F::from_bits_retain(<F::Bits as AtomicBits>::fetch_or(
-            &self.inner,
-            flags.bits(),
-            ordering,
-        ))
+        F::from_bits_retain(F::Bits::fetch_or(&self.inner, flags.bits(), ordering))
     }
 }
 
