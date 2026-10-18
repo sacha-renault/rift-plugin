@@ -715,6 +715,10 @@ dependencies = [
 [[package]]
 name = "dev"
 version = "0.1.0"
+dependencies = [
+ "bitflags 2.13.2",
+ "rift-plugin",
+]
 
 [[package]]
 name = "dispatch"
@@ -2157,6 +2161,7 @@ name = "rift-plugin-utils"
 version = "0.1.0"
 dependencies = [
  "assert_no_alloc",
+ "bitflags 2.13.2",
  "crossbeam-channel",
  "log",
  "serde",

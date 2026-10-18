@@ -1,10 +1,10 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU8, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
 use rift_plugin_gui::GuiTasks as GuiTask;
 use rift_plugin_params::AtomicF64;
-use rift_plugin_utils::DEFAULT_SAMPLERATE;
+use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
 
 use crate::tasks::{AudioThreadTask, MainThreadTask};
 
@@ -150,23 +150,27 @@ bitflags::bitflags! {
 ///
 /// `set` is `Release` and `take` is `Acquire`, so a resync triggered by a
 /// `take` sees whatever the producer wrote before the drop.
-pub struct AtomicQueueOverflows(AtomicU8);
+pub struct AtomicQueueOverflows(AtomicFlags<u8, QueueOverflows>);
 
 impl Default for AtomicQueueOverflows {
     fn default() -> Self {
-        Self(AtomicU8::new(0))
+        Self(AtomicFlags::<u8, QueueOverflows>::new(
+            QueueOverflows::empty(),
+        ))
     }
 }
 
 impl AtomicQueueOverflows {
     fn set(&self, mask: QueueOverflows) {
-        self.0.fetch_or(mask.bits(), Ordering::Release);
+        self.0.fetch_or(mask, Ordering::Release);
     }
 
     fn take_overflow(&self, mask: QueueOverflows) -> bool {
-        let bitmask = mask.bits();
-        let previous = self.0.fetch_and(!bitmask, Ordering::Acquire);
-        previous & bitmask != 0
+        let previous = self.0.fetch_and(
+            QueueOverflows::from_bits_retain(!mask.bits()),
+            Ordering::Acquire,
+        );
+        previous.intersects(mask)
     }
 
     pub fn set_main_overflow(&self) {

@@ -10,6 +10,7 @@ pub mod multi_channel;
 pub mod notes;
 pub mod spaces;
 
+mod atomic_flags;
 mod graveyard;
 mod test_macros;
 
@@ -18,6 +19,7 @@ use std::{cell::RefCell, rc::Rc};
 /// Type alias of [`Rc<RefCell<T>>`]
 pub type ConsumerCell<T> = Rc<RefCell<T>>;
 
+pub use atomic_flags::{AtomicBits, AtomicFlags};
 pub use background_thread::BackgroundExecutor;
 pub use bounded_vec::BoundedVec;
 pub use multi_channel::MultiChannel;
