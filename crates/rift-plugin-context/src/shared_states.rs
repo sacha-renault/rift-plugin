@@ -167,7 +167,7 @@ impl AtomicQueueOverflows {
     }
 
     fn take_overflow(&self, mask: QueueOverflows) -> bool {
-        !self.0.fetch_clear(mask, Ordering::Acquire).is_empty()
+        !self.0.take(mask, Ordering::Acquire).is_empty()
     }
 
     pub fn set_main_overflow(&self) {

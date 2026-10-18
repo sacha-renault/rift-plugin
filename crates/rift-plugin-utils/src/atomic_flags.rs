@@ -98,7 +98,10 @@ where
         F::from_bits_retain(F::Bits::fetch_or(&self.inner, flags.bits(), ordering))
     }
 
-    pub fn fetch_clear(&self, flags: F, ordering: Ordering) -> F {
+    /// Removes the requested flags and returns the ones that were set.
+    ///
+    /// Empty if none of `flags` were set.
+    pub fn take(&self, flags: F, ordering: Ordering) -> F {
         let previous = self.fetch_and(flags.complement(), ordering);
         previous.intersection(flags)
     }
@@ -133,20 +136,20 @@ mod tests {
     }
 
     #[test]
-    fn fetch_clear_clears_requested_flags_and_returns_cleared() {
+    fn take_removes_requested_flags_and_returns_taken() {
         let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
 
-        let cleared = flags.fetch_clear(TestFlags::A, Ordering::SeqCst);
-        assert_eq!(cleared, TestFlags::A);
+        let taken = flags.take(TestFlags::A, Ordering::SeqCst);
+        assert_eq!(taken, TestFlags::A);
         assert_eq!(flags.load(Ordering::SeqCst), TestFlags::B);
 
         // Taking a flag that isn't set is a no-op.
-        let cleared = flags.fetch_clear(TestFlags::A, Ordering::SeqCst);
-        assert_eq!(cleared, TestFlags::empty());
+        let taken = flags.take(TestFlags::A, Ordering::SeqCst);
+        assert_eq!(taken, TestFlags::empty());
         assert_eq!(flags.load(Ordering::SeqCst), TestFlags::B);
 
-        let cleared = flags.fetch_clear(TestFlags::A | TestFlags::B, Ordering::SeqCst);
-        assert_eq!(cleared, TestFlags::B);
+        let taken = flags.take(TestFlags::A | TestFlags::B, Ordering::SeqCst);
+        assert_eq!(taken, TestFlags::B);
         assert_eq!(flags.load(Ordering::SeqCst), TestFlags::empty());
     }
 
