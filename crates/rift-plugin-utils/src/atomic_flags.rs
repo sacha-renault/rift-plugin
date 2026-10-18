@@ -15,6 +15,10 @@ pub trait AtomicBits: Copy {
     fn load(storage: &Self::Storage, ordering: Ordering) -> Self::Bits;
     fn fetch_and(storage: &Self::Storage, bits: Self::Bits, ordering: Ordering) -> Self::Bits;
     fn fetch_or(storage: &Self::Storage, bits: Self::Bits, ordering: Ordering) -> Self::Bits;
+    fn fetch_xor(storage: &Self::Storage, bits: Self::Bits, ordering: Ordering) -> Self::Bits;
+    fn fetch_nand(storage: &Self::Storage, bits: Self::Bits, ordering: Ordering) -> Self::Bits;
+    fn swap(storage: &Self::Storage, bits: Self::Bits, ordering: Ordering) -> Self::Bits;
+    fn into_inner(storage: Self::Storage) -> Self::Bits;
 }
 
 macro_rules! impl_atomic_bits {
@@ -49,6 +53,30 @@ macro_rules! impl_atomic_bits {
                 ordering: Ordering,
             ) -> Self::Bits {
                 <$atomic>::fetch_or(storage, bits, ordering)
+            }
+
+            fn fetch_xor(
+                storage: &Self::Storage,
+                bits: Self::Bits,
+                ordering: Ordering,
+            ) -> Self::Bits {
+                <$atomic>::fetch_xor(storage, bits, ordering)
+            }
+
+            fn fetch_nand(
+                storage: &Self::Storage,
+                bits: Self::Bits,
+                ordering: Ordering,
+            ) -> Self::Bits {
+                <$atomic>::fetch_nand(storage, bits, ordering)
+            }
+
+            fn swap(storage: &Self::Storage, bits: Self::Bits, ordering: Ordering) -> Self::Bits {
+                <$atomic>::swap(storage, bits, ordering)
+            }
+
+            fn into_inner(storage: Self::Storage) -> Self::Bits {
+                storage.into_inner()
             }
         }
     };
@@ -98,6 +126,18 @@ where
         F::from_bits_retain(F::Bits::fetch_or(&self.inner, flags.bits(), ordering))
     }
 
+    pub fn fetch_xor(&self, flags: F, ordering: Ordering) -> F {
+        F::from_bits_retain(F::Bits::fetch_xor(&self.inner, flags.bits(), ordering))
+    }
+
+    pub fn fetch_nand(&self, flags: F, ordering: Ordering) -> F {
+        F::from_bits_retain(F::Bits::fetch_nand(&self.inner, flags.bits(), ordering))
+    }
+
+    pub fn swap(&self, flags: F, ordering: Ordering) -> F {
+        F::from_bits_retain(F::Bits::swap(&self.inner, flags.bits(), ordering))
+    }
+
     /// Removes the requested flags and returns the ones that were set.
     ///
     /// Empty if none of `flags` were set.
@@ -109,6 +149,15 @@ where
     /// Returns which of the requested flags are currently set, without clearing them.
     pub fn peek(&self, flags: F, ordering: Ordering) -> F {
         self.load(ordering).intersection(flags)
+    }
+
+    /// Clears all bits.
+    pub fn clear(&self, ordering: Ordering) {
+        self.store(F::empty(), ordering);
+    }
+
+    pub fn into_inner(self) -> F {
+        F::from_bits_retain(F::Bits::into_inner(self.inner))
     }
 }
 
@@ -182,5 +231,39 @@ mod tests {
         let previous = flags.fetch_and(!TestFlags::A, Ordering::SeqCst);
         assert_eq!(previous, TestFlags::A | TestFlags::B);
         assert_eq!(flags.load(Ordering::SeqCst), TestFlags::B);
+    }
+
+    #[test]
+    fn fetch_xor_and_swap_return_previous_state() {
+        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+
+        let previous = flags.fetch_xor(TestFlags::B | TestFlags::C, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::A | TestFlags::B);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::A | TestFlags::C);
+
+        let previous = flags.swap(TestFlags::B, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::A | TestFlags::C);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::B);
+    }
+
+    #[test]
+    fn fetch_nand_operates_on_the_raw_word() {
+        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+
+        let previous = flags.fetch_nand(TestFlags::A, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::A | TestFlags::B);
+
+        // NAND affects bits outside the mask too: !(0b011 & 0b001) = 0xFE.
+        assert_eq!(flags.load(Ordering::SeqCst).bits(), !TestFlags::A.bits());
+    }
+
+    #[test]
+    fn clear_and_into_inner() {
+        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::B);
+        flags.clear(Ordering::SeqCst);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::empty());
+
+        let flags = AtomicFlags::<u8, TestFlags>::new(TestFlags::A | TestFlags::C);
+        assert_eq!(flags.into_inner(), TestFlags::A | TestFlags::C);
     }
 }
