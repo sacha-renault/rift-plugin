@@ -134,6 +134,7 @@ bitflags::bitflags! {
     /// Which task queue(s) dropped a task because it was full.
     ///
     /// One bit per queue, so a single atomic can hold all of them at once.
+    #[derive(Debug, Copy, Clone)]
     pub struct QueueOverflows: u8 {
         const MAIN  = 1 << 0;
         const AUDIO = 1 << 1;
