@@ -1,6 +1,9 @@
 use std::{
     marker::PhantomData,
-    sync::atomic::{AtomicU8, AtomicU16, AtomicU32, AtomicU64, Ordering},
+    sync::atomic::{
+        AtomicI8, AtomicI16, AtomicI32, AtomicI64, AtomicIsize, AtomicU8, AtomicU16, AtomicU32,
+        AtomicU64, AtomicUsize, Ordering,
+    },
 };
 
 use bitflags::Flags;
@@ -82,10 +85,21 @@ macro_rules! impl_atomic_bits {
     };
 }
 
+// Bitflag crate implement Flag for almost all integer
+// types:
+//     u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, usize, isize.
+// So this implement AtomicBits for every type possible. There isn't
+// 128 bit atomic implementation in rust.
 impl_atomic_bits!(u8, AtomicU8);
 impl_atomic_bits!(u16, AtomicU16);
 impl_atomic_bits!(u32, AtomicU32);
 impl_atomic_bits!(u64, AtomicU64);
+impl_atomic_bits!(usize, AtomicUsize);
+impl_atomic_bits!(i8, AtomicI8);
+impl_atomic_bits!(i16, AtomicI16);
+impl_atomic_bits!(i32, AtomicI32);
+impl_atomic_bits!(i64, AtomicI64);
+impl_atomic_bits!(isize, AtomicIsize);
 
 pub struct AtomicFlags<T, F>
 where
