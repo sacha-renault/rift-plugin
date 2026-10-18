@@ -1,9 +1,6 @@
-use std::{
-    marker::PhantomData,
-    sync::atomic::{
-        AtomicI8, AtomicI16, AtomicI32, AtomicI64, AtomicIsize, AtomicU8, AtomicU16, AtomicU32,
-        AtomicU64, AtomicUsize, Ordering,
-    },
+use std::sync::atomic::{
+    AtomicI8, AtomicI16, AtomicI32, AtomicI64, AtomicIsize, AtomicU8, AtomicU16, AtomicU32,
+    AtomicU64, AtomicUsize, Ordering,
 };
 
 use bitflags::Flags;
@@ -108,7 +105,6 @@ where
     F: Copy,
 {
     storage: <F::Bits as AtomicBits>::Storage,
-    _p: PhantomData<fn() -> F>,
 }
 
 impl<F> Default for AtomicFlags<F>
@@ -132,7 +128,6 @@ where
     pub fn new(flags: F) -> Self {
         Self {
             storage: F::Bits::new(flags.bits()),
-            _p: PhantomData,
         }
     }
 
