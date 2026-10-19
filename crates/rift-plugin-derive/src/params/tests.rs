@@ -47,7 +47,7 @@ const PERSIST: &str = r#"
         #[persist]
         pub pattern: StringParam,
 
-        #[persist(id = "sequence")]
+        #[persist(id = "sequence", name = "Sequence")]
         pub seq: StringParam,
 
         #[nested]
@@ -219,13 +219,13 @@ fn persist_builds_through_persistent_create() {
         out.contains(r#"::std::string::String::from("pattern")"#),
         "{out}"
     );
-    // `id = "..."` overrides the id but not the name.
+    // `id` and `name` are independent: neither falls back to the other.
     assert!(
         out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"sequence")"#),
         "{out}"
     );
     assert!(
-        out.contains(r#"::std::string::String::from("seq")"#),
+        out.contains(r#"::std::string::String::from("Sequence")"#),
         "{out}"
     );
 }

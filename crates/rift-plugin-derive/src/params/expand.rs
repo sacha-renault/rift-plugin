@@ -125,7 +125,7 @@ fn expand_leaf(leaf: &LeafParam) -> TokenStream2 {
 fn expand_persist(leaf: &LeafPersist) -> TokenStream2 {
     let ty = type_path_expr(&leaf.ty);
 
-    let name = leaf.ident.to_string();
+    let name = leaf.name.clone().unwrap_or_else(|| leaf.ident.to_string());
     let id = leaf.resolve_string_id();
     let name_lit = LitStr::new(&name, leaf.ident.span());
     let id_lit = LitStr::new(&id, leaf.ident.span());
