@@ -1,5 +1,7 @@
 use std::sync::atomic::{AtomicI32, Ordering};
 
+use clack_extensions::params::ParamInfoFlags;
+
 use crate::Scale;
 use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
 use crate::range::IntRange;
@@ -52,6 +54,10 @@ impl ParamKind for _Int {
 
     fn clamp(range: &IntRange, value: i32) -> i32 {
         value.clamp(range.min, range.max)
+    }
+
+    fn default_flags() -> ParamInfoFlags {
+        ParamInfoFlags::IS_AUTOMATABLE | ParamInfoFlags::IS_STEPPED
     }
 }
 

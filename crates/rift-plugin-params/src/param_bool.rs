@@ -1,5 +1,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 
+use clack_extensions::params::ParamInfoFlags;
+
 use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
 
 /// Marker for [`BoolParam`].
@@ -48,6 +50,10 @@ impl ParamKind for _Bool {
 
     fn denormalize(_: &(), normalized: f32) -> f32 {
         normalized
+    }
+
+    fn default_flags() -> ParamInfoFlags {
+        ParamInfoFlags::IS_AUTOMATABLE | ParamInfoFlags::IS_STEPPED
     }
 }
 

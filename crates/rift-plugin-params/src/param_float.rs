@@ -1,6 +1,8 @@
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use clack_extensions::params::ParamInfoFlags;
+
 use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
 use crate::range::FloatRange;
 
@@ -52,6 +54,10 @@ impl<S: Atomic<f32> + 'static> ParamKind for _Float<S> {
 
     fn clamp(range: &FloatRange, value: f32) -> f32 {
         value.clamp(range.min, range.max)
+    }
+
+    fn default_flags() -> ParamInfoFlags {
+        ParamInfoFlags::IS_AUTOMATABLE
     }
 }
 

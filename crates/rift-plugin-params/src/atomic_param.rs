@@ -59,6 +59,8 @@ pub trait ParamKind: 'static {
         let _ = range;
         write!(writer, "{value}{unit}")
     }
+
+    fn default_flags() -> ParamInfoFlags;
 }
 
 /// A parameter, generic over its [`ParamKind`].
@@ -84,7 +86,7 @@ pub struct AtomicParam<K: ParamKind> {
     #[builder(default)]
     pub(crate) range: K::Range,
 
-    #[builder(default = ParamInfoFlags::IS_AUTOMATABLE)]
+    #[builder(default = K::default_flags())]
     pub(crate) flags: ParamInfoFlags,
 
     #[builder(default = ClapId::new(0))]

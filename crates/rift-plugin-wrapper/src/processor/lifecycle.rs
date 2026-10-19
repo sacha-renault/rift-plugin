@@ -40,6 +40,9 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
         let plugin = P::create(shared.params.as_ref(), audio_config, init_context);
         shared.states.set_samplerate(audio_config.sample_rate);
 
+        // After the plugin is created, we set latency
+        main_thread.notify_latency_changed();
+
         // Only push param changes to GUIs that ask for it; pull-mode GUIs read
         // the values themselves.
         let notify_gui = matches!(
@@ -79,10 +82,10 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 .states(self.shared.states.clone())
                 .process(process)
                 .samplerate(self.samplerate)
-                .num_events(0)
                 .outputs_events(events.output)
                 .block_index(self.block_index.increment())
                 .host_params(self.shared.host_params.clone())
+                .notify_gui(self.notify_gui)
                 .build();
 
             self.plugin.process(

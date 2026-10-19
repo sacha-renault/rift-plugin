@@ -17,7 +17,6 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
 
             match task {
                 GuiParamEvent(event) => self.handle_gui_param_change(event, outputs),
-                RequestCallback => self.host.request_callback(),
             }
         }
     }

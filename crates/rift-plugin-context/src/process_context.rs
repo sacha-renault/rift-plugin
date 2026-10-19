@@ -5,6 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
+use rift_plugin_gui::GuiTasks;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
@@ -20,11 +21,9 @@ pub struct ProcessContext<'a, 'e> {
     samplerate: f64,
     block_index: BlockIndex,
 
-    /// Count of pending events to be drained. MUST be initialized to 0; dropping with >0
-    /// triggers a callback request to the host via the destructor.
-    num_events: usize,
     outputs_events: &'e mut OutputEvents<'e>,
     host_params: Arc<ParamsWrapper>,
+    notify_gui: bool,
 }
 
 impl<'a, 'e> ProcessContext<'a, 'e> {
@@ -53,30 +52,37 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         let _ = self.outputs_events.try_push::<MidiEvent>(event.into());
     }
 
-    pub fn set_parameter(&self, param_event: ParamValueEvent) {
+    /// Asks the host to restart the plugin.
+    ///
+    /// CLAP's `request_restart` is thread-safe, so this does not need to be
+    /// deferred to the main thread.
+    pub fn request_restart(&mut self) {
+        self.host.request_restart();
+    }
+
+    /// Reports a new processing latency, in samples.
+    pub fn set_latency(&mut self, latency: u32) {
+        self.states.set_latency(latency);
+
+        // On process context, latency triggers a restart.
+        self.host.request_restart();
+    }
+
+    pub fn set_parameter(&mut self, param_event: ParamValueEvent) {
         if let Some(id) = param_event.param_id() {
-            self.host_params.set_value(id, param_event.value() as f32);
-        }
-    }
-}
+            let value = param_event.value() as f32;
+            self.host_params.set_value(id, value);
 
-impl<'a, 'e> super::HostStatesGetter for ProcessContext<'a, 'e> {
-    #[inline]
-    fn increment_event_count(&mut self) {
-        self.num_events += 1;
-    }
+            // Notify GUI & Host about the param change.
+            if let Err(err) = self.outputs_events.try_push(param_event) {
+                log::error!("Host failed to read event {err}");
+            }
 
-    #[inline]
-    fn states(&self) -> Arc<PluginSharedState> {
-        self.states.clone()
-    }
-}
-
-impl<'a, 'e> Drop for ProcessContext<'a, 'e> {
-    fn drop(&mut self) {
-        if self.num_events > 0 {
-            // Drains the event count buffer by requesting a final callback on drop.
-            self.host.request_callback();
+            if self.notify_gui && self.states.is_gui_opened() {
+                _ = self
+                    .states
+                    .post_to_gui(GuiTasks::ParamChanged { id, value });
+            }
         }
     }
 }

@@ -81,10 +81,17 @@ impl ClapGui for ViziaGui {
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
-        self.spawn()
+        if self.handle.is_some() {
+            Ok(())
+        } else {
+            self.spawn()
+        }
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
+        if let Some(handle) = self.handle.take() {
+            handle.close();
+        }
         Ok(())
     }
 
