@@ -23,14 +23,6 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         }
     }
 
-    fn request_flush(&self) {
-        if let Some(ext) = self.host.get_extension::<HostParams>() {
-            ext.request_flush(self.host.as_shared());
-        } else {
-            log::error!("Flush failed")
-        }
-    }
-
     pub(super) fn handle_input_events(&mut self, events: &InputEvents) {
         let flags = P::EVENT_PRE_PROCESS;
         let should_notify_gui = self.notify_gui && self.shared.states.is_gui_opened();
@@ -86,7 +78,11 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
         }
 
         match event.kind {
-            GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => self.request_flush(),
+            // Gesture events were already forwarded to `outputs` above. Do not call
+            // `request_flush` here: CLAP marks it `[thread-safe, !audio-thread]`, and we are
+            // already inside `process()`/`flush()`. Requesting the flush is the job of the
+            // thread that queued the change (see `GuiContextImpl::param_event`).
+            GuiParamEventKind::GestureBegin | GuiParamEventKind::GestureEnd => {}
             GuiParamEventKind::Value(value) => {
                 let id = event.param_id;
 
