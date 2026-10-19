@@ -197,6 +197,7 @@ impl AtomicQueueOverflows {
 mod tests {
     use super::*;
     use clack_plugin::utils::ClapId;
+    use rift_plugin_gui::GuiParamEvent;
 
     #[test]
     fn set_then_take() {
@@ -255,33 +256,27 @@ mod tests {
     fn posting_to_a_full_queue_sets_its_overflow_flag() {
         // Capacity of one, so the second push into any queue must fail.
         let state = PluginSharedState::new(1);
+        let create_task = || {
+            MainThreadTask::ParamContextMenu(crate::ParamContextMenu {
+                param_id: None,
+                x: 0,
+                y: 0,
+                screen: 0,
+            })
+        };
 
         // Main queue only.
-        assert!(
-            state
-                .post_to_audio(AudioThreadTask::RequestCallback)
-                .is_ok()
-        );
-        assert!(
-            state
-                .post_to_audio(AudioThreadTask::RequestCallback)
-                .is_err()
-        );
+        assert!(state.post_to_main(create_task()).is_ok());
+        assert!(state.post_to_main(create_task()).is_err());
         assert!(state.overflows().take_main_overflow());
         assert!(!state.overflows().take_audio_overflow());
         assert!(!state.overflows().take_gui_overflow());
 
         // Audio queue only.
-        assert!(
-            state
-                .post_to_audio(AudioThreadTask::RequestCallback)
-                .is_ok()
-        );
-        assert!(
-            state
-                .post_to_audio(AudioThreadTask::RequestCallback)
-                .is_err()
-        );
+        let create_task =
+            || AudioThreadTask::GuiParamEvent(GuiParamEvent::persistent(ClapId::new(0)));
+        assert!(state.post_to_audio(create_task()).is_ok());
+        assert!(state.post_to_audio(create_task()).is_err());
         assert!(state.overflows().take_audio_overflow());
         assert!(!state.overflows().take_gui_overflow());
 

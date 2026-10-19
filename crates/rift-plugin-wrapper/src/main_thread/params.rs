@@ -34,7 +34,6 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
                         self.shared.host_params.set_value(event.param_id, value);
                     }
                 }
-                AudioThreadTask::RequestCallback => self.host.request_callback(),
             }
         }
 

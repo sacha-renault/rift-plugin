@@ -74,12 +74,7 @@ impl GuiContextImpl {
             log::error!("Couldn't push new param event from gui");
             return;
         }
-        if self
-            .states
-            .post_to_audio(AudioThreadTask::RequestCallback)
-            .is_err()
-        {
-            log::error!("Couldn't push callback request");
-        }
+        // FIX: use the shared handle for the callbacks...
+        self.handle.request_callback();
     }
 }
