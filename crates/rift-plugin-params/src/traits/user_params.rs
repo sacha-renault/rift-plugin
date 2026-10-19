@@ -54,6 +54,20 @@ pub trait UserParams {
             .map(|param| param.id())
     }
 
+    /// The [`ClapId`]s of every persistent field whose [`tags`](Param::tags) satisfy
+    /// `predicate`.
+    ///
+    /// See [`Self::params_by_tags`].
+    fn persist_by_tags<F>(&self, predicate: F) -> impl Iterator<Item = ClapId>
+    where
+        F: Fn(Tags) -> bool,
+    {
+        self.all_persist()
+            .into_iter()
+            .filter(move |persist| predicate(persist.tags()))
+            .map(|persist| persist.id())
+    }
+
     /// Write every reachable parameter into `out`, keyed by its stable
     /// [`ClapId`], as its plain value.
     ///

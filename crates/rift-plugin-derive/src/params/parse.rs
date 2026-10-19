@@ -32,6 +32,7 @@ struct ParamArgs {
 struct PersistArgs {
     id: Option<String>,
     name: Option<String>,
+    tags: Option<Expr>,
 }
 
 /// Receiver for `#[nested(...)]` on a nested field.
@@ -99,6 +100,7 @@ pub(crate) struct LeafPersist {
     pub ty: Type,
     pub id: Option<String>,
     pub name: Option<String>,
+    pub tags: Option<Expr>,
 }
 
 impl LeafPersist {
@@ -203,12 +205,13 @@ fn parse_persist_leaf(field: &syn::Field) -> syn::Result<Field> {
     let ident = field.ident.clone().expect("named field");
     let ty = field.ty.clone();
 
-    let PersistArgs { id, name } = PersistArgs::from_field(field)?;
+    let PersistArgs { id, name, tags } = PersistArgs::from_field(field)?;
     let leaf = LeafPersist {
         ident,
         ty,
         id,
         name,
+        tags,
     };
 
     Ok(Field::Persist(leaf))

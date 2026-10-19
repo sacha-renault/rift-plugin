@@ -1,7 +1,7 @@
 use clack_plugin::utils::ClapId;
 
 use crate::range::FloatRange;
-use crate::{FloatParam, Param, ParamPtr, Persistent, StringParam, UserParams};
+use crate::{FloatParam, Param, ParamPtr, Persistent, StringParam, Tags, UserParams};
 
 /// A hand-written stand-in for a `#[derive(Params)]` struct.
 struct MockParams {
@@ -85,7 +85,12 @@ fn mock_with_persist() -> MockParamsWithPersist {
             .name(String::from("gain"))
             .range(FloatRange::linear(0.0, 1.0))
             .build(),
-        pattern: StringParam::create(ClapId::new(10), String::from("pattern"), None),
+        pattern: StringParam::create(
+            ClapId::new(10),
+            String::from("pattern"),
+            None,
+            Tags::default(),
+        ),
     }
 }
 

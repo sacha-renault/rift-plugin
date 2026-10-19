@@ -7,7 +7,7 @@ pub type StringParamValue = SwapParamValue<String>;
 mod tests {
     use clack_plugin::utils::ClapId;
 
-    use crate::Persistent;
+    use crate::{Persistent, Tags};
 
     use super::*;
 
@@ -38,13 +38,19 @@ mod tests {
             ClapId::new(7),
             String::from("pattern"),
             Some(String::from("seq")),
+            Tags::default(),
         );
         param.set_value("x..x..x.");
 
         let mut buf = Vec::new();
         param.serialize(&mut buf).unwrap();
 
-        let restored = StringParam::create(ClapId::new(7), String::from("pattern"), None);
+        let restored = StringParam::create(
+            ClapId::new(7),
+            String::from("pattern"),
+            None,
+            Tags::default(),
+        );
         restored.deserialize(&mut buf.as_slice()).unwrap();
 
         assert_eq!(&*restored.value(), "x..x..x.");
@@ -56,6 +62,7 @@ mod tests {
             ClapId::new(42),
             String::from("sample"),
             Some(String::from("osc")),
+            Tags::default(),
         );
 
         assert_eq!(param.id(), ClapId::new(42));

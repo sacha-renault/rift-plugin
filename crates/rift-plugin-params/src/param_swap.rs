@@ -15,7 +15,7 @@ use clack_plugin::utils::ClapId;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use crate::Persistent;
+use crate::{Persistent, Tags};
 
 /// A shared T parameter: a host-invisible, [`Persistent`] value.
 ///
@@ -41,6 +41,9 @@ where
 
     #[builder(default = ClapId::new(0))]
     id: ClapId,
+
+    #[builder(default)]
+    tags: Tags,
 }
 
 impl<T> SwapParam<T>
@@ -101,11 +104,12 @@ impl<T> Persistent for SwapParam<T>
 where
     T: Default + Sized + Clone + Serialize + DeserializeOwned,
 {
-    fn create(id: ClapId, name: String, module: Option<String>) -> Self {
+    fn create(id: ClapId, name: String, module: Option<String>, tags: impl Into<Tags>) -> Self {
         Self::builder()
             .id(id)
             .name(name)
             .maybe_module(module)
+            .tags(tags.into())
             .build()
     }
 
@@ -132,6 +136,10 @@ where
             .map_err(|_| PluginError::Message("Failed to deserialize SwapParam"))?;
         self.set_value(value);
         Ok(())
+    }
+
+    fn tags(&self) -> Tags {
+        self.tags
     }
 }
 
@@ -223,6 +231,7 @@ mod tests {
             ClapId::new(11),
             String::from("reverb"),
             Some(String::from("fx")),
+            Tags::default(),
         );
 
         assert_eq!(param.id(), ClapId::new(11));
@@ -235,7 +244,12 @@ mod tests {
 
     #[test]
     fn identity_without_module() {
-        let param = SwapParam::<Settings>::create(ClapId::new(3), String::from("solo"), None);
+        let param = SwapParam::<Settings>::create(
+            ClapId::new(3),
+            String::from("solo"),
+            None,
+            Tags::default(),
+        );
 
         assert_eq!(param.module(), None);
         assert_eq!(param.path(), "solo");
@@ -243,7 +257,8 @@ mod tests {
 
     #[test]
     fn persistent_roundtrip() {
-        let param = SwapParam::<Settings>::create(ClapId::new(1), String::from("s"), None);
+        let param =
+            SwapParam::<Settings>::create(ClapId::new(1), String::from("s"), None, Tags::default());
         param.set_value(settings());
 
         let mut buf = Vec::new();
@@ -255,7 +270,8 @@ mod tests {
             settings()
         );
 
-        let restored = SwapParam::<Settings>::create(ClapId::new(1), String::from("s"), None);
+        let restored =
+            SwapParam::<Settings>::create(ClapId::new(1), String::from("s"), None, Tags::default());
         restored.deserialize(&mut buf.as_slice()).unwrap();
 
         assert_eq!(&*restored.value(), &settings());
@@ -263,7 +279,8 @@ mod tests {
 
     #[test]
     fn deserialize_invalid_data_errors_and_keeps_value() {
-        let param = SwapParam::<Settings>::create(ClapId::new(1), String::from("s"), None);
+        let param =
+            SwapParam::<Settings>::create(ClapId::new(1), String::from("s"), None, Tags::default());
         param.set_value(settings());
 
         let mut reader = std::io::Cursor::new(b"not json");

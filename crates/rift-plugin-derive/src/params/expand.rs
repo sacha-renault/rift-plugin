@@ -130,6 +130,11 @@ fn expand_persist(leaf: &LeafPersist) -> TokenStream2 {
     let name_lit = LitStr::new(&name, leaf.ident.span());
     let id_lit = LitStr::new(&id, leaf.ident.span());
 
+    let tags = match leaf.tags.as_ref() {
+        Some(expr) => quote! { #expr },
+        None => quote! { ::rift_plugin::prelude::Tags::default() },
+    };
+
     quote! {
         <#ty as ::rift_plugin::prelude::Persistent>::create(
             ::rift_plugin::prelude::param_id(
@@ -138,6 +143,7 @@ fn expand_persist(leaf: &LeafPersist) -> TokenStream2 {
             ),
             ::std::string::String::from(#name_lit),
             __module.clone(),
+            #tags,
         )
     }
 }
