@@ -9,7 +9,9 @@ use clack_plugin::utils::ClapId;
 ///
 /// Each implementor is responsible for writing a single valid JSON value to the writer and reading it back.
 pub trait Persistent {
-    fn create(id: ClapId, name: String, module: Option<String>) -> Self;
+    fn create(id: ClapId, name: String, module: Option<String>) -> Self
+    where
+        Self: Sized;
     fn name(&self) -> &str;
     fn module(&self) -> Option<&str>;
     fn path(&self) -> String {

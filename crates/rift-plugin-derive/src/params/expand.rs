@@ -4,7 +4,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{Expr, ExprLit, ExprUnary, Lit, LitFloat, LitStr, PathArguments, Type, UnOp};
 
-use super::parse::{Field, Leaf, Nested, ParamKind, Params, RangeSpec};
+use super::parse::{Field, LeafParam, LeafPersist, Nested, ParamKind, Params, RangeSpec};
 
 /// Entry point: render the `new`/`Default`/`UserParams` implementations.
 pub(crate) fn expand(params: Params) -> TokenStream2 {
@@ -17,6 +17,7 @@ pub(crate) fn expand(params: Params) -> TokenStream2 {
 
     let construct = expand_construct(&fields);
     let all_params = expand_all_params(&fields);
+    let all_persist = expand_all_persist(&fields);
 
     quote! {
         impl #impl_generics #ident #ty_generics #where_clause {
@@ -46,6 +47,13 @@ pub(crate) fn expand(params: Params) -> TokenStream2 {
                 #all_params
                 __params
             }
+
+            fn all_persist(&self) -> ::std::vec::Vec<&dyn ::rift_plugin::prelude::Persistent> {
+                let mut __persist =
+                    ::std::vec::Vec::<&dyn ::rift_plugin::prelude::Persistent>::new();
+                #all_persist
+                __persist
+            }
         }
     }
 }
@@ -54,11 +62,13 @@ pub(crate) fn expand(params: Params) -> TokenStream2 {
 fn expand_construct(fields: &[Field]) -> TokenStream2 {
     let inits = fields.iter().map(|field| {
         let ident = match field {
-            Field::Leaf(leaf) => &leaf.ident,
+            Field::Param(leaf) => &leaf.ident,
+            Field::Persist(leaf) => &leaf.ident,
             Field::Nested(nested) => &nested.ident,
         };
         let value = match field {
-            Field::Leaf(leaf) => expand_leaf(leaf),
+            Field::Param(leaf) => expand_leaf(leaf),
+            Field::Persist(leaf) => expand_persist(leaf),
             Field::Nested(nested) => expand_nested(nested),
         };
         quote! { #ident: #value, }
@@ -68,7 +78,7 @@ fn expand_construct(fields: &[Field]) -> TokenStream2 {
 }
 
 /// The construction of a single leaf parameter: `Ty::builder()..build()`.
-fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
+fn expand_leaf(leaf: &LeafParam) -> TokenStream2 {
     let ty = type_path_expr(&leaf.ty);
 
     let field = leaf.ident.to_string();
@@ -111,11 +121,32 @@ fn expand_leaf(leaf: &Leaf) -> TokenStream2 {
     }
 }
 
+/// The construction of a single `#[persist]` field.
+fn expand_persist(leaf: &LeafPersist) -> TokenStream2 {
+    let ty = type_path_expr(&leaf.ty);
+
+    let name = leaf.ident.to_string();
+    let id = leaf.resolve_string_id();
+    let name_lit = LitStr::new(&name, leaf.ident.span());
+    let id_lit = LitStr::new(&id, leaf.ident.span());
+
+    quote! {
+        <#ty as ::rift_plugin::prelude::Persistent>::create(
+            ::rift_plugin::prelude::param_id(
+                __module.as_deref().unwrap_or(""),
+                #id_lit
+            ),
+            ::std::string::String::from(#name_lit),
+            __module.clone(),
+        )
+    }
+}
+
 /// Render a `range = ...` into the kind-specific constructor call.
 ///
 /// The call is wrapped in a `const` block so the constructor's asserts run at
 /// compile time.
-fn expand_range(range: &RangeSpec, leaf: &Leaf) -> TokenStream2 {
+fn expand_range(range: &RangeSpec, leaf: &LeafParam) -> TokenStream2 {
     let range_ty = match leaf.kind {
         ParamKind::Float => quote!(::rift_plugin::prelude::FloatRange),
         ParamKind::Int => quote!(::rift_plugin::prelude::IntRange),
@@ -169,12 +200,14 @@ fn expand_nested(nested: &Nested) -> TokenStream2 {
 /// The body of `all_params`, walking nested structs and arrays.
 fn expand_all_params(fields: &[Field]) -> TokenStream2 {
     let statements = fields.iter().map(|field| match field {
-        Field::Leaf(leaf) => {
+        Field::Param(leaf) => {
             let ident = &leaf.ident;
             quote! {
                 __params.push(::rift_plugin::prelude::Param::as_ptr(&self.#ident));
             }
         }
+        // Persist fields are host-invisible and must stay out of `all_params`.
+        Field::Persist(_) => quote! {},
         Field::Nested(nested) => {
             let ident = &nested.ident;
             if nested.array_len.is_some() {
@@ -193,6 +226,39 @@ fn expand_all_params(fields: &[Field]) -> TokenStream2 {
                 }
             }
         }
+    });
+
+    quote! { #( #statements )* }
+}
+
+/// The body of `all_persist`, walking nested structs and arrays.
+fn expand_all_persist(fields: &[Field]) -> TokenStream2 {
+    let statements = fields.iter().map(|field| match field {
+        Field::Persist(leaf) => {
+            let ident = &leaf.ident;
+            quote! {
+                __persist.push(&self.#ident);
+            }
+        }
+        Field::Nested(nested) => {
+            let ident = &nested.ident;
+            if nested.array_len.is_some() {
+                quote! {
+                    for __item in self.#ident.iter() {
+                        __persist.extend(
+                            ::rift_plugin::prelude::UserParams::all_persist(__item),
+                        );
+                    }
+                }
+            } else {
+                quote! {
+                    __persist.extend(
+                        ::rift_plugin::prelude::UserParams::all_persist(&self.#ident),
+                    );
+                }
+            }
+        }
+        Field::Param(_) => quote! {},
     });
 
     quote! { #( #statements )* }

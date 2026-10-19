@@ -51,10 +51,11 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
             .ok_or(PluginError::Message("Missing params"))?;
         self.shared.params.deserialize_params(params)?;
 
-        // Absent in state saved before `persist` existed, so treat it as empty.
-        if let Some(persist) = root.get("persist").and_then(serde_json::Value::as_object) {
-            self.shared.params.deserialize_persist(persist)?;
-        }
+        let persist = root
+            .get("persist")
+            .and_then(serde_json::Value::as_object)
+            .ok_or(PluginError::Message("Missing persist"))?;
+        self.shared.params.deserialize_persist(persist)?;
 
         Ok(())
     }

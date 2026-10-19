@@ -4,7 +4,8 @@
 //! struct layout, the leaf/nested discrimination and the [`ParamKind`] deduced
 //! from the field type stay hand-written.
 //!
-//! Every field must carry exactly one of `#[param(...)]` (a leaf parameter) or
+//! Every field must carry exactly one of `#[param(...)]` (a host-visible leaf
+//! parameter), `#[persist(...)]` (a host-invisible persistent value) or
 //! `#[nested]` / `#[nested(module = "...")]` (a struct, or an array of structs,
 //! that itself derives `Params`).
 
@@ -24,6 +25,12 @@ struct ParamArgs {
     range: Option<Expr>,
     flags: Option<Expr>,
     tags: Option<Expr>,
+}
+
+#[derive(FromField)]
+#[darling(attributes(persist))]
+struct PersistArgs {
+    id: Option<String>,
 }
 
 /// Receiver for `#[nested(...)]` on a nested field.
@@ -47,7 +54,8 @@ pub(crate) struct Params {
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub(crate) enum Field {
-    Leaf(Leaf),
+    Param(LeafParam),
+    Persist(LeafPersist),
     Nested(Nested),
 }
 
@@ -63,7 +71,7 @@ pub(crate) enum ParamKind {
 
 /// A `#[param(...)]` field.
 #[derive(Debug)]
-pub(crate) struct Leaf {
+pub(crate) struct LeafParam {
     pub ident: Ident,
     pub ty: Type,
     pub kind: ParamKind,
@@ -76,7 +84,22 @@ pub(crate) struct Leaf {
     pub tags: Option<Expr>,
 }
 
-impl Leaf {
+impl LeafParam {
+    pub fn resolve_string_id(&self) -> String {
+        self.id.clone().unwrap_or(self.ident.to_string())
+    }
+}
+
+/// A `#[persist(...)]` field: a host-invisible value saved in the `persist`
+/// section of the plugin state.
+#[derive(Debug)]
+pub(crate) struct LeafPersist {
+    pub ident: Ident,
+    pub ty: Type,
+    pub id: Option<String>,
+}
+
+impl LeafPersist {
     pub fn resolve_string_id(&self) -> String {
         self.id.clone().unwrap_or(self.ident.to_string())
     }
@@ -154,22 +177,37 @@ fn parse_field(field: &syn::Field) -> syn::Result<Field> {
         .attrs
         .iter()
         .any(|attr| attr.path().is_ident("nested"));
+    let has_persist = field
+        .attrs
+        .iter()
+        .any(|attr| attr.path().is_ident("persist"));
 
-    match (has_param, has_nested) {
-        (true, true) => Err(syn::Error::new_spanned(
-            &field.ty,
-            "a field cannot be both `#[param]` and `#[nested]`",
-        )),
-        (true, false) => parse_leaf(field),
-        (false, true) => parse_nested(field),
-        (false, false) => Err(syn::Error::new(
+    match (has_param, has_persist, has_nested) {
+        (true, false, false) => parse_param_leaf(field),
+        (false, true, false) => parse_persist_leaf(field),
+        (false, false, true) => parse_nested(field),
+        (false, false, false) => Err(syn::Error::new(
             ident.span(),
-            "every field must be marked `#[param]` or `#[nested]`",
+            "every field must be marked `#[param]`, `#[persist]` or `#[nested]`",
+        )),
+        _ => Err(syn::Error::new(
+            ident.span(),
+            "a field can have only one of `#[param]`, `#[persist]` and `#[nested]`",
         )),
     }
 }
 
-fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
+fn parse_persist_leaf(field: &syn::Field) -> syn::Result<Field> {
+    let ident = field.ident.clone().expect("named field");
+    let ty = field.ty.clone();
+
+    let PersistArgs { id } = PersistArgs::from_field(field)?;
+    let leaf = LeafPersist { ident, ty, id };
+
+    Ok(Field::Persist(leaf))
+}
+
+fn parse_param_leaf(field: &syn::Field) -> syn::Result<Field> {
     let ident = field.ident.clone().expect("named field");
     let ty = field.ty.clone();
     let kind = param_kind(&ty)?;
@@ -186,7 +224,7 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
 
     let range = range.as_ref().map(parse_range).transpose()?;
 
-    let leaf = Leaf {
+    let leaf = LeafParam {
         ident,
         ty,
         kind,
@@ -200,7 +238,7 @@ fn parse_leaf(field: &syn::Field) -> syn::Result<Field> {
     };
 
     validate_leaf(&leaf)?;
-    Ok(Field::Leaf(leaf))
+    Ok(Field::Param(leaf))
 }
 
 fn parse_nested(field: &syn::Field) -> syn::Result<Field> {
@@ -251,7 +289,7 @@ fn parse_range(expr: &Expr) -> syn::Result<RangeSpec> {
     })
 }
 
-fn validate_leaf(leaf: &Leaf) -> syn::Result<()> {
+fn validate_leaf(leaf: &LeafParam) -> syn::Result<()> {
     // `range` on a kind without a range type has nowhere to land, so it is the
     // one `range` error the macro still reports itself.
     if leaf.range.is_some() && matches!(leaf.kind, ParamKind::Bool | ParamKind::Enum) {
@@ -318,7 +356,8 @@ fn validate_resolved_ids(fields: &[Field]) -> syn::Result<()> {
 
     for field in fields.iter() {
         let (resolved_id, ident) = match field {
-            Field::Leaf(leaf) => (leaf.resolve_string_id(), &leaf.ident),
+            Field::Param(leaf) => (leaf.resolve_string_id(), &leaf.ident),
+            Field::Persist(leaf) => (leaf.resolve_string_id(), &leaf.ident),
             Field::Nested(nested) => (nested.resolve_string_id(), &nested.ident),
         };
 

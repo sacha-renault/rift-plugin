@@ -1,7 +1,7 @@
 use clack_plugin::utils::ClapId;
 
 use crate::range::FloatRange;
-use crate::{FloatParam, Param, ParamPtr, UserParams};
+use crate::{FloatParam, Param, ParamPtr, Persistent, StringParam, UserParams};
 
 /// A hand-written stand-in for a `#[derive(Params)]` struct.
 struct MockParams {
@@ -60,6 +60,76 @@ fn missing_and_unknown_keys_are_tolerated() {
     assert_eq!(params.gain.plain(), 0.5);
     // An absent key leaves the parameter untouched rather than resetting it.
     assert_eq!(params.level.plain(), 0.7);
+}
+
+/// A stand-in for a derived struct that also has a `#[persist]` field.
+struct MockParamsWithPersist {
+    gain: FloatParam,
+    pattern: StringParam,
+}
+
+impl UserParams for MockParamsWithPersist {
+    fn all_params(&self) -> Vec<ParamPtr> {
+        vec![self.gain.as_ptr()]
+    }
+
+    fn all_persist(&self) -> Vec<&dyn Persistent> {
+        vec![&self.pattern]
+    }
+}
+
+fn mock_with_persist() -> MockParamsWithPersist {
+    MockParamsWithPersist {
+        gain: FloatParam::builder()
+            .id(ClapId::new(1))
+            .name(String::from("gain"))
+            .range(FloatRange::linear(0.0, 1.0))
+            .build(),
+        pattern: StringParam::create(ClapId::new(10), String::from("pattern"), None),
+    }
+}
+
+#[test]
+fn persist_roundtrip() {
+    let params = mock_with_persist();
+    params.pattern.set_value("x..x..");
+
+    let mut section = serde_json::Map::new();
+    params.serialize_persist(&mut section).unwrap();
+
+    // Keyed by the persist param's stable id, like the host params.
+    assert_eq!(section.get("10").unwrap(), "x..x..");
+    // Host params never leak into the persist section.
+    assert!(!section.contains_key("1"));
+
+    let restored = mock_with_persist();
+    restored.deserialize_persist(&section).unwrap();
+
+    assert_eq!(&*restored.pattern.value(), "x..x..");
+}
+
+#[test]
+fn missing_persist_keys_leave_the_value_untouched() {
+    let params = mock_with_persist();
+    params.pattern.set_value("current");
+
+    let section: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_str(r#"{"999": "other"}"#).unwrap();
+    params.deserialize_persist(&section).unwrap();
+
+    assert_eq!(&*params.pattern.value(), "current");
+}
+
+#[test]
+fn persist_fields_are_not_host_params() {
+    let params = mock_with_persist();
+
+    let mut section = serde_json::Map::new();
+    params.serialize_params(&mut section).unwrap();
+
+    // Only the `FloatParam` is exposed to the host.
+    assert_eq!(section.len(), 1);
+    assert!(section.contains_key("1"));
 }
 
 #[test]

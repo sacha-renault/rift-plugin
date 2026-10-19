@@ -39,6 +39,22 @@ const ROOT: &str = r#"
     }
 "#;
 
+const PERSIST: &str = r#"
+    struct MyParams {
+        #[param]
+        pub gain: FloatParam,
+
+        #[persist]
+        pub pattern: StringParam,
+
+        #[persist(id = "sequence")]
+        pub seq: StringParam,
+
+        #[nested]
+        pub inner: InnerParams,
+    }
+"#;
+
 #[test]
 fn leaf_id_defaults_to_field_ident() {
     let out = expand(ROOT);
@@ -178,9 +194,88 @@ fn rejects_fields_without_attribute() {
     .unwrap_err();
 
     assert!(
-        err.to_string().contains("`#[param]` or `#[nested]`"),
+        err.to_string()
+            .contains("`#[param]`, `#[persist]` or `#[nested]`"),
         "{err}"
     );
+}
+
+#[test]
+fn persist_builds_through_persistent_create() {
+    let out = expand(PERSIST);
+
+    // Whitespace is stripped by the test helper, so `<StringParam as ...>` reads
+    // as `<StringParamas ...>`.
+    assert!(
+        out.contains("<StringParamas::rift_plugin::prelude::Persistent>::create("),
+        "{out}"
+    );
+    // The id defaults to the field ident; `name` is always the field ident.
+    assert!(
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"pattern")"#),
+        "{out}"
+    );
+    assert!(
+        out.contains(r#"::std::string::String::from("pattern")"#),
+        "{out}"
+    );
+    // `id = "..."` overrides the id but not the name.
+    assert!(
+        out.contains(r#"param_id(__module.as_deref().unwrap_or(""),"sequence")"#),
+        "{out}"
+    );
+    assert!(
+        out.contains(r#"::std::string::String::from("seq")"#),
+        "{out}"
+    );
+}
+
+#[test]
+fn persist_is_kept_out_of_all_params() {
+    let out = expand(PERSIST);
+
+    assert!(!out.contains("Param::as_ptr(&self.pattern)"), "{out}");
+    assert!(!out.contains("Param::as_ptr(&self.seq)"), "{out}");
+    assert!(out.contains("Param::as_ptr(&self.gain)"), "{out}");
+}
+
+#[test]
+fn all_persist_walks_leaves_and_nested_fields() {
+    let out = expand(PERSIST);
+
+    assert!(out.contains("__persist.push(&self.pattern)"), "{out}");
+    assert!(out.contains("__persist.push(&self.seq)"), "{out}");
+    assert!(
+        out.contains("UserParams::all_persist(&self.inner)"),
+        "{out}"
+    );
+}
+
+#[test]
+fn rejects_multiple_field_attributes() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>("struct P { #[param] #[persist] pub gain: StringParam }")
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("can have only one of"), "{err}");
+}
+
+#[test]
+fn reject_duplicate_id_across_param_and_persist() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(
+            r#"struct P {
+                #[param] pub gain: FloatParam,
+                #[persist(id = "gain")] pub pattern: StringParam,
+            }"#,
+        )
+        .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("Duplicate id: `gain`"), "{err}");
 }
 
 #[test]
