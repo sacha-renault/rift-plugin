@@ -85,6 +85,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 .outputs_events(events.output)
                 .block_index(self.block_index.increment())
                 .host_params(self.shared.host_params.clone())
+                .notify_gui(self.notify_gui)
                 .build();
 
             self.plugin.process(

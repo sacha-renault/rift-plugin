@@ -23,6 +23,7 @@ pub struct ProcessContext<'a, 'e> {
 
     outputs_events: &'e mut OutputEvents<'e>,
     host_params: Arc<ParamsWrapper>,
+    notify_gui: bool,
 }
 
 impl<'a, 'e> ProcessContext<'a, 'e> {
@@ -73,8 +74,11 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
             self.host_params.set_value(id, value);
 
             // Notify GUI & Host about the param change.
-            _ = self.outputs_events.try_push(param_event);
-            if self.states.is_gui_opened() {
+            if let Err(err) = self.outputs_events.try_push(param_event) {
+                log::error!("Host failed to read event {err}");
+            }
+
+            if self.notify_gui && self.states.is_gui_opened() {
                 _ = self
                     .states
                     .post_to_gui(GuiTasks::ParamChanged { id, value });
