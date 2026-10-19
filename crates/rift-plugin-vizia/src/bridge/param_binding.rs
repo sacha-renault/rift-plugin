@@ -55,25 +55,23 @@ impl ParamBinding {
     }
 
     pub fn begin(&self, cx: &mut impl EmitContext) {
-        cx.emit_to(Entity::root(), GuiParamEvent::gesture_start(self.id()));
+        cx.notify_param_gesture_start(self.id());
     }
 
     pub fn set(&self, cx: &mut impl EmitContext, normalized: f32) {
         let normalized = normalized.clamp(0.0, 1.0);
         self.value.set(normalized);
-        cx.emit_to(
-            Entity::root(),
-            GuiParamEvent::value(self.id(), self.ptr.denormalize(normalized)),
-        );
+        cx.notify_param_changed(self.id(), self.ptr.denormalize(normalized));
     }
 
     pub fn end(&self, cx: &mut impl EmitContext) {
-        cx.emit_to(Entity::root(), GuiParamEvent::gesture_end(self.id()));
+        cx.notify_param_gesture_end(self.id());
     }
 
     pub fn open_context_menu(&self, cx: &mut EventContext) {
         let scale = cx.scale_factor().max(f32::EPSILON);
         let mouse = cx.mouse();
+
         let request = ParamContextMenuRequest {
             id: self.id(),
             x: (mouse.cursor_x / scale).round() as i32,
