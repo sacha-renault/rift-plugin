@@ -20,7 +20,8 @@ pub(crate) mod dev_prelude {
 }
 
 pub mod prelude {
-    pub use super::bridge::{Control, ControlExt, ParamBinding, register_param};
+    pub use super::bridge::{ContextExt, ControlExt};
+    pub use super::bridge::{Control, ParamBinding, register_param};
     pub use super::factory::{ViziaFactory, vizia_gui};
     pub use super::utils::FrameSignal;
 
