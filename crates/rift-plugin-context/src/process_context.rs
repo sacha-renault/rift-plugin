@@ -5,6 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
+use rift_plugin_gui::GuiTasks;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
@@ -53,9 +54,18 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         let _ = self.outputs_events.try_push::<MidiEvent>(event.into());
     }
 
-    pub fn set_parameter(&self, param_event: ParamValueEvent) {
+    pub fn set_parameter(&mut self, param_event: ParamValueEvent) {
         if let Some(id) = param_event.param_id() {
-            self.host_params.set_value(id, param_event.value() as f32);
+            let value = param_event.value() as f32;
+            self.host_params.set_value(id, value);
+
+            // Notify GUI & Host about the param change.
+            _ = self.outputs_events.try_push(param_event);
+            if self.states.is_gui_opened() {
+                _ = self
+                    .states
+                    .post_to_gui(GuiTasks::ParamChanged { id, value });
+            }
         }
     }
 }
