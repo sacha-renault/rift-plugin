@@ -98,7 +98,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     EventSource::GUI,
                 );
             }
-            GuiParamEventKind::ValueLess => {
+            GuiParamEventKind::Persistent => {
                 self.plugin.on_param_change(
                     event.param_id,
                     &self.shared.params,

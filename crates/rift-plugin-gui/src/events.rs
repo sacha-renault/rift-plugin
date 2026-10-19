@@ -14,9 +14,9 @@ pub enum GuiParamEventKind {
     GestureBegin,
     /// End of a mouse gesture interaction.
     GestureEnd,
-    /// This allow the audio thread the a value as changed
-    /// without a f64 value.
-    ValueLess,
+    /// Notify the audio thread a Persistent
+    /// has changed. There is no value associated.
+    Persistent,
 }
 
 /// The GUI-side event wrapper passed to `GuiView::handle_event` for parameter interactions.
@@ -51,10 +51,10 @@ impl GuiParamEvent {
         }
     }
 
-    pub fn value_less(param_id: ClapId) -> Self {
+    pub fn persistent(persistent_param_id: ClapId) -> Self {
         Self {
-            param_id,
-            kind: GuiParamEventKind::ValueLess,
+            param_id: persistent_param_id,
+            kind: GuiParamEventKind::Persistent,
         }
     }
 
