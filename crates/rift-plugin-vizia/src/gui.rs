@@ -81,10 +81,17 @@ impl ClapGui for ViziaGui {
     }
 
     fn show(&mut self) -> Result<(), PluginError> {
-        self.spawn()
+        if self.handle.is_some() {
+            Ok(())
+        } else {
+            self.spawn()
+        }
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
+        self.handle
+            .take()
+            .ok_or_else(|| PluginError::Message("Nothing to hide."))?;
         Ok(())
     }
 
