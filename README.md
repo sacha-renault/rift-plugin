@@ -1,26 +1,31 @@
-> **⚠️ Status: Archived / discontinued.**
-> This was a library for building CLAP audio plugins in Rust.
-> Development got pretty far and I was happy with it. but I've since found
-> [**truce**](https://github.com/truce-audio/truce).
->
-> The code below is left up as-is for reference. It is **not maintained** and
-> the TODO list will not be completed.
+# rift
 
----
+A library for building CLAP audio plugins in Rust, built on [clack](https://github.com/prokopyl/clack).
+
+Early development: the API changes without notice and saved plugin state is not stable yet.
+
+Current work is mostly the parameter system (host-visible params and host-invisible `#[persist]` state), the wrapper, and the vizia GUI. Open items are in [TODO.md](TODO.md).
 
 ## Tests
-- Run all tests and collect coverage:
+
+Run all tests and collect coverage:
+
 ```
 cargo llvm-cov --workspace --lcov --output-path ./target/lcov.info
 ```
-- Run the test and show coverage on a single package
+
+Run the tests and show coverage for a single package:
+
 ```
 cargo llvm-cov -p <package-name>
 ```
-- HTML Output
+
+HTML output:
+
 ```
 cargo llvm-cov --workspace --html
 ```
 
-## Notes:
-Rayon seems to make FLCrashes if rebuilding a new version of .CLAP without restarting FLStudio entirely. Using rayon in a release build is safe, but on dev it must not be used !!
+## Notes
+
+Rayon makes FL Studio crash when rebuilding a `.clap` without restarting FL Studio first. It is safe in release builds, but must not be used in dev builds.
