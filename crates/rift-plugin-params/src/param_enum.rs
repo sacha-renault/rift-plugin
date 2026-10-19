@@ -74,6 +74,10 @@ impl<E: EnumValues> ParamKind for _Enum<E> {
         // what `set_plain`/`plain` would round-trip.
         write!(writer, "{}", Self::from_f32(value))
     }
+
+    fn default_flags() -> ParamInfoFlags {
+        ParamInfoFlags::IS_AUTOMATABLE | ParamInfoFlags::IS_STEPPED | ParamInfoFlags::IS_ENUM
+    }
 }
 
 pub type EnumParam<E> = AtomicParam<_Enum<E>>;
