@@ -1,4 +1,3 @@
-use clack_extensions::params::*;
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::prelude::*;
 

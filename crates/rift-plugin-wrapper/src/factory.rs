@@ -8,6 +8,7 @@ use clack_extensions::note_ports::PluginNotePorts;
 use clack_extensions::params::PluginParams;
 use clack_extensions::state::PluginState;
 use clack_plugin::prelude::*;
+use rift_plugin_gui::HostSharedHandle;
 use rift_plugin_utils::init_graveyard;
 
 use crate::ClapPlugin;
@@ -84,6 +85,16 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         let context = Arc::new(GuiContextImpl {
             states: shared.states.clone(),
             params: shared.host_params.clone(),
+
+            // SAFETY: the host handle is valid for the lifetime of the plugin instance.
+            // The GUI context must be `'static` because vizia stores it in window callbacks
+            // on its own event-loop thread. `ClapGui::destroy` closes the window before the
+            // plugin is torn down, so this handle is never used after the host goes away.
+            handle: unsafe {
+                std::mem::transmute::<HostSharedHandle<'a>, HostSharedHandle<'static>>(
+                    host.shared(),
+                )
+            },
         });
         let gui = into_gui.build(context);
 

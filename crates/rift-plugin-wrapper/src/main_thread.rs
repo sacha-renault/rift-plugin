@@ -18,7 +18,7 @@ mod wrapper_gui;
 
 pub struct WrapperMainThread<'a, P: ClapPlugin> {
     pub(crate) shared: WrapperShared<P>,
-    pub(crate) gui: Box<dyn ClapGui>, // TODO an actual gui thing here
+    pub(crate) gui: Box<dyn ClapGui>,
     pub(crate) host: HostMainThreadHandle<'a>,
 }
 

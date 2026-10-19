@@ -3,6 +3,8 @@ pub use clack_extensions::params::*;
 use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
+use rift_plugin_context::AudioThreadTask;
+use rift_plugin_gui::{GuiParamEventKind, GuiTasks, ParamSync};
 use rift_plugin_params::ParamCollection;
 
 use crate::ClapPlugin;
@@ -16,17 +18,45 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
         self.shared.host_params.count()
     }
 
-    fn flush(&mut self, inputs: &InputEvents, _outputs: &mut OutputEvents) {
+    fn flush(&mut self, inputs: &InputEvents, outputs: &mut OutputEvents) {
+        // The plugin is inactive in this path, so nothing else drains the tasks the GUI
+        // queued. Report them through `outputs` before applying incoming automation.
+        while let Some(task) = self.shared.states.pop_in_audio() {
+            match task {
+                AudioThreadTask::GuiParamEvent(event) => {
+                    if let Some(raw_event) = event.maybe_to_raw()
+                        && let Err(err) = outputs.try_push(raw_event)
+                    {
+                        log::error!("There was an error pushing event {err:?}");
+                    }
+
+                    if let GuiParamEventKind::Value(value) = event.kind {
+                        self.shared.host_params.set_value(event.param_id, value);
+                    }
+                }
+                AudioThreadTask::RequestCallback => self.host.request_callback(),
+            }
+        }
+
+        let notify_gui =
+            matches!(self.gui.param_sync(), ParamSync::Push) && self.shared.states.is_gui_opened();
+
         for event in inputs.iter() {
             if let Some(param_event) = event.as_event::<ParamValueEvent>() {
                 let Some(id) = param_event.param_id() else {
                     continue;
                 };
-                let value = param_event.value();
-                self.shared.host_params.set_value(id, value as f32);
+                let value = param_event.value() as f32;
+                self.shared.host_params.set_value(id, value);
+
+                if notify_gui {
+                    _ = self
+                        .shared
+                        .states
+                        .post_to_gui(GuiTasks::ParamChanged { id, value });
+                }
             };
         }
-        // todo!()
     }
 
     fn get_info(&mut self, param_index: u32, info: &mut ParamInfoWriter) {

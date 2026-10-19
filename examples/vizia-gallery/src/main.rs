@@ -7,7 +7,7 @@ use baseview::{Event, EventStatus, Window, WindowContext, WindowHandler, WindowO
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{
     ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiTasks,
-    Window as ClapWindow,
+    HostSharedHandle, Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::PopupSelector;
@@ -89,6 +89,10 @@ impl GuiContext for StandaloneContext {
 
     fn is_overflow(&self) -> bool {
         false
+    }
+
+    fn handle(&self) -> Option<HostSharedHandle<'static>> {
+        None
     }
 }
 

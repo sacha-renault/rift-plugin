@@ -88,7 +88,11 @@ impl ClapGui for ViziaGui {
         Ok(())
     }
 
-    fn destroy(&mut self) {}
+    fn destroy(&mut self) {
+        if let Some(handle) = self.handle.take() {
+            handle.close();
+        }
+    }
 
     fn adjust_size(&mut self, _: GuiSize) -> Option<GuiSize> {
         // todo!()

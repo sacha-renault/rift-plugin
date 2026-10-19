@@ -1,8 +1,8 @@
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 
-use clack_extensions::gui::*;
-use clack_plugin::{plugin::PluginError, utils::ClapId};
+use clack_extensions::{gui::*, params::HostParams};
+use clack_plugin::{host::HostSharedHandle, plugin::PluginError, utils::ClapId};
 
 use rift_plugin_params::ParamCollection;
 
@@ -18,6 +18,18 @@ pub trait GuiContext: Send + Sync {
     fn is_playing(&self) -> Arc<AtomicBool>;
     fn pop_in_gui(&self) -> Option<GuiTasks>;
     fn is_overflow(&self) -> bool;
+    fn handle(&self) -> Option<HostSharedHandle<'static>>;
+
+    #[inline]
+    fn request_flush(&self) {
+        let Some(host) = self.handle() else {
+            return;
+        };
+
+        if let Some(ext) = host.get_extension::<HostParams>() {
+            ext.request_flush(&host);
+        }
+    }
 }
 
 pub trait ClapGui {
