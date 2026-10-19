@@ -257,8 +257,16 @@ mod tests {
         let state = PluginSharedState::new(1);
 
         // Main queue only.
-        assert!(state.post_to_main(MainThreadTask::RequestRestart).is_ok());
-        assert!(state.post_to_main(MainThreadTask::RequestRestart).is_err());
+        assert!(
+            state
+                .post_to_audio(AudioThreadTask::RequestCallback)
+                .is_ok()
+        );
+        assert!(
+            state
+                .post_to_audio(AudioThreadTask::RequestCallback)
+                .is_err()
+        );
         assert!(state.overflows().take_main_overflow());
         assert!(!state.overflows().take_audio_overflow());
         assert!(!state.overflows().take_gui_overflow());

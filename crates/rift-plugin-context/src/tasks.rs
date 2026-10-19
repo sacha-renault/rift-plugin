@@ -1,5 +1,5 @@
-//! Exaustive lists of task audio / main thread may have to perform. Those are sent in there respective queues
-//! in [`crate::wrapper::shared_states::PluginSharedState`].
+//! Exhaustive list of tasks the audio / main thread may have to perform. Those are sent in their respective queues
+//! in [`crate::PluginSharedState`].
 
 use clack_plugin::utils::ClapId;
 use rift_plugin_gui::GuiParamEvent;
@@ -12,8 +12,6 @@ pub struct ParamContextMenu {
 }
 
 pub enum MainThreadTask {
-    ChangeLatency(u32),
-    RequestRestart,
     ParamContextMenu(ParamContextMenu),
 }
 

@@ -8,33 +8,22 @@ use crate::PluginSharedState;
 pub struct InitContext<'a> {
     host: &'a HostMainThreadHandle<'a>,
     states: Arc<PluginSharedState>,
-    num_events: usize,
 }
 
 impl<'a> InitContext<'a> {
     pub fn new(host: &'a HostMainThreadHandle<'a>, states: Arc<PluginSharedState>) -> Self {
-        Self {
-            host,
-            states,
-            num_events: 0,
-        }
-    }
-}
-
-impl<'a> super::HostStatesGetter for InitContext<'a> {
-    fn increment_event_count(&mut self) {
-        self.num_events += 1;
+        Self { host, states }
     }
 
-    fn states(&self) -> Arc<PluginSharedState> {
-        self.states.clone()
+    /// Asks the host to restart the plugin.
+    pub fn request_restart(&mut self) {
+        self.host.request_restart();
     }
-}
 
-impl<'a> Drop for InitContext<'a> {
-    fn drop(&mut self) {
-        if self.num_events > 0 {
-            self.host.request_callback();
-        }
+    /// Reports a new processing latency, in samples.
+    pub fn set_latency(&mut self, latency: u32) {
+        // On init context. We don't have to do anything else.
+        // Latency will be set be changed right after the activation
+        self.states.set_latency(latency);
     }
 }
