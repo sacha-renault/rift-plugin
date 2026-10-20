@@ -3,6 +3,8 @@ use std::io::{Read, Write};
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
+use rift_plugin_gui::{GuiTask, ParamSync};
+use serde_json::{Map, Value};
 
 use crate::ClapPlugin;
 use rift_plugin_params::UserParams;
@@ -44,7 +46,21 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
 
         let root: serde_json::Map<String, serde_json::Value> = serde_json::from_slice(&bytes)
             .map_err(|_| PluginError::Message("Failed to parse state as JSON"))?;
+        let result = self.inner_load(root);
 
+        // Ping GUI and tell him it has to resync
+        if matches!(self.gui.param_sync(), ParamSync::Push) {
+            if let Err(err) = self.shared.states.post_to_gui(GuiTask::ParamRescan) {
+                log::error!("{err:?}")
+            }
+        }
+
+        result
+    }
+}
+
+impl<'a, P: ClapPlugin> super::WrapperMainThread<'a, P> {
+    fn inner_load(&mut self, root: Map<String, Value>) -> Result<(), PluginError> {
         let params = root
             .get("params")
             .and_then(serde_json::Value::as_object)

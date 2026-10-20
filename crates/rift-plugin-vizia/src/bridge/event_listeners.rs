@@ -31,6 +31,9 @@ pub fn pump(cx: &Context, host: &dyn GuiContext) {
     while let Some(task) = host.pop_in_gui() {
         match task {
             GuiTask::ParamChanged { id, value } => registry.apply_host_value(id, value),
+
+            // Todo, after rescan, should i exit directly ?
+            GuiTask::ParamRescan => registry.refresh_param_values(),
         }
     }
 
