@@ -1,5 +1,6 @@
 use std::io::{Read, Write};
 
+use clack_extensions::params::{HostParams, ParamRescanFlags};
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
@@ -53,6 +54,11 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
             if let Err(err) = self.shared.states.post_to_gui(GuiTask::ParamRescan) {
                 log::error!("{err:?}")
             }
+        }
+
+        // host must rescan param after load
+        if let Some(ext) = self.host.get_extension::<HostParams>() {
+            ext.rescan(&mut self.host, ParamRescanFlags::VALUES);
         }
 
         result
