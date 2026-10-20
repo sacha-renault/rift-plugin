@@ -61,6 +61,7 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
     }
 
     /// Reports a new processing latency, in samples.
+    /// Takes effect at next activation
     pub fn set_latency(&mut self, latency: u32) {
         self.states.set_latency(latency);
 
