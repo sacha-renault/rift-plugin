@@ -102,7 +102,7 @@ impl AsRef<UnknownEvent> for RawParamEvent {
     }
 }
 
-pub enum GuiTasks {
+pub enum GuiTask {
     /// Signal the param with ID has a new value
     ParamChanged { id: ClapId, value: f32 },
 }

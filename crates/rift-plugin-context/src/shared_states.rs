@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
-use rift_plugin_gui::GuiTasks as GuiTask;
+use rift_plugin_gui::GuiTask;
 use rift_plugin_params::AtomicF64;
 use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
 

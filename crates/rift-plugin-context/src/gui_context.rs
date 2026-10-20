@@ -40,7 +40,7 @@ impl GuiContext for GuiContextImpl {
         self.states.is_playing.clone()
     }
 
-    fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiTasks> {
+    fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiTask> {
         self.states.pop_in_gui()
     }
 

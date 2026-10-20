@@ -4,7 +4,7 @@ use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
 use rift_plugin_context::AudioThreadTask;
-use rift_plugin_gui::{GuiParamEventKind, GuiTasks, ParamSync};
+use rift_plugin_gui::{GuiParamEventKind, GuiTask, ParamSync};
 use rift_plugin_params::ParamCollection;
 
 use crate::ClapPlugin;
@@ -52,7 +52,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
                     _ = self
                         .shared
                         .states
-                        .post_to_gui(GuiTasks::ParamChanged { id, value });
+                        .post_to_gui(GuiTask::ParamChanged { id, value });
                 }
             };
         }
