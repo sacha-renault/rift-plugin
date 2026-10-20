@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
-use rift_plugin_gui::GuiTasks as GuiTask;
+use rift_plugin_gui::GuiTask;
 use rift_plugin_params::AtomicF64;
 use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
 
@@ -87,6 +87,9 @@ impl PluginSharedState {
         self.audio_tasks.pop()
     }
 
+    // Todo, question for later. Since we post an overflow, do we really need
+    // to handle the case of failure when it cannot post ?
+    // I guess it depends on Tasks ... Follow up later...
     pub fn post_to_gui(&self, task: GuiTask) -> Result<(), GuiTask> {
         let result = self.gui_tasks.push(task);
         if result.is_err() {

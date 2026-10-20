@@ -5,7 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
-use rift_plugin_gui::GuiTasks;
+use rift_plugin_gui::GuiTask;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
@@ -61,6 +61,7 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
     }
 
     /// Reports a new processing latency, in samples.
+    /// Takes effect at next activation
     pub fn set_latency(&mut self, latency: u32) {
         self.states.set_latency(latency);
 
@@ -79,9 +80,7 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
             }
 
             if self.notify_gui && self.states.is_gui_opened() {
-                _ = self
-                    .states
-                    .post_to_gui(GuiTasks::ParamChanged { id, value });
+                _ = self.states.post_to_gui(GuiTask::ParamChanged { id, value });
             }
         }
     }

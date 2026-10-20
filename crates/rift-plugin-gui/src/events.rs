@@ -102,9 +102,14 @@ impl AsRef<UnknownEvent> for RawParamEvent {
     }
 }
 
-pub enum GuiTasks {
+#[derive(Debug, Clone)]
+pub enum GuiTask {
     /// Signal the param with ID has a new value
     ParamChanged { id: ClapId, value: f32 },
+    /// Signal new parameters set was loaded. This signals
+    /// GUI must reload all the values (in case of retain GUI,
+    /// immediate mode can discard this event safely).
+    ParamRescan,
 }
 
 #[cfg(test)]
