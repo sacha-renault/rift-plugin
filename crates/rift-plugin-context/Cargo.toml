@@ -11,7 +11,5 @@ rift-plugin-utils = { workspace = true }
 
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
-crossbeam-queue = { workspace = true }
 log = { workspace = true }
-bitflags = { workspace = true }
 bon = { workspace = true }

@@ -84,9 +84,9 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
             // this function is called from ParamValueEvent from the
             // host, it would be an error to notify host too.
             if self.notify_gui && self.states.is_gui_opened() {
-                _ = self
-                    .states
-                    .post_to_gui(GuiEvent::ParamChanged { id, value });
+                self.states
+                    .gui_tasks()
+                    .post(GuiEvent::ParamChanged { id, value });
             }
         }
     }

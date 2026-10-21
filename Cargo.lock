@@ -2092,11 +2092,9 @@ dependencies = [
 name = "rift-plugin-context"
 version = "0.1.0"
 dependencies = [
- "bitflags 2.13.2",
  "bon",
  "clack-extensions",
  "clack-plugin",
- "crossbeam-queue",
  "log",
  "rift-plugin-gui",
  "rift-plugin-params",
@@ -2152,6 +2150,7 @@ dependencies = [
  "bitflags 2.13.2",
  "clack-extensions",
  "clack-plugin",
+ "crossbeam-queue",
  "serde",
 ]
 

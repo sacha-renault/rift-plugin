@@ -82,20 +82,22 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         log::debug!("Create new MainThread<'a>");
         let into_gui = P::gui(shared.params.clone(), shared.data.clone());
 
-        let context = Arc::new(GuiContextImpl {
-            states: shared.states.clone(),
-            params: shared.host_params.clone(),
+        // SAFETY: the host handle is valid for the lifetime of the plugin instance.
+        // The GUI context must be `'static` because vizia stores it in window callbacks
+        // on its own event-loop thread. `ClapGui::destroy` closes the window before the
+        // plugin is torn down, so this handle is never used after the host goes away.
+        let handle = unsafe {
+            std::mem::transmute::<HostSharedHandle<'a>, HostSharedHandle<'static>>(host.shared())
+        };
 
-            // SAFETY: the host handle is valid for the lifetime of the plugin instance.
-            // The GUI context must be `'static` because vizia stores it in window callbacks
-            // on its own event-loop thread. `ClapGui::destroy` closes the window before the
-            // plugin is torn down, so this handle is never used after the host goes away.
-            handle: unsafe {
-                std::mem::transmute::<HostSharedHandle<'a>, HostSharedHandle<'static>>(
-                    host.shared(),
-                )
-            },
-        });
+        let context = Arc::new(
+            GuiContextImpl::builder()
+                .states(shared.states.clone())
+                .params(shared.host_params.clone())
+                .handle(handle)
+                .build(),
+        );
+
         let gui = into_gui.build(context);
 
         Ok(WrapperMainThread {

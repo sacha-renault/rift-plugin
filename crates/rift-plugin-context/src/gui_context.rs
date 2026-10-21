@@ -7,10 +7,11 @@ use crate::PluginSharedState;
 use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use rift_plugin_params::{ClapId, ParamCollection};
 
+#[derive(bon::Builder)]
 pub struct GuiContextImpl {
-    pub states: Arc<PluginSharedState>,
-    pub params: Arc<dyn ParamCollection>,
-    pub handle: HostSharedHandle<'static>,
+    states: Arc<PluginSharedState>,
+    params: Arc<dyn ParamCollection>,
+    handle: HostSharedHandle<'static>,
 }
 
 impl GuiContext for GuiContextImpl {
@@ -24,7 +25,7 @@ impl GuiContext for GuiContextImpl {
         }
 
         let task = AudioThreadTask::GuiParamEvent(event);
-        if self.states.post_to_audio(task).is_err() {
+        if self.states.audio_tasks().try_post(task).is_some() {
             log::error!("Couldn't push new param event from gui");
             return;
         }
@@ -41,11 +42,11 @@ impl GuiContext for GuiContextImpl {
     }
 
     fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiEvent> {
-        self.states.pop_in_gui()
+        self.states.gui_tasks().pop()
     }
 
     fn is_overflow(&self) -> bool {
-        self.states.overflows().take_gui_overflow()
+        self.states.gui_tasks().take_overflow()
     }
 
     fn global_context_menu(&self, x: i32, y: i32, screen: i32) {
@@ -70,7 +71,7 @@ impl GuiContextImpl {
             screen,
         };
         let task = MainThreadTask::ParamContextMenu(ctx);
-        if self.states.post_to_main(task).is_err() {
+        if self.states.main_tasks().try_post(task).is_some() {
             log::error!("Couldn't push new param event from gui");
             return;
         }

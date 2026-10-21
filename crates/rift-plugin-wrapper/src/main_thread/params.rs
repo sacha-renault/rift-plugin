@@ -4,7 +4,7 @@ use clack_plugin::events::event_types::ParamValueEvent;
 use clack_plugin::prelude::*;
 
 use rift_plugin_context::AudioThreadTask;
-use rift_plugin_gui::{GuiParamEventKind, GuiEvent, ParamSync};
+use rift_plugin_gui::{GuiEvent, GuiParamEventKind, ParamSync};
 use rift_plugin_params::ParamCollection;
 
 use crate::ClapPlugin;
@@ -21,7 +21,7 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
     fn flush(&mut self, inputs: &InputEvents, outputs: &mut OutputEvents) {
         // The plugin is inactive in this path, so nothing else drains the tasks the GUI
         // queued. Report them through `outputs` before applying incoming automation.
-        while let Some(task) = self.shared.states.pop_in_audio() {
+        while let Some(task) = self.shared.states.audio_tasks().pop() {
             match task {
                 AudioThreadTask::GuiParamEvent(event) => {
                     if let Some(raw_event) = event.maybe_to_raw()
@@ -49,10 +49,10 @@ impl<'a, P: ClapPlugin> PluginMainThreadParams for super::WrapperMainThread<'a, 
                 self.shared.host_params.set_value(id, value);
 
                 if notify_gui {
-                    _ = self
-                        .shared
+                    self.shared
                         .states
-                        .post_to_gui(GuiEvent::ParamChanged { id, value });
+                        .gui_tasks()
+                        .post(GuiEvent::ParamChanged { id, value });
                 }
             };
         }

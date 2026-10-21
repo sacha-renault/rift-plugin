@@ -51,9 +51,7 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
 
         // Ping GUI and tell him it has to resync
         if matches!(self.gui.param_sync(), ParamSync::Push) {
-            if let Err(err) = self.shared.states.post_to_gui(GuiEvent::ParamRescan) {
-                log::error!("{err:?}")
-            }
+            self.shared.states.gui_tasks().post(GuiEvent::ParamRescan);
         }
 
         // host must rescan param after load
