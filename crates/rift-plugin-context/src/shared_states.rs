@@ -1,26 +1,25 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
-use rift_plugin_gui::GuiEvent;
+use rift_plugin_gui::{GuiEvent, GuiParamEvent};
 use rift_plugin_params::AtomicF64;
 use rift_plugin_types::{TaskCapacity, TaskQueue};
 use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
-use crate::tasks::{AudioThreadTask, MainThreadTask};
+use crate::tasks::ParamContextMenu;
 
 /// Shared state for an audio plugin accessed by both the main and audio threads.
 ///
-/// Contains bounded queues for posting tasks to the opposite thread.
-/// If a queue is full when pushing a task, the push operation fails and returns
-/// the unposted task in an `Err`.
+/// Contains bounded queues for posting tasks to the opposite thread. Full queues
+/// evict the oldest task; see [`TaskQueue`].
 pub struct PluginSharedState {
     pub(crate) latency: AtomicU32,
     pub(crate) is_playing: Arc<AtomicBool>,
     pub(crate) samplerate: Arc<AtomicF64>,
 
     /// Queues that audio / main thread can read
-    main_tasks: TaskQueue<MainThreadTask>,
-    audio_tasks: TaskQueue<AudioThreadTask>,
+    main_tasks: TaskQueue<ParamContextMenu>,
+    audio_tasks: TaskQueue<GuiParamEvent>,
     gui_tasks: TaskQueue<GuiEvent>,
 
     gui_opened: AtomicBool,
@@ -51,18 +50,21 @@ impl PluginSharedState {
         self.latency.load(Ordering::Relaxed)
     }
 
+    /// GUI → audio parameter events.
     #[inline]
-    pub fn audio_tasks(&self) -> &TaskQueue<AudioThreadTask> {
+    pub fn audio_tasks(&self) -> &TaskQueue<GuiParamEvent> {
         &self.audio_tasks
     }
 
+    /// Audio/main → GUI updates.
     #[inline]
     pub fn gui_tasks(&self) -> &TaskQueue<GuiEvent> {
         &self.gui_tasks
     }
 
+    /// GUI → main context-menu requests.
     #[inline]
-    pub fn main_tasks(&self) -> &TaskQueue<MainThreadTask> {
+    pub fn main_tasks(&self) -> &TaskQueue<ParamContextMenu> {
         &self.main_tasks
     }
 

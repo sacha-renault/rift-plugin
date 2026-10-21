@@ -6,7 +6,7 @@ use clack_plugin::prelude::*;
 use rift_plugin_gui::ClapGui;
 
 use crate::{ClapPlugin, shared::WrapperShared};
-use rift_plugin_context::{MainThreadTask, PluginSharedState};
+use rift_plugin_context::PluginSharedState;
 
 pub(crate) mod context_menu;
 mod latency;
@@ -41,11 +41,7 @@ impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainTh
     fn on_main_thread(&mut self) {
         let states = self.states();
         while let Some(task) = states.main_tasks().pop() {
-            use MainThreadTask::*;
-
-            match task {
-                ParamContextMenu(ctx) => self.open_param_menu(ctx),
-            }
+            self.open_param_menu(task);
         }
     }
 }

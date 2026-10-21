@@ -1,7 +1,6 @@
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::prelude::*;
 
-use rift_plugin_context::AudioThreadTask;
 use rift_plugin_gui::{GuiEvent, GuiParamEvent, GuiParamEventKind};
 use rift_plugin_params::ParamCollection;
 use rift_plugin_types::{EventPreProcess, EventSource};
@@ -12,12 +11,8 @@ use super::WrapperProcessor;
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     pub(super) fn handle_audio_thread_tasks(&mut self, outputs: &mut OutputEvents) {
-        while let Some(task) = self.shared.states.audio_tasks().pop() {
-            use AudioThreadTask::*;
-
-            match task {
-                GuiParamEvent(event) => self.handle_gui_param_change(event, outputs),
-            }
+        while let Some(event) = self.shared.states.audio_tasks().pop() {
+            self.handle_gui_param_change(event, outputs);
         }
     }
 

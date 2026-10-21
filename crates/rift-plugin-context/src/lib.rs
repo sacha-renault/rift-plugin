@@ -15,4 +15,3 @@ pub use process_context::ProcessContext;
 pub use shared_states::PluginSharedState;
 
 pub use tasks::ParamContextMenu;
-pub use tasks::{AudioThreadTask, MainThreadTask};

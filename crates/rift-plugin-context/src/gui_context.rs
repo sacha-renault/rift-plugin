@@ -3,8 +3,8 @@ use std::sync::atomic::AtomicBool;
 
 use rift_plugin_gui::{GuiContext, GuiParamEvent, GuiParamEventKind, HostSharedHandle};
 
+use crate::ParamContextMenu;
 use crate::PluginSharedState;
-use crate::{AudioThreadTask, MainThreadTask, ParamContextMenu};
 use rift_plugin_params::{ClapId, ParamCollection};
 
 #[derive(bon::Builder)]
@@ -15,17 +15,13 @@ pub struct GuiContextImpl {
 }
 
 impl GuiContext for GuiContextImpl {
-    /// Queues a GUI parameter event to be processed by the audio thread.
-    ///
-    /// The event is wrapped in [`AudioThreadTask`] and pushed to the audio thread's internal task queue.
-    /// If the queue is full, an error is logged but the event is dropped.
+    /// Queues a GUI parameter event for the audio thread.
     fn param_event(&self, event: GuiParamEvent) {
         if let GuiParamEventKind::Value(value) = event.kind {
             self.params.set_value(event.param_id, value);
         }
 
-        let task = AudioThreadTask::GuiParamEvent(event);
-        if self.states.audio_tasks().try_post(task).is_some() {
+        if self.states.audio_tasks().try_post(event).is_some() {
             log::error!("Couldn't push new param event from gui");
             return;
         }
@@ -64,13 +60,12 @@ impl GuiContext for GuiContextImpl {
 
 impl GuiContextImpl {
     fn context_menu(&self, param_id: Option<ClapId>, x: i32, y: i32, screen: i32) {
-        let ctx = ParamContextMenu {
+        let task = ParamContextMenu {
             param_id,
             x,
             y,
             screen,
         };
-        let task = MainThreadTask::ParamContextMenu(ctx);
         if self.states.main_tasks().try_post(task).is_some() {
             log::error!("Couldn't push new param event from gui");
             return;

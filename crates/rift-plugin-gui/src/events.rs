@@ -77,7 +77,7 @@ impl GuiParamEvent {
             GuiParamEventKind::GestureEnd => {
                 RawParamEvent::GestureEnd(ParamGestureEndEvent::new(0, self.param_id))
             }
-            _ => return None,
+            GuiParamEventKind::Persistent => return None,
         };
 
         Some(raw)

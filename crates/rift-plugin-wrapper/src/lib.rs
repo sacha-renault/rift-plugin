@@ -72,10 +72,10 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// ```
     const EVENT_PRE_PROCESS: EventPreProcess;
 
-    /// Define the maximum number of task the plugin can hold at the same time, before dropping
-    /// events. See [`MainThreadTask`] and [`AudioThreadTask`].
+    /// Maximum number of tasks held per cross-thread queue before the oldest is
+    /// dropped.
     ///
-    /// Default to all same at `2048`.
+    /// Defaults to 2048 entries for each queue.
     const TASKS_CAPACITY: TaskCapacity = TaskCapacity::small();
 
     /// Creates a new instance of the plugin.
