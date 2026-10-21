@@ -71,7 +71,7 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         self.states.set_latency(latency);
 
         // On process context, latency triggers a restart.
-        self.host.request_restart();
+        self.request_restart();
     }
 
     /// Set a parameter from a host change
