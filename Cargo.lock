@@ -979,7 +979,6 @@ dependencies = [
  "fundsp",
  "rift-fun-dsp",
  "rift-plugin",
- "rift-plugin-dsp",
  "rift-plugin-vizia",
 ]
 
