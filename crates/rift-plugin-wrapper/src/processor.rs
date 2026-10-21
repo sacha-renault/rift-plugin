@@ -3,7 +3,7 @@ mod lifecycle;
 mod params;
 
 use clack_plugin::prelude::*;
-use rift_plugin_types::transport::BlockIndex;
+use rift_plugin_types::{TransportInfo, transport::BlockIndex};
 
 use crate::{ClapPlugin, shared::WrapperShared};
 
@@ -13,6 +13,7 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     host: HostAudioProcessorHandle<'a>,
     samplerate: f64,
     block_index: BlockIndex,
+    transport_info: TransportInfo,
 
     /// Whether the audio thread pushes param changes into the GUI queue.
     /// True for `ParamSync::Push` (retained GUIs); false for `Pull`, where the

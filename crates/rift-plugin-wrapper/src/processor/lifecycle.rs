@@ -1,9 +1,9 @@
 use clack_extensions::params::*;
-use clack_plugin::events::event_types::TransportFlags;
 use clack_plugin::prelude::*;
 
 use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{InitContext, ProcessContext};
+use rift_plugin_types::TransportInfo;
 use rift_plugin_types::transport::BlockIndex;
 
 use crate::ClapPlugin;
@@ -57,6 +57,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             host,
             samplerate: audio_config.sample_rate,
             block_index: BlockIndex(-1),
+            transport_info: TransportInfo::new(audio_config.sample_rate),
             notify_gui,
         })
     }
@@ -69,13 +70,14 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<ProcessStatus, PluginError> {
         audio_callback(|| {
             self.flush(events.input, events.output);
+            let frame_count = audio.frames_count() as usize;
             let buffers = Buffers::new(audio, P::MAIN_AUDIO_PORTS);
 
-            if let Some(flags) = process.transport.map(|tr| tr.flags) {
-                self.shared
-                    .states
-                    .set_is_playing(flags.contains(TransportFlags::IS_PLAYING));
-            }
+            // update transport
+            self.transport_info.update(process.transport, frame_count);
+            self.shared
+                .states
+                .set_is_playing(self.transport_info.is_playing);
 
             let context = ProcessContext::builder()
                 .host(&self.host)
@@ -86,6 +88,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 .block_index(self.block_index.increment())
                 .host_params(self.shared.host_params.clone())
                 .notify_gui(self.notify_gui)
+                .transport_info(&self.transport_info)
                 .build();
 
             self.plugin.process(

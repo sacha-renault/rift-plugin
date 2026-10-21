@@ -11,7 +11,7 @@ use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
 
 use crate::PluginSharedState;
-use rift_plugin_types::MidiMessage;
+use rift_plugin_types::{MidiMessage, TransportInfo};
 
 #[derive(bon::Builder)]
 pub struct ProcessContext<'a, 'e> {
@@ -20,6 +20,7 @@ pub struct ProcessContext<'a, 'e> {
     process: Process<'a>,
     samplerate: f64,
     block_index: BlockIndex,
+    transport_info: &'a TransportInfo,
 
     outputs_events: &'e mut OutputEvents<'e>,
     host_params: Arc<ParamsWrapper>,
@@ -41,6 +42,10 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         } else {
             None
         }
+    }
+
+    pub fn transport_info(&self) -> &TransportInfo {
+        self.transport_info
     }
 
     pub fn block_index(&self) -> BlockIndex {

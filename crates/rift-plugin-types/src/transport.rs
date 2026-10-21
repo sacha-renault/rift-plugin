@@ -1,4 +1,10 @@
 pub use clack_plugin::events::event_types::TransportFlags;
+use clack_plugin::{
+    events::event_types::TransportEvent,
+    utils::{BeatTime, SecondsTime},
+};
+
+const DEFAULT_TEMPO: f64 = 130.;
 
 #[derive(Clone, Copy)]
 pub struct ChannelsInfo {
@@ -31,6 +37,158 @@ impl ChannelsInfo {
     pub fn is_last_channel(&self) -> bool {
         // idx starts at 0
         self.current + 1 == self.total_channels
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct LoopRegion {
+    pub start_beats: BeatTime,
+    pub end_beats: BeatTime,
+    pub start_seconds: SecondsTime,
+    pub end_seconds: SecondsTime,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct TimeSignature {
+    pub numerator: u16,
+    pub denominator: u16,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct BarInfo {
+    pub start: BeatTime,
+    pub number: i32,
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct TransportInfo {
+    pub is_playing: bool,
+    pub is_recording: bool,
+    pub is_preroll: bool,
+    pub sample_rate: f64,
+
+    pub song_pos_beats: BeatTime,
+    pub song_pos_seconds: SecondsTime,
+
+    pub tempo: f64,
+    pub tempo_inc: f64,
+
+    pub loop_region: Option<LoopRegion>,
+    pub time_signature: Option<TimeSignature>,
+    pub bar: Option<BarInfo>,
+    last_sample_count: usize,
+}
+
+impl TransportInfo {
+    pub fn new(sample_rate: f64) -> Self {
+        Self {
+            is_playing: false,
+            is_recording: false,
+            is_preroll: false,
+            sample_rate,
+            song_pos_beats: 0f64.into(),
+            song_pos_seconds: 0f64.into(),
+            tempo: DEFAULT_TEMPO,
+            tempo_inc: 0.,
+            loop_region: None,
+            time_signature: None,
+            bar: None,
+            last_sample_count: 0,
+        }
+    }
+
+    pub fn is_loop_active(&self) -> bool {
+        self.loop_region.is_some()
+    }
+
+    /// Must be called exactly once per processed block, with that block's frame count.
+    /// If the host omits a timeline, the position is extrapolated from the previous
+    /// block's tempo and play state. It is overwritten as soon as the host provides it.
+    pub fn update(&mut self, event: Option<&TransportEvent>, sample_count: usize) {
+        // Advance over the previous block using the previous block's state
+        // Will be overwritten if outdated
+        if self.is_playing {
+            self.advance_both();
+        }
+
+        match event {
+            Some(ev) => self.update_with_event(ev),
+            None => {
+                self.is_preroll = false;
+                self.tempo_inc = 0.0;
+                self.loop_region = None;
+                self.time_signature = None;
+                self.bar = None;
+            }
+        }
+
+        self.last_sample_count = sample_count;
+    }
+
+    fn update_with_event(&mut self, event: &TransportEvent) {
+        self.is_playing = event.flags.contains(TransportFlags::IS_PLAYING);
+        self.is_recording = event.flags.contains(TransportFlags::IS_RECORDING);
+        self.is_preroll = event.flags.contains(TransportFlags::IS_WITHIN_PRE_ROLL);
+
+        if event.flags.contains(TransportFlags::HAS_TEMPO) {
+            self.tempo = event.tempo;
+            self.tempo_inc = event.tempo_inc;
+        } else {
+            // I think we just keep old tempo
+            // reset to default seems odd ...
+            self.tempo_inc = 0f64;
+        }
+
+        self.loop_region = event
+            .flags
+            .contains(TransportFlags::IS_LOOP_ACTIVE)
+            .then(|| LoopRegion {
+                start_beats: event.loop_start_beats,
+                end_beats: event.loop_end_beats,
+                start_seconds: event.loop_start_seconds,
+                end_seconds: event.loop_end_seconds,
+            });
+
+        self.time_signature = event
+            .flags
+            .contains(TransportFlags::HAS_TIME_SIGNATURE)
+            .then(|| TimeSignature {
+                numerator: event.time_signature_numerator,
+                denominator: event.time_signature_denominator,
+            });
+
+        if event.flags.contains(TransportFlags::HAS_BEATS_TIMELINE) {
+            self.song_pos_beats = event.song_pos_beats;
+            self.bar = Some(BarInfo {
+                start: event.bar_start,
+                number: event.bar_number,
+            });
+        } else {
+            self.bar = None;
+        }
+
+        if event.flags.contains(TransportFlags::HAS_SECONDS_TIMELINE) {
+            self.song_pos_seconds = event.song_pos_seconds;
+        }
+    }
+
+    fn advance_both(&mut self) {
+        self.advance_beats();
+        self.advance_seconds();
+    }
+
+    fn advance_seconds(&mut self) {
+        let n = self.last_sample_count as f64;
+        let increment = (n / self.sample_rate).into();
+        self.song_pos_seconds = self.song_pos_seconds + increment;
+    }
+
+    fn advance_beats(&mut self) {
+        // Tempo increment is constant so avg tempo is (start_tempo + end_tempo) / 2
+        let n = self.last_sample_count as f64;
+        let avg_tempo = self.tempo + self.tempo_inc * n / 2.0;
+        let increment = (n / self.sample_rate * avg_tempo / 60f64).into();
+        self.song_pos_beats = self.song_pos_beats + increment;
     }
 }
 

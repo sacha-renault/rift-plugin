@@ -15,4 +15,5 @@ pub use event_pre_process::*;
 pub use event_source::EventSource;
 pub use midi_message::{MidiMessage, MidiMessageKind};
 pub use midi_port::MidiPort;
+pub use transport::TransportInfo;
 pub use triple_buffer::TripleBuffer;
