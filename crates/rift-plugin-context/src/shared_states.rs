@@ -53,34 +53,36 @@ impl PluginSharedState {
         self.latency.load(Ordering::Relaxed)
     }
 
-    /// Posts a task to be executed by the main thread from the audio thread.
+    /// Posts a task to be executed by the main thread from any thread.
     ///
     /// Returns an error if the [`Self::main_thread_tasks`] queue is full, and
     /// records the overflow so the consumer can observe that a task was dropped.
     #[inline]
     pub fn post_to_main(&self, task: MainThreadTask) -> Result<(), MainThreadTask> {
-        let result = self.main_tasks.push(task);
-        if result.is_err() {
+        if let Some(task) = self.main_tasks.force_push(task) {
             self.overflows.set_main_overflow();
+            Err(task)
+        } else {
+            Ok(())
         }
-        result
     }
 
     pub fn pop_in_main(&self) -> Option<MainThreadTask> {
         self.main_tasks.pop()
     }
 
-    /// Posts a task to be executed by the audio thread from the audio thread.
+    /// Posts a task to be executed by the audio thread from any other thread.
     ///
     /// Returns an error if the [`Self::audio_thread_tasks`] queue is full, and
     /// records the overflow so the consumer can observe that a task was dropped.
     #[inline]
     pub fn post_to_audio(&self, task: AudioThreadTask) -> Result<(), AudioThreadTask> {
-        let result = self.audio_tasks.push(task);
-        if result.is_err() {
+        if let Some(task) = self.audio_tasks.force_push(task) {
             self.overflows.set_audio_overflow();
+            Err(task)
+        } else {
+            Ok(())
         }
-        result
     }
 
     pub fn pop_in_audio(&self) -> Option<AudioThreadTask> {
@@ -91,11 +93,12 @@ impl PluginSharedState {
     // to handle the case of failure when it cannot post ?
     // I guess it depends on Tasks ... Follow up later...
     pub fn post_to_gui(&self, task: GuiEvent) -> Result<(), GuiEvent> {
-        let result = self.gui_tasks.push(task);
-        if result.is_err() {
+        if let Some(task) = self.gui_tasks.force_push(task) {
             self.overflows.set_gui_overflow();
+            Err(task)
+        } else {
+            Ok(())
         }
-        result
     }
 
     pub fn pop_in_gui(&self) -> Option<GuiEvent> {
