@@ -1,12 +1,24 @@
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
+use std::sync::atomic::{AtomicU32, Ordering};
 
-use rift_plugin_gui::{GuiEvent, GuiParamEvent};
+use bitflags::bitflags;
+use rift_plugin_gui::{GuiParamEvent, HostParamChange};
 use rift_plugin_params::AtomicF64;
 use rift_plugin_types::{TaskCapacity, TaskQueue};
-use rift_plugin_utils::DEFAULT_SAMPLERATE;
+use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
 
 use crate::tasks::ParamContextMenu;
+
+const REL: Ordering = Ordering::Relaxed;
+
+bitflags! {
+    #[derive(Debug, Clone, Copy)]
+    pub struct SharedStateFlags: u32 {
+        const IS_GUI_OPENED = 1 << 1;
+        const IS_PLAYING = 1 << 2;
+        const PARAM_RESCAN = 1 << 3;
+    }
+}
 
 /// Shared state for an audio plugin accessed by both the main and audio threads.
 ///
@@ -14,66 +26,97 @@ use crate::tasks::ParamContextMenu;
 /// evict the oldest task; see [`TaskQueue`].
 pub struct PluginSharedState {
     pub(crate) latency: AtomicU32,
-    pub(crate) is_playing: Arc<AtomicBool>,
     pub(crate) samplerate: Arc<AtomicF64>,
 
     /// Queues that audio / main thread can read
-    main_tasks: TaskQueue<ParamContextMenu>,
-    audio_tasks: TaskQueue<GuiParamEvent>,
-    gui_tasks: TaskQueue<GuiEvent>,
+    context_menu_requests: TaskQueue<ParamContextMenu>,
+    param_events: TaskQueue<GuiParamEvent>,
+    gui_param_changes: TaskQueue<HostParamChange>,
 
-    gui_opened: AtomicBool,
+    states_flags: AtomicFlags<SharedStateFlags>,
 }
 
 impl PluginSharedState {
-    pub fn new(TaskCapacity { gui, audio, main }: TaskCapacity) -> Self {
+    pub fn new(
+        TaskCapacity {
+            gui_param_changes,
+            param_events,
+            context_menu,
+        }: TaskCapacity,
+    ) -> Self {
         Self {
             latency: AtomicU32::new(0),
-            is_playing: Arc::new(AtomicBool::new(false)),
             samplerate: Arc::new(AtomicF64::new(DEFAULT_SAMPLERATE)),
 
-            main_tasks: TaskQueue::new(main),
-            audio_tasks: TaskQueue::new(audio),
-            gui_tasks: TaskQueue::new(gui),
-            gui_opened: AtomicBool::new(false),
+            context_menu_requests: TaskQueue::new(context_menu),
+            param_events: TaskQueue::new(param_events),
+            gui_param_changes: TaskQueue::new(gui_param_changes),
+
+            states_flags: AtomicFlags::new(SharedStateFlags::empty()),
         }
     }
 
     /// Updates the plugin's processing latency in samples.
     #[inline]
     pub fn set_latency(&self, latency: u32) {
-        self.latency.store(latency, Ordering::Relaxed);
+        self.latency.store(latency, REL);
     }
 
     #[inline]
     pub fn get_latency(&self) -> u32 {
-        self.latency.load(Ordering::Relaxed)
+        self.latency.load(REL)
     }
 
-    /// GUI → audio parameter events.
+    /// Parameter edits posted by the GUI for the audio thread.
+    ///
+    /// Drained by the audio processor, or by the main-thread flush when the
+    /// plugin is inactive.
     #[inline]
-    pub fn audio_tasks(&self) -> &TaskQueue<GuiParamEvent> {
-        &self.audio_tasks
+    pub fn param_events(&self) -> &TaskQueue<GuiParamEvent> {
+        &self.param_events
     }
 
-    /// Audio/main → GUI updates.
+    /// Host-side parameter changes the GUI has not applied yet.
+    ///
+    /// Posted by the audio thread for automation, or by the main thread for
+    /// inactive flushes. Drained by the GUI; a full queue evicts the oldest
+    /// change, which the GUI detects through [`TaskQueue::take_overflow`].
     #[inline]
-    pub fn gui_tasks(&self) -> &TaskQueue<GuiEvent> {
-        &self.gui_tasks
+    pub fn gui_param_changes(&self) -> &TaskQueue<HostParamChange> {
+        &self.gui_param_changes
     }
 
-    /// GUI → main context-menu requests.
+    /// Asks the GUI to reload every parameter value, e.g. after a state load.
+    pub fn request_param_rescan(&self) {
+        self.states_flags.set(SharedStateFlags::PARAM_RESCAN, REL);
+    }
+
+    /// Consumes a pending rescan request. Returns `true` at most once per request.
+    pub fn take_param_rescan(&self) -> bool {
+        !self
+            .states_flags
+            .take(SharedStateFlags::PARAM_RESCAN, REL)
+            .is_empty()
+    }
+
+    /// Context-menu requests posted by the GUI for the main thread.
     #[inline]
-    pub fn main_tasks(&self) -> &TaskQueue<ParamContextMenu> {
-        &self.main_tasks
+    pub fn context_menu_requests(&self) -> &TaskQueue<ParamContextMenu> {
+        &self.context_menu_requests
     }
 
     pub fn is_playing(&self) -> bool {
-        self.is_playing.load(Ordering::Relaxed)
+        self.states_flags
+            .load(Ordering::Relaxed)
+            .contains(SharedStateFlags::IS_PLAYING)
     }
 
-    pub fn set_is_playing(&self, value: bool) {
-        self.is_playing.store(value, Ordering::Relaxed);
+    pub fn set_is_playing(&self, is_playing: bool) {
+        if is_playing {
+            self.states_flags.set(SharedStateFlags::IS_PLAYING, REL)
+        } else {
+            self.states_flags.unset(SharedStateFlags::IS_PLAYING, REL)
+        };
     }
 
     pub fn samplerate(&self) -> f64 {
@@ -86,10 +129,34 @@ impl PluginSharedState {
     }
 
     pub fn is_gui_opened(&self) -> bool {
-        self.gui_opened.load(Ordering::Acquire)
+        self.states_flags
+            .load(Ordering::Relaxed)
+            .contains(SharedStateFlags::IS_GUI_OPENED)
     }
 
     pub fn set_gui_opened(&self, is_opened: bool) {
-        self.gui_opened.store(is_opened, Ordering::Release);
+        if is_opened {
+            self.states_flags.set(SharedStateFlags::IS_GUI_OPENED, REL)
+        } else {
+            self.states_flags
+                .unset(SharedStateFlags::IS_GUI_OPENED, REL)
+        };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn param_rescan_is_reported_once() {
+        let states = PluginSharedState::new(TaskCapacity::small());
+        assert!(!states.take_param_rescan());
+
+        // Repeated requests collapse into a single pending one.
+        states.request_param_rescan();
+        states.request_param_rescan();
+        assert!(states.take_param_rescan());
+        assert!(!states.take_param_rescan());
     }
 }

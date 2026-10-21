@@ -102,14 +102,13 @@ impl AsRef<UnknownEvent> for RawParamEvent {
     }
 }
 
-#[derive(Debug, Clone)]
-pub enum GuiEvent {
-    /// Signal the param with ID has a new value
-    ParamChanged { id: ClapId, value: f32 },
-    /// Signal new parameters set was loaded. This signals
-    /// GUI must reload all the values (in case of retain GUI,
-    /// immediate mode can discard this event safely).
-    ParamRescan,
+/// A parameter value changed by the host, for the GUI to display.
+///
+/// Posted on the audio or main thread and drained by [`GuiContext::pop_in_gui`].
+#[derive(Debug, Clone, Copy)]
+pub struct HostParamChange {
+    pub id: ClapId,
+    pub value: f32,
 }
 
 #[cfg(test)]

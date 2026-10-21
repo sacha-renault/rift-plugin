@@ -180,6 +180,16 @@ where
     pub fn into_inner(self) -> F {
         F::from_bits_retain(F::Bits::into_inner(self.storage))
     }
+
+    /// Sets the bits in `flags`, returning the previous value.
+    pub fn set(&self, flags: F, ordering: Ordering) -> F {
+        self.fetch_or(flags, ordering)
+    }
+
+    /// Clears the bits in `flags`, returning the previous value.
+    pub fn unset(&self, flags: F, ordering: Ordering) -> F {
+        self.fetch_and(flags.complement(), ordering)
+    }
 }
 
 #[cfg(test)]
@@ -276,6 +286,34 @@ mod tests {
 
         // NAND affects bits outside the mask too: !(0b011 & 0b001) = 0xFE.
         assert_eq!(flags.load(Ordering::SeqCst).bits(), !TestFlags::A.bits());
+    }
+
+    #[test]
+    fn set_returns_previous_state_and_ors_requested_flags() {
+        let flags = AtomicFlags::new(TestFlags::A);
+
+        let previous = flags.set(TestFlags::B, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::A);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::A | TestFlags::B);
+
+        // Setting an already-set flag leaves the state unchanged.
+        let previous = flags.set(TestFlags::A, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::A | TestFlags::B);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::A | TestFlags::B);
+    }
+
+    #[test]
+    fn unset_returns_previous_state_and_clears_only_requested_flags() {
+        let flags = AtomicFlags::new(TestFlags::A | TestFlags::B);
+
+        let previous = flags.unset(TestFlags::A, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::A | TestFlags::B);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::B);
+
+        // Clearing a flag that isn't set is a no-op.
+        let previous = flags.unset(TestFlags::C, Ordering::SeqCst);
+        assert_eq!(previous, TestFlags::B);
+        assert_eq!(flags.load(Ordering::SeqCst), TestFlags::B);
     }
 
     #[test]

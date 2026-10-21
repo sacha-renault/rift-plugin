@@ -4,7 +4,7 @@ use clack_extensions::params::{HostParams, ParamRescanFlags};
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
-use rift_plugin_gui::{GuiEvent, ParamSync};
+use rift_plugin_gui::ParamSync;
 use serde_json::{Map, Value};
 
 use crate::ClapPlugin;
@@ -49,9 +49,9 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
             .map_err(|_| PluginError::Message("Failed to parse state as JSON"))?;
         let result = self.inner_load(root);
 
-        // Ping GUI and tell him it has to resync
+        // Ping GUI and tell it to resync.
         if matches!(self.gui.param_sync(), ParamSync::Push) {
-            self.shared.states.gui_tasks().post(GuiEvent::ParamRescan);
+            self.shared.states.request_param_rescan();
         }
 
         // host must rescan param after load

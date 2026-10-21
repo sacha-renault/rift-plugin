@@ -75,7 +75,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Maximum number of tasks held per cross-thread queue before the oldest is
     /// dropped.
     ///
-    /// Defaults to 2048 entries for each queue.
+    /// Defaults to 2048 entries for the parameter-event and GUI-param-change
+    /// queues, and 32 for the context-menu queue.
     const TASKS_CAPACITY: TaskCapacity = TaskCapacity::small();
 
     /// Creates a new instance of the plugin.

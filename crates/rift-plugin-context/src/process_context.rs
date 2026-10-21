@@ -5,7 +5,7 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 use clack_plugin::process::Process;
 
-use rift_plugin_gui::GuiEvent;
+use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
 use rift_plugin_types::transport::{BlockIndex, BlockInfo};
@@ -85,8 +85,8 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
             // host, it would be an error to notify host too.
             if self.notify_gui && self.states.is_gui_opened() {
                 self.states
-                    .gui_tasks()
-                    .post(GuiEvent::ParamChanged { id, value });
+                    .gui_param_changes()
+                    .post(HostParamChange { id, value });
             }
         }
     }

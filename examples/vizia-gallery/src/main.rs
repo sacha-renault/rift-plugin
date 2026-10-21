@@ -1,12 +1,11 @@
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use baseview::dpi::LogicalSize;
 use baseview::{Event, EventStatus, Window, WindowContext, WindowHandler, WindowOpenOptions};
 
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{
-    ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiEvent,
+    ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, HostParamChange,
     HostSharedHandle, Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
@@ -59,7 +58,6 @@ struct StandaloneParams {
 /// Minimal [`GuiContext`] for a host with no audio engine.
 struct StandaloneContext {
     params: Arc<dyn ParamCollection>,
-    is_playing: Arc<AtomicBool>,
 }
 
 impl GuiContext for StandaloneContext {
@@ -79,15 +77,15 @@ impl GuiContext for StandaloneContext {
 
     fn global_context_menu(&self, _x: i32, _y: i32, _screen: i32) {}
 
-    fn is_playing(&self) -> Arc<AtomicBool> {
-        self.is_playing.clone()
+    fn is_playing(&self) -> bool {
+        false
     }
 
-    fn pop_in_gui(&self) -> Option<GuiEvent> {
+    fn pop_in_gui(&self) -> Option<HostParamChange> {
         None
     }
 
-    fn is_overflow(&self) -> bool {
+    fn take_refresh_request(&self) -> bool {
         false
     }
 
@@ -114,7 +112,6 @@ impl HostWindow {
         let params = Arc::new(StandaloneParams::new());
         let context = Arc::new(StandaloneContext {
             params: Arc::new(params_wrapper::ParamsWrapper::new(params.all_params())),
-            is_playing: Arc::new(AtomicBool::new(false)),
         });
 
         let ui_params = params.clone();

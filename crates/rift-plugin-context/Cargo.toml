@@ -9,6 +9,7 @@ rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-utils = { workspace = true }
 
+bitflags = { workspace = true }
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
 log = { workspace = true }

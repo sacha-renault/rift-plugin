@@ -40,7 +40,7 @@ impl<'a, P: ClapPlugin> WrapperMainThread<'a, P> {
 impl<'a, P: ClapPlugin> PluginMainThread<'a, WrapperShared<P>> for WrapperMainThread<'a, P> {
     fn on_main_thread(&mut self) {
         let states = self.states();
-        while let Some(task) = states.main_tasks().pop() {
+        while let Some(task) = states.context_menu_requests().pop() {
             self.open_param_menu(task);
         }
     }

@@ -1,7 +1,8 @@
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
-use rift_plugin_gui::{GuiContext, GuiParamEvent, GuiParamEventKind, HostSharedHandle};
+use rift_plugin_gui::{
+    GuiContext, GuiParamEvent, GuiParamEventKind, HostParamChange, HostSharedHandle,
+};
 
 use crate::ParamContextMenu;
 use crate::PluginSharedState;
@@ -21,7 +22,7 @@ impl GuiContext for GuiContextImpl {
             self.params.set_value(event.param_id, value);
         }
 
-        if self.states.audio_tasks().try_post(event).is_some() {
+        if self.states.param_events().try_post(event).is_some() {
             log::error!("Couldn't push new param event from gui");
             return;
         }
@@ -33,16 +34,18 @@ impl GuiContext for GuiContextImpl {
         self.params.clone()
     }
 
-    fn is_playing(&self) -> Arc<AtomicBool> {
-        self.states.is_playing.clone()
+    fn is_playing(&self) -> bool {
+        self.states.is_playing()
     }
 
-    fn pop_in_gui(&self) -> Option<rift_plugin_gui::GuiEvent> {
-        self.states.gui_tasks().pop()
+    fn pop_in_gui(&self) -> Option<HostParamChange> {
+        self.states.gui_param_changes().pop()
     }
 
-    fn is_overflow(&self) -> bool {
-        self.states.gui_tasks().take_overflow()
+    fn take_refresh_request(&self) -> bool {
+        let rescan = self.states.take_param_rescan();
+        let overflow = self.states.gui_param_changes().take_overflow();
+        rescan || overflow
     }
 
     fn global_context_menu(&self, x: i32, y: i32, screen: i32) {
@@ -66,7 +69,7 @@ impl GuiContextImpl {
             y,
             screen,
         };
-        if self.states.main_tasks().try_post(task).is_some() {
+        if self.states.context_menu_requests().try_post(task).is_some() {
             log::error!("Couldn't push new param event from gui");
             return;
         }

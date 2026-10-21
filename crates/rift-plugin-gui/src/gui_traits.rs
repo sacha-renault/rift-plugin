@@ -1,12 +1,11 @@
 use std::sync::Arc;
-use std::sync::atomic::AtomicBool;
 
 use clack_extensions::{gui::*, params::HostParams};
 use clack_plugin::{host::HostSharedHandle, plugin::PluginError, utils::ClapId};
 
 use rift_plugin_params::ParamCollection;
 
-use crate::{GuiEvent, ParamSync};
+use crate::{HostParamChange, ParamSync};
 
 use super::events::GuiParamEvent;
 
@@ -15,9 +14,13 @@ pub trait GuiContext: Send + Sync {
     fn params(&self) -> Arc<dyn ParamCollection>;
     fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
     fn global_context_menu(&self, x: i32, y: i32, screen: i32);
-    fn is_playing(&self) -> Arc<AtomicBool>;
-    fn pop_in_gui(&self) -> Option<GuiEvent>;
-    fn is_overflow(&self) -> bool;
+    fn is_playing(&self) -> bool;
+    /// Returns the next host-side parameter change, oldest first.
+    fn pop_in_gui(&self) -> Option<HostParamChange>;
+
+    /// Returns `true` once if the GUI must reload every parameter value,
+    /// because changes were dropped or the host loaded a new state.
+    fn take_refresh_request(&self) -> bool;
     fn handle(&self) -> Option<HostSharedHandle<'static>>;
 
     #[inline]

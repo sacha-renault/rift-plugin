@@ -1,7 +1,5 @@
 use std::sync::Arc;
 
-use rift_plugin_gui::GuiEvent;
-
 use crate::{bridge::ParamRegistry, dev_prelude::*};
 
 /// Connects the view tree to the host.
@@ -28,16 +26,11 @@ pub fn install_event_listener(cx: &mut Context, host: Arc<dyn GuiContext>) {
 pub fn pump(cx: &Context, host: &dyn GuiContext) {
     // audio thread => GUI
     let registry = ParamRegistry::from_context(cx);
-    while let Some(task) = host.pop_in_gui() {
-        match task {
-            GuiEvent::ParamChanged { id, value } => registry.apply_host_value(id, value),
-
-            // Todo, after rescan, should i exit directly ?
-            GuiEvent::ParamRescan => registry.refresh_param_values(),
-        }
+    while let Some(change) = host.pop_in_gui() {
+        registry.apply_host_value(change.id, change.value);
     }
 
-    if host.is_overflow() {
+    if host.take_refresh_request() {
         registry.refresh_param_values();
     }
 }

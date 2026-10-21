@@ -1,7 +1,7 @@
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::prelude::*;
 
-use rift_plugin_gui::{GuiEvent, GuiParamEvent, GuiParamEventKind};
+use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind, HostParamChange};
 use rift_plugin_params::ParamCollection;
 use rift_plugin_types::{EventPreProcess, EventSource};
 
@@ -11,7 +11,7 @@ use super::WrapperProcessor;
 
 impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
     pub(super) fn handle_audio_thread_tasks(&mut self, outputs: &mut OutputEvents) {
-        while let Some(event) = self.shared.states.audio_tasks().pop() {
+        while let Some(event) = self.shared.states.param_events().pop() {
             self.handle_gui_param_change(event, outputs);
         }
     }
@@ -45,10 +45,13 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                 }
 
                 if should_notify_gui {
-                    self.shared.states.gui_tasks().post(GuiEvent::ParamChanged {
-                        id,
-                        value: event.value() as f32,
-                    });
+                    self.shared
+                        .states
+                        .gui_param_changes()
+                        .post(HostParamChange {
+                            id,
+                            value: event.value() as f32,
+                        });
                 }
             } else if flags.contains(EventPreProcess::MIDI_NOTIFY_EVENT)
                 && let Some(event) = event.as_event::<MidiEvent>()
