@@ -10,7 +10,7 @@ use rift_plugin_context::{InitContext, ProcessContext};
 use rift_plugin_gui::GuiFactory;
 use rift_plugin_params::UserParams;
 use rift_plugin_types::{
-    AudioPort, EventPreProcess, EventSource, MainAudioPort, MidiMessage, MidiPort,
+    AudioPort, EventPreProcess, EventSource, MainAudioPort, MidiMessage, MidiPort, TaskCapacity,
 };
 
 pub mod factory;
@@ -75,8 +75,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// Define the maximum number of task the plugin can hold at the same time, before dropping
     /// events. See [`MainThreadTask`] and [`AudioThreadTask`].
     ///
-    /// Default to `2048`.
-    const TASKS_CAPACITY: usize = 2048;
+    /// Default to all same at `2048`.
+    const TASKS_CAPACITY: TaskCapacity = TaskCapacity::small();
 
     /// Creates a new instance of the plugin.
     ///

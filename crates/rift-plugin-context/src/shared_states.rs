@@ -4,6 +4,7 @@ use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use crossbeam_queue::ArrayQueue;
 use rift_plugin_gui::GuiEvent;
 use rift_plugin_params::AtomicF64;
+use rift_plugin_types::TaskCapacity;
 use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
 
 use crate::tasks::{AudioThreadTask, MainThreadTask};
@@ -28,15 +29,15 @@ pub struct PluginSharedState {
 }
 
 impl PluginSharedState {
-    pub fn new(task_capacity: usize) -> Self {
+    pub fn new(TaskCapacity { gui, audio, main }: TaskCapacity) -> Self {
         Self {
             latency: AtomicU32::new(0),
             is_playing: Arc::new(AtomicBool::new(false)),
             samplerate: Arc::new(AtomicF64::new(DEFAULT_SAMPLERATE)),
 
-            main_tasks: ArrayQueue::new(task_capacity),
-            audio_tasks: ArrayQueue::new(task_capacity),
-            gui_tasks: ArrayQueue::new(task_capacity),
+            main_tasks: ArrayQueue::new(main),
+            audio_tasks: ArrayQueue::new(audio),
+            gui_tasks: ArrayQueue::new(gui),
             overflows: AtomicQueueOverflows::default(),
             gui_opened: AtomicBool::new(false),
         }
@@ -261,7 +262,7 @@ mod tests {
     #[test]
     fn posting_to_a_full_queue_sets_its_overflow_flag() {
         // Capacity of one, so the second push into any queue must fail.
-        let state = PluginSharedState::new(1);
+        let state = PluginSharedState::new(TaskCapacity::same(1));
         let create_task = || {
             MainThreadTask::ParamContextMenu(crate::ParamContextMenu {
                 param_id: None,
