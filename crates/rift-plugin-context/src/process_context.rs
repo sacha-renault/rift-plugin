@@ -74,16 +74,15 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
         self.host.request_restart();
     }
 
-    pub fn set_parameter(&mut self, param_event: ParamValueEvent) {
+    /// Set a parameter from a host change
+    pub fn set_parameter_from_host_event(&mut self, param_event: ParamValueEvent) {
         if let Some(id) = param_event.param_id() {
             let value = param_event.value() as f32;
             self.host_params.set_value(id, value);
 
-            // Notify GUI & Host about the param change.
-            if let Err(err) = self.outputs_events.try_push(param_event) {
-                log::error!("Host failed to read event {err}");
-            }
-
+            // Notify GUI about the param change.
+            // this function is called from ParamValueEvent from the
+            // host, it would be an error to notify host too.
             if self.notify_gui && self.states.is_gui_opened() {
                 _ = self
                     .states
