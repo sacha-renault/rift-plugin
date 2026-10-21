@@ -4,7 +4,7 @@ use clack_extensions::params::{HostParams, ParamRescanFlags};
 use clack_extensions::state::PluginStateImpl;
 use clack_plugin::prelude::*;
 use clack_plugin::stream::{InputStream, OutputStream};
-use rift_plugin_gui::{GuiTask, ParamSync};
+use rift_plugin_gui::{GuiEvent, ParamSync};
 use serde_json::{Map, Value};
 
 use crate::ClapPlugin;
@@ -51,7 +51,7 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
 
         // Ping GUI and tell him it has to resync
         if matches!(self.gui.param_sync(), ParamSync::Push) {
-            if let Err(err) = self.shared.states.post_to_gui(GuiTask::ParamRescan) {
+            if let Err(err) = self.shared.states.post_to_gui(GuiEvent::ParamRescan) {
                 log::error!("{err:?}")
             }
         }

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use rift_plugin_gui::GuiTask;
+use rift_plugin_gui::GuiEvent;
 
 use crate::{bridge::ParamRegistry, dev_prelude::*};
 
@@ -30,10 +30,10 @@ pub fn pump(cx: &Context, host: &dyn GuiContext) {
     let registry = ParamRegistry::from_context(cx);
     while let Some(task) = host.pop_in_gui() {
         match task {
-            GuiTask::ParamChanged { id, value } => registry.apply_host_value(id, value),
+            GuiEvent::ParamChanged { id, value } => registry.apply_host_value(id, value),
 
             // Todo, after rescan, should i exit directly ?
-            GuiTask::ParamRescan => registry.refresh_param_values(),
+            GuiEvent::ParamRescan => registry.refresh_param_values(),
         }
     }
 

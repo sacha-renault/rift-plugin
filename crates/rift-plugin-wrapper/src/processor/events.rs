@@ -2,7 +2,7 @@ use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::prelude::*;
 
 use rift_plugin_context::AudioThreadTask;
-use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind, GuiTask};
+use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind, GuiEvent};
 use rift_plugin_params::ParamCollection;
 use rift_plugin_types::{EventPreProcess, EventSource};
 
@@ -50,7 +50,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                 }
 
                 if should_notify_gui {
-                    _ = self.shared.states.post_to_gui(GuiTask::ParamChanged {
+                    _ = self.shared.states.post_to_gui(GuiEvent::ParamChanged {
                         id,
                         value: event.value() as f32,
                     });

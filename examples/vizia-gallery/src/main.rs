@@ -6,7 +6,7 @@ use baseview::{Event, EventStatus, Window, WindowContext, WindowHandler, WindowO
 
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{
-    ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiTask,
+    ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, GuiEvent,
     HostSharedHandle, Window as ClapWindow,
 };
 use rift_plugin_vizia::prelude::*;
@@ -83,7 +83,7 @@ impl GuiContext for StandaloneContext {
         self.is_playing.clone()
     }
 
-    fn pop_in_gui(&self) -> Option<GuiTask> {
+    fn pop_in_gui(&self) -> Option<GuiEvent> {
         None
     }
 

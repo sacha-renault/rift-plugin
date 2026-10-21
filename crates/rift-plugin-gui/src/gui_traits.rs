@@ -6,7 +6,7 @@ use clack_plugin::{host::HostSharedHandle, plugin::PluginError, utils::ClapId};
 
 use rift_plugin_params::ParamCollection;
 
-use crate::{GuiTask, ParamSync};
+use crate::{GuiEvent, ParamSync};
 
 use super::events::GuiParamEvent;
 
@@ -16,7 +16,7 @@ pub trait GuiContext: Send + Sync {
     fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
     fn global_context_menu(&self, x: i32, y: i32, screen: i32);
     fn is_playing(&self) -> Arc<AtomicBool>;
-    fn pop_in_gui(&self) -> Option<GuiTask>;
+    fn pop_in_gui(&self) -> Option<GuiEvent>;
     fn is_overflow(&self) -> bool;
     fn handle(&self) -> Option<HostSharedHandle<'static>>;
 

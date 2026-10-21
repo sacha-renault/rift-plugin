@@ -103,7 +103,7 @@ impl AsRef<UnknownEvent> for RawParamEvent {
 }
 
 #[derive(Debug, Clone)]
-pub enum GuiTask {
+pub enum GuiEvent {
     /// Signal the param with ID has a new value
     ParamChanged { id: ClapId, value: f32 },
     /// Signal new parameters set was loaded. This signals

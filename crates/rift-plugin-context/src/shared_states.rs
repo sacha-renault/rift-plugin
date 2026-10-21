@@ -2,7 +2,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 use crossbeam_queue::ArrayQueue;
-use rift_plugin_gui::GuiTask;
+use rift_plugin_gui::GuiEvent;
 use rift_plugin_params::AtomicF64;
 use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
 
@@ -21,7 +21,7 @@ pub struct PluginSharedState {
     /// Queues that audio / main thread can read
     main_tasks: ArrayQueue<MainThreadTask>,
     audio_tasks: ArrayQueue<AudioThreadTask>,
-    gui_tasks: ArrayQueue<GuiTask>,
+    gui_tasks: ArrayQueue<GuiEvent>,
 
     overflows: AtomicQueueOverflows,
     gui_opened: AtomicBool,
@@ -90,7 +90,7 @@ impl PluginSharedState {
     // Todo, question for later. Since we post an overflow, do we really need
     // to handle the case of failure when it cannot post ?
     // I guess it depends on Tasks ... Follow up later...
-    pub fn post_to_gui(&self, task: GuiTask) -> Result<(), GuiTask> {
+    pub fn post_to_gui(&self, task: GuiEvent) -> Result<(), GuiEvent> {
         let result = self.gui_tasks.push(task);
         if result.is_err() {
             self.overflows.set_gui_overflow();
@@ -98,7 +98,7 @@ impl PluginSharedState {
         result
     }
 
-    pub fn pop_in_gui(&self) -> Option<GuiTask> {
+    pub fn pop_in_gui(&self) -> Option<GuiEvent> {
         self.gui_tasks.pop()
     }
 
@@ -284,14 +284,14 @@ mod tests {
         assert!(!state.overflows().take_gui_overflow());
 
         // Gui queue only.
-        let gui = GuiTask::ParamChanged {
+        let gui = GuiEvent::ParamChanged {
             id: ClapId::new(0),
             value: 1.0,
         };
         assert!(state.post_to_gui(gui).is_ok());
         assert!(
             state
-                .post_to_gui(GuiTask::ParamChanged {
+                .post_to_gui(GuiEvent::ParamChanged {
                     id: ClapId::new(0),
                     value: 1.0,
                 })
