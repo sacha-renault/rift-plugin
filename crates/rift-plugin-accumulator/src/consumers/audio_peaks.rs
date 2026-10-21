@@ -29,14 +29,14 @@ pub struct AudioPeak {
 
 impl Default for AudioPeak {
     fn default() -> Self {
-        Self::new()
+        Self::new(DEFAULT_SAMPLERATE)
     }
 }
 
 impl AudioPeak {
     /// Creates a meter with a 20 dB/s release, a 1 s hold and a clip
     /// threshold of 0 dBFS.
-    pub fn new() -> Self {
+    pub fn new(sample_rate: f64) -> Self {
         let mut meter = Self {
             level: 0.0,
             held: 0.0,
@@ -44,7 +44,7 @@ impl AudioPeak {
             release_db_per_sec: 20.0,
             hold_ms: 1000.0,
             clip_threshold: 1.0,
-            sample_rate: DEFAULT_SAMPLERATE,
+            sample_rate,
             release_coef: 1.0,
             hold_samples: 0,
             hold_left: 0,
@@ -113,6 +113,11 @@ impl AudioPeak {
         self.clipped = false;
     }
 
+    pub fn set_samplerate(&mut self, sample_rate: f64) {
+        self.sample_rate = sample_rate;
+        self.update_coefs();
+    }
+
     fn update_coefs(&mut self) {
         // Falling by `r` dB per second is multiplying by 10^(-r / 20) per second.
         let db_per_sample = self.release_db_per_sec as f64 / self.sample_rate;
@@ -155,8 +160,7 @@ impl AudioPeak {
 impl MonoConsumer for AudioPeak {
     fn consume(&mut self, block: &[f32], time: BlockTime) {
         if time.sample_rate > 0.0 && time.sample_rate != self.sample_rate {
-            self.sample_rate = time.sample_rate;
-            self.update_coefs();
+            self.set_samplerate(time.sample_rate);
         }
 
         if let Some(expected) = self.next_pos
@@ -203,7 +207,7 @@ mod tests {
 
     #[test]
     fn starts_silent() {
-        let m = AudioPeak::new();
+        let m = AudioPeak::default();
         assert_eq!(m.level(), 0.0);
         assert_eq!(m.held(), 0.0);
         assert_eq!(m.level_db(), f32::NEG_INFINITY);
@@ -212,7 +216,7 @@ mod tests {
 
     #[test]
     fn instant_attack() {
-        let mut m = AudioPeak::new();
+        let mut m = AudioPeak::default();
         m.consume(&[0.0, -0.5, 0.25], at(0));
         assert_eq!(m.held(), 0.5);
         assert!(m.level() >= 0.49);
@@ -220,7 +224,7 @@ mod tests {
 
     #[test]
     fn releases_at_db_per_sec() {
-        let mut m = AudioPeak::new().release_db_per_sec(20.0);
+        let mut m = AudioPeak::default().release_db_per_sec(20.0);
         let mut pos = 0;
 
         feed(&mut m, &mut pos, 1.0, 1);
@@ -232,8 +236,8 @@ mod tests {
 
     #[test]
     fn release_is_block_size_independent() {
-        let mut a = AudioPeak::new();
-        let mut b = AudioPeak::new();
+        let mut a = AudioPeak::default();
+        let mut b = AudioPeak::default();
         let (mut pa, mut pb) = (0, 0);
 
         feed(&mut a, &mut pa, 1.0, 1);
@@ -250,8 +254,8 @@ mod tests {
 
     #[test]
     fn release_is_sample_rate_independent() {
-        let mut a = AudioPeak::new();
-        let mut b = AudioPeak::new();
+        let mut a = AudioPeak::default();
+        let mut b = AudioPeak::default();
 
         let time = |sample_pos, sample_rate| BlockTime {
             sample_pos,
@@ -270,7 +274,7 @@ mod tests {
 
     #[test]
     fn held_stays_during_hold_then_falls() {
-        let mut m = AudioPeak::new().hold_ms(100.0).release_db_per_sec(20.0);
+        let mut m = AudioPeak::default().hold_ms(100.0).release_db_per_sec(20.0);
         let mut pos = 0;
 
         feed(&mut m, &mut pos, 0.8, 1);
@@ -285,7 +289,7 @@ mod tests {
 
     #[test]
     fn held_restarts_on_higher_peak() {
-        let mut m = AudioPeak::new().hold_ms(100.0);
+        let mut m = AudioPeak::default().hold_ms(100.0);
         let mut pos = 0;
 
         feed(&mut m, &mut pos, 0.5, 1);
@@ -298,7 +302,7 @@ mod tests {
 
     #[test]
     fn clip_is_sticky_until_reset() {
-        let mut m = AudioPeak::new();
+        let mut m = AudioPeak::default();
         let mut pos = 0;
 
         feed(&mut m, &mut pos, 0.99, 10);
@@ -314,15 +318,15 @@ mod tests {
 
     #[test]
     fn custom_clip_threshold() {
-        let mut m = AudioPeak::new().clip_threshold(0.5);
+        let mut m = AudioPeak::default().clip_threshold(0.5);
         m.consume(&[0.6], at(0));
         assert!(m.clipped());
     }
 
     #[test]
     fn dropped_samples_decay_like_silence() {
-        let mut gap = AudioPeak::new();
-        let mut silence = AudioPeak::new();
+        let mut gap = AudioPeak::default();
+        let mut silence = AudioPeak::default();
 
         gap.consume(&[1.0], at(0));
         gap.consume(&[0.0], at(48_001)); // 48000 samples dropped
@@ -336,7 +340,7 @@ mod tests {
 
     #[test]
     fn decays_to_exact_zero() {
-        let mut m = AudioPeak::new().hold_ms(0.0);
+        let mut m = AudioPeak::default().hold_ms(0.0);
         let mut pos = 0;
 
         feed(&mut m, &mut pos, 1.0, 1);
@@ -348,7 +352,7 @@ mod tests {
 
     #[test]
     fn reset_clears_everything() {
-        let mut m = AudioPeak::new();
+        let mut m = AudioPeak::default();
         m.consume(&[1.0], at(0));
         m.reset();
 
@@ -359,7 +363,7 @@ mod tests {
 
     #[test]
     fn works_without_timing() {
-        let mut m = AudioPeak::new();
+        let mut m = AudioPeak::default();
         m.consume(&[0.5], BlockTime::none());
         m.consume(&[0.0; 100], BlockTime::none());
         assert!(m.level() > 0.0 && m.level() < 0.5);

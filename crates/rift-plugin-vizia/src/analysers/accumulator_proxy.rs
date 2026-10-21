@@ -49,7 +49,7 @@ impl AccumulatorProxy {
 
         self.add_consumer_at_channel(
             PeakMeter {
-                peak: AudioPeak::new(),
+                peak: AudioPeak::default(),
                 level,
                 held: peak,
             },
