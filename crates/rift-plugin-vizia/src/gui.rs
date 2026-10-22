@@ -89,9 +89,6 @@ impl ClapGui for ViziaGui {
     }
 
     fn hide(&mut self) -> Result<(), PluginError> {
-        if let Some(handle) = self.handle.take() {
-            handle.close();
-        }
         Ok(())
     }
 
