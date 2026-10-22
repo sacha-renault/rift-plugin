@@ -4,7 +4,6 @@ use clack_plugin::prelude::*;
 use rift_plugin_buffers::Buffers;
 use rift_plugin_context::{InitContext, ProcessContext};
 use rift_plugin_types::TransportInfo;
-use rift_plugin_types::transport::BlockIndex;
 
 use crate::ClapPlugin;
 use crate::main_thread::WrapperMainThread;
@@ -56,7 +55,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             plugin,
             host,
             samplerate: audio_config.sample_rate,
-            block_index: BlockIndex(-1),
             transport_info: TransportInfo::new(audio_config.sample_rate),
             notify_gui,
         })
@@ -85,7 +83,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 .process(process)
                 .samplerate(self.samplerate)
                 .outputs_events(events.output)
-                .block_index(self.block_index.increment())
                 .host_params(self.shared.host_params.clone())
                 .notify_gui(self.notify_gui)
                 .transport_info(&self.transport_info)

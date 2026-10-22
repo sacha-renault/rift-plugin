@@ -12,21 +12,6 @@ pub struct ChannelsInfo {
     pub total_channels: usize,
 }
 
-#[derive(Clone, Copy, PartialEq)]
-pub struct BlockIndex(pub i64);
-
-impl BlockIndex {
-    pub fn increment(&mut self) -> Self {
-        if self.0 == i64::MAX {
-            self.0 = 0;
-            *self
-        } else {
-            self.0 += 1;
-            *self
-        }
-    }
-}
-
 impl ChannelsInfo {
     pub fn mono() -> Self {
         ChannelsInfo {

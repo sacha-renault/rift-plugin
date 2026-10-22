@@ -8,7 +8,7 @@ use clack_plugin::process::Process;
 use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
-use rift_plugin_types::transport::{BlockIndex, BlockInfo};
+use rift_plugin_types::transport::BlockInfo;
 
 use crate::PluginSharedState;
 use rift_plugin_types::{MidiMessage, TransportInfo};
@@ -19,7 +19,6 @@ pub struct ProcessContext<'a, 'e> {
     states: Arc<PluginSharedState>,
     process: Process<'a>,
     samplerate: f64,
-    block_index: BlockIndex,
     transport_info: &'a TransportInfo,
 
     outputs_events: &'e mut OutputEvents<'e>,
@@ -46,10 +45,6 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
 
     pub fn transport_info(&self) -> &TransportInfo {
         self.transport_info
-    }
-
-    pub fn block_index(&self) -> BlockIndex {
-        self.block_index
     }
 
     /// Add a midi message as output event
