@@ -725,6 +725,7 @@ dependencies = [
 name = "dev"
 version = "0.1.0"
 dependencies = [
+ "atomic-bitflags",
  "bitflags 2.13.2",
  "rift-plugin",
 ]
@@ -2162,6 +2163,7 @@ dependencies = [
  "clack-extensions",
  "clack-plugin",
  "crossbeam-queue",
+ "rift-plugin-utils",
  "serde",
 ]
 

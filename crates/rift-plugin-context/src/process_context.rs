@@ -1,14 +1,12 @@
 use std::sync::Arc;
 
-use bitflags::Flags;
-use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent, TransportFlags};
+use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 
 use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
-use rift_plugin_types::transport::BlockInfo;
 
 use crate::PluginSharedState;
 use rift_plugin_types::{MidiMessage, TransportInfo};
@@ -24,33 +22,7 @@ pub struct ProcessContext<'a, 'e> {
     notify_gui: bool,
 }
 
-fn union_if<F: Flags + Copy>(cond_flags: &[(F, bool)]) -> F {
-    cond_flags
-        .into_iter()
-        .filter_map(|(flag, cond)| cond.then_some(flag))
-        .fold(F::empty(), |acc, new| acc.union(*new))
-}
-
 impl<'a, 'e> ProcessContext<'a, 'e> {
-    /// Returns playback progress info (seconds/beats) if currently playing, otherwise None.
-    pub fn block_info(&self) -> BlockInfo {
-        #[rustfmt::skip]
-        let flags = union_if(&[
-            (TransportFlags::IS_PLAYING, self.transport_info.is_playing),
-            (TransportFlags::IS_RECORDING, self.transport_info.is_recording),
-            (TransportFlags::IS_WITHIN_PRE_ROLL, self.transport_info.is_preroll),
-            (TransportFlags::IS_LOOP_ACTIVE, self.transport_info.is_loop_active()),
-        ]);
-
-        BlockInfo {
-            seconds: self.transport_info.song_pos_seconds.to_float(),
-            beats: self.transport_info.song_pos_beats.to_float(),
-            samplerate: self.transport_info.sample_rate,
-            tempo: self.transport_info.tempo,
-            flags,
-        }
-    }
-
     pub fn transport_info(&self) -> &TransportInfo {
         self.transport_info
     }

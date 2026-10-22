@@ -1,5 +1,5 @@
 use rift_plugin_types::TripleBuffer;
-use rift_plugin_types::transport::{BlockInfo, BlockTime, Transport};
+use rift_plugin_types::transport::{BlockTime, TransportInfo};
 
 /// Timing of the first sample of the latest written buffer. Any other
 /// sample's timing is extrapolated from it, so loops/seeks inside a single UI
@@ -14,15 +14,9 @@ impl Anchor {
     /// Records that the sample at absolute position `pos` has timing `info`.
     ///
     /// Audio thread only.
-    pub fn store(&self, pos: u64, info: &BlockInfo) {
-        let time = BlockTime {
-            sample_pos: pos,
-            sample_rate: info.samplerate,
-            transport: Some(Transport::from(info)),
-        };
-
+    pub fn store(&self, pos: u64, info: &TransportInfo) {
         // SAFETY: only the audio thread writes.
-        unsafe { self.0.write(time) };
+        unsafe { self.0.write(BlockTime::new(pos, *info)) };
     }
 
     /// Timing of the sample at absolute position `pos`, which may be before
@@ -38,13 +32,16 @@ impl Anchor {
 
 #[cfg(test)]
 mod tests {
-    use rift_plugin_types::transport::TransportFlags;
+    use rift_plugin_utils::assert_approx_eq;
 
     use super::*;
 
-    fn playing_info(beats: f64, tempo: f64) -> BlockInfo {
-        let mut info = BlockInfo::new(beats * 60. / tempo, beats, 48000., tempo);
-        info.flags = TransportFlags::IS_PLAYING;
+    fn playing_info(beats: f64, tempo: f64) -> TransportInfo {
+        let mut info = TransportInfo::new(48_000.);
+        info.is_playing = true;
+        info.tempo = tempo;
+        info.song_pos_beats = beats.into();
+        info.song_pos_seconds = (beats * 60. / tempo).into();
         info
     }
 
@@ -54,7 +51,8 @@ mod tests {
         let t = anchor.time_at(0);
 
         assert_eq!(t.sample_pos, 0);
-        assert_eq!(t.transport, None);
+        assert_eq!(t.beats(), 0.);
+        assert!(!t.is_playing());
     }
 
     #[test]
@@ -64,8 +62,8 @@ mod tests {
 
         let t = anchor.time_at(1000);
         assert_eq!(t.sample_pos, 1000);
-        assert_eq!(t.sample_rate, 48000.);
-        assert_eq!(t.beats(), Some(2.));
+        assert_eq!(t.sample_rate(), 48_000.);
+        assert_eq!(t.beats(), 2.);
         assert!(t.is_playing());
     }
 
@@ -75,7 +73,7 @@ mod tests {
         let anchor = Anchor::new();
         anchor.store(48000, &playing_info(4., 120.));
 
-        assert_eq!(anchor.time_at(72000).beats(), Some(5.));
-        assert_eq!(anchor.time_at(24000).beats(), Some(3.));
+        assert_approx_eq!(anchor.time_at(72000).beats(), 5.);
+        assert_approx_eq!(anchor.time_at(24000).beats(), 3.);
     }
 }

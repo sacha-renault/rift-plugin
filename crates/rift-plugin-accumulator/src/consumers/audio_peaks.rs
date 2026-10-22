@@ -159,8 +159,8 @@ impl AudioPeak {
 
 impl MonoConsumer for AudioPeak {
     fn consume(&mut self, block: &[f32], time: BlockTime) {
-        if time.sample_rate > 0.0 && time.sample_rate != self.sample_rate {
-            self.set_samplerate(time.sample_rate);
+        if time.sample_rate() != self.sample_rate {
+            self.set_samplerate(time.sample_rate());
         }
 
         if let Some(expected) = self.next_pos
@@ -185,6 +185,7 @@ impl MonoConsumer for AudioPeak {
 
 #[cfg(test)]
 mod tests {
+    use rift_plugin_types::transport::TransportInfo;
     use rift_plugin_utils::assert_approx_eq;
 
     use super::*;
@@ -192,11 +193,7 @@ mod tests {
     const SR: f64 = 48_000.0;
 
     fn at(sample_pos: u64) -> BlockTime {
-        BlockTime {
-            sample_pos,
-            sample_rate: SR,
-            transport: None,
-        }
+        BlockTime::new(sample_pos, TransportInfo::new(SR))
     }
 
     /// Feeds `len` samples of `value` as one block, continuing from `pos`.
@@ -257,11 +254,8 @@ mod tests {
         let mut a = AudioPeak::default();
         let mut b = AudioPeak::default();
 
-        let time = |sample_pos, sample_rate| BlockTime {
-            sample_pos,
-            sample_rate,
-            transport: None,
-        };
+        let time =
+            |sample_pos, sample_rate| BlockTime::new(sample_pos, TransportInfo::new(sample_rate));
 
         a.consume(&[1.0], time(0, 48_000.));
         a.consume(&vec![0.0; 24_000], time(1, 48_000.));
@@ -362,10 +356,10 @@ mod tests {
     }
 
     #[test]
-    fn works_without_timing() {
+    fn decays_with_a_default_transport() {
         let mut m = AudioPeak::default();
-        m.consume(&[0.5], BlockTime::none());
-        m.consume(&[0.0; 100], BlockTime::none());
+        m.consume(&[0.5], at(0));
+        m.consume(&[0.0; 100], at(1));
         assert!(m.level() > 0.0 && m.level() < 0.5);
     }
 }

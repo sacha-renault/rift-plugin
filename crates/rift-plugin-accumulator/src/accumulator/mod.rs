@@ -38,7 +38,7 @@ impl AudioAccumulator {
         }
     }
 
-    pub fn audio_thread_writes(&self, buffer: &Buffer, info: BlockInfo) {
+    pub fn audio_thread_writes(&self, buffer: &Buffer, info: TransportInfo) {
         // TODO
         // Actually handle those case rather than doing nothing on
         // release builds.

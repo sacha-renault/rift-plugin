@@ -68,7 +68,7 @@ impl ClapPlugin for MinimalGain {
         });
 
         data.acc
-            .audio_thread_writes(&buffers.main(), context.block_info());
+            .audio_thread_writes(&buffers.main(), *context.transport_info());
 
         Ok(ProcessStatus::Continue)
     }
