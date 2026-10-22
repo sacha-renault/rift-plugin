@@ -271,6 +271,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomic-bitflags"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f6260cddd9d8ada2442ab118b7e3002f248f89513b695260b6a661c3728097e"
+dependencies = [
+ "bitflags 2.13.2",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2092,6 +2101,7 @@ dependencies = [
 name = "rift-plugin-context"
 version = "0.1.0"
 dependencies = [
+ "atomic-bitflags",
  "bitflags 2.13.2",
  "bon",
  "clack-extensions",

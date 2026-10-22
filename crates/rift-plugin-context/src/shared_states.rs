@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
+use atomic_bitflags::AtomicFlags;
 use bitflags::bitflags;
 use rift_plugin_gui::{GuiParamEvent, HostParamChange};
 use rift_plugin_params::AtomicF64;
 use rift_plugin_types::{TaskCapacity, TaskQueue};
-use rift_plugin_utils::{AtomicFlags, DEFAULT_SAMPLERATE};
+use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
 use crate::tasks::ParamContextMenu;
 
