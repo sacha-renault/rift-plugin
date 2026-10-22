@@ -15,9 +15,9 @@ const REL: Ordering = Ordering::Relaxed;
 bitflags! {
     #[derive(Debug, Clone, Copy)]
     pub struct SharedStateFlags: u32 {
-        const IS_GUI_OPENED = 1 << 1;
-        const IS_PLAYING = 1 << 2;
-        const PARAM_RESCAN = 1 << 3;
+        const IS_GUI_OPENED = 1 << 0;
+        const IS_PLAYING = 1 << 1;
+        const PARAM_RESCAN = 1 << 2;
     }
 }
 
