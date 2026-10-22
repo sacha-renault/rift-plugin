@@ -11,7 +11,6 @@ pub struct WrapperProcessor<'a, P: ClapPlugin> {
     shared: WrapperShared<P>,
     plugin: P,
     host: HostAudioProcessorHandle<'a>,
-    samplerate: f64,
     transport_info: TransportInfo,
 
     /// Whether the audio thread pushes param changes into the GUI queue.

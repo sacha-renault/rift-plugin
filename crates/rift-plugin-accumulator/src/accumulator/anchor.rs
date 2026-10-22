@@ -14,11 +14,11 @@ impl Anchor {
     /// Records that the sample at absolute position `pos` has timing `info`.
     ///
     /// Audio thread only.
-    pub fn store(&self, pos: u64, info: Option<&BlockInfo>) {
+    pub fn store(&self, pos: u64, info: &BlockInfo) {
         let time = BlockTime {
             sample_pos: pos,
-            sample_rate: info.map_or(0.0, |i| i.samplerate),
-            transport: info.map(Transport::from),
+            sample_rate: info.samplerate,
+            transport: Some(Transport::from(info)),
         };
 
         // SAFETY: only the audio thread writes.
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn exact_position() {
         let anchor = Anchor::new();
-        anchor.store(1000, Some(&playing_info(2., 120.)));
+        anchor.store(1000, &playing_info(2., 120.));
 
         let t = anchor.time_at(1000);
         assert_eq!(t.sample_pos, 1000);
@@ -73,19 +73,9 @@ mod tests {
     fn extrapolates_forward_and_backward() {
         // 120 bpm at 48k: 24000 samples per beat
         let anchor = Anchor::new();
-        anchor.store(48000, Some(&playing_info(4., 120.)));
+        anchor.store(48000, &playing_info(4., 120.));
 
         assert_eq!(anchor.time_at(72000).beats(), Some(5.));
         assert_eq!(anchor.time_at(24000).beats(), Some(3.));
-    }
-
-    #[test]
-    fn without_transport() {
-        let anchor = Anchor::new();
-        anchor.store(10, None);
-
-        let t = anchor.time_at(15);
-        assert_eq!(t.sample_pos, 15);
-        assert_eq!(t.transport, None);
     }
 }

@@ -1,8 +1,8 @@
 pub use clack_extensions::audio_ports::*;
 pub use clack_extensions::params::*;
 
-use rift_plugin_types::{AudioPort, MainAudioPort, PAIR_PORT_ID};
 use crate::ClapPlugin;
+use rift_plugin_types::{AudioPort, MainAudioPort, PAIR_PORT_ID};
 
 impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P> {
     /// Returns the total number of audio ports for the given direction.
@@ -66,7 +66,7 @@ impl<'a, P: ClapPlugin> PluginAudioPortsImpl for super::WrapperMainThread<'a, P>
         if let Some(port_info) = all_ports.nth(index as usize) {
             writer.set(&port_info.into_audio_port_info(index))
         } else {
-            panic!("Invalid port index {index} for is_input={is_input}");
+            log::error!("Invalid port index {index} for is_input={is_input}");
         }
     }
 }

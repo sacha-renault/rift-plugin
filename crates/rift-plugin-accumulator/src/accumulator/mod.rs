@@ -38,7 +38,7 @@ impl AudioAccumulator {
         }
     }
 
-    pub fn audio_thread_writes(&self, buffer: &Buffer, info: Option<BlockInfo>) {
+    pub fn audio_thread_writes(&self, buffer: &Buffer, info: BlockInfo) {
         // TODO
         // Actually handle those case rather than doing nothing on
         // release builds.
@@ -62,7 +62,7 @@ impl AudioAccumulator {
             ch.push_slice(write_idx, slice);
         }
 
-        self.anchor.store(start, info.as_ref());
+        self.anchor.store(start, &info);
         self.written
             .store(start + buffer.samples() as u64, Ordering::Release);
     }

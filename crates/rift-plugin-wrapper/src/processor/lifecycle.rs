@@ -54,7 +54,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             shared: shared.clone(),
             plugin,
             host,
-            samplerate: audio_config.sample_rate,
             transport_info: TransportInfo::new(audio_config.sample_rate),
             notify_gui,
         })
@@ -80,8 +79,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             let context = ProcessContext::builder()
                 .host(&self.host)
                 .states(self.shared.states.clone())
-                .process(process)
-                .samplerate(self.samplerate)
                 .outputs_events(events.output)
                 .host_params(self.shared.host_params.clone())
                 .notify_gui(self.notify_gui)
