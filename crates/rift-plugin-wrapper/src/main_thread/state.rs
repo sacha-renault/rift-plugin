@@ -59,6 +59,9 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
             ext.rescan(&mut self.host, ParamRescanFlags::VALUES);
         }
 
+        // host must reload the plugin
+        self.host.request_restart();
+
         result
     }
 }
