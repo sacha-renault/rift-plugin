@@ -272,9 +272,9 @@ dependencies = [
 
 [[package]]
 name = "atomic-bitflags"
-version = "0.1.1"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f6260cddd9d8ada2442ab118b7e3002f248f89513b695260b6a661c3728097e"
+checksum = "86a78bbe7aa597b08d64ded3b7bd33c0b4cff8062b308e97e8bce72084919b5b"
 dependencies = [
  "bitflags 2.13.2",
 ]
