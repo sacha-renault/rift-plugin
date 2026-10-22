@@ -24,7 +24,6 @@ impl GuiContext for GuiContextImpl {
 
         if self.states.param_events().try_post(event).is_some() {
             log::error!("Couldn't push new param event from gui");
-            return;
         }
 
         self.request_flush();
