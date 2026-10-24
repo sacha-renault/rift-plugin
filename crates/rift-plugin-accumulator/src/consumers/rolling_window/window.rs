@@ -67,7 +67,13 @@ impl<B: Bucket> RollingWindow<B> {
 
     /// Sets the number of columns the window is spread over (typically widget width in pixels
     /// divided by the wanted column width). Clamped to at least 1.
+    ///
+    /// Noop if n_cols is already equal to self.n_cols
     pub fn set_columns(&mut self, n_cols: usize) {
+        if n_cols == self.n_cols {
+            return;
+        }
+
         self.n_cols = n_cols.max(1);
         self.reconfigure();
     }
