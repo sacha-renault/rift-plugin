@@ -7,6 +7,16 @@ pub struct PeakBucket {
     count: usize,
 }
 
+impl PeakBucket {
+    pub fn min(&self) -> f32 {
+        self.min
+    }
+
+    pub fn max(&self) -> f32 {
+        self.max
+    }
+}
+
 impl Bucket for PeakBucket {
     #[allow(dead_code)]
     fn new(x: f32) -> Self {
@@ -53,6 +63,20 @@ impl Bucket for PeakBucket {
     #[inline]
     fn count(&self) -> usize {
         self.count
+    }
+
+    #[inline]
+    fn merge(&mut self, other: &Self) {
+        if other.count == 0 {
+            return;
+        }
+        if self.count == 0 {
+            *self = other.clone();
+        } else {
+            self.min = self.min.min(other.min);
+            self.max = self.max.max(other.max);
+            self.count += other.count;
+        }
     }
 }
 

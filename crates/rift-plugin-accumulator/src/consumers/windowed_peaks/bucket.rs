@@ -20,4 +20,9 @@ pub trait Bucket: Clone + 'static {
 
     /// Get the number of sample that were accumulated in this bucket.
     fn count(&self) -> usize;
+
+    /// Merge is needed if UI columns aren't consumed at constant speed.
+    /// For example, the UI view might advance most of the time by 1 columns,
+    /// but wraps sometimes and consume 2. Creating a jittery UI.
+    fn merge(&mut self, other: &Self);
 }

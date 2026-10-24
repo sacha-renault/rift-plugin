@@ -4,123 +4,151 @@ use rift_plugin_utils::DEFAULT_SAMPLERATE;
 pub use super::bucket::Bucket;
 use crate::prelude::MonoConsumer;
 
-/// A circular buffer that accumulates audio samples over a time window and exposes [`Bucket::value`].
+/// Rolling history for waveform display, one bucket per display column.
 ///
-/// This struct is designed for visualizing audio waveforms (e.g., in a VU meter or oscilloscope)
-/// where maintaining full sample precision isn't required, but tracking peaks over time is essential.
-/// It implements [`AudioConsumer`] to accept audio blocks from the accumulator chain.
+/// The bucket size (`fine`, in samples) is derived from three settings:
+/// sample rate, displayed window ([`Self::set_seconds`]) and column count
+/// ([`Self::set_columns`]). You never choose it yourself.
 ///
-/// Channel routing (averaging, single-channel capture) is handled upstream by
-/// [`ConsumerDispatcher`]; this struct only processes the mono block it receives.
+/// Bucket boundaries are fixed to the absolute sample index, and a closed bucket never changes,
+/// so columns are stable while they scroll (no shimmer). [`Self::columns`] also returns a phase
+/// (0..1) for sub-column scrolling at sample resolution.
+///
+/// **Changing `fine` clears the history.** That happens whenever a setter changes the derived
+/// value (typically a widget resize). Setters that leave `fine` unchanged keep the history.
+///
+/// Channel routing is handled upstream by `ConsumerDispatcher`.
 pub struct WindowBuckets<B: Bucket> {
-    /// The circular list of buckets storing peak data for each visual segment.
-    buckets: Vec<B>,
+    /// Closed buckets (ring).
+    ring: Vec<B>,
+    /// Number of closed buckets since the start (absolute index).
+    total: u64,
+    /// Partial bucket currently being filled.
+    current: B,
 
+    /// Samples per bucket, derived.
+    fine: usize,
     samplerate: f64,
-    sample_per_bucket: usize,
-    n_buckets: usize,
     seconds: f64,
-
-    /// The index in the buckets array where the next sample should be written.
-    write_idx: usize,
+    n_cols: usize,
 }
 
 impl<B: Bucket> WindowBuckets<B> {
     pub fn new(seconds: f64) -> Self {
-        let n_buckets = 1;
-        let buckets = vec![B::empty(); n_buckets];
-
-        let mut buffer = Self {
-            buckets,
-            n_buckets,
+        let mut s = Self {
+            ring: Vec::new(),
+            total: 0,
+            current: B::empty(),
+            fine: 0,
             samplerate: DEFAULT_SAMPLERATE,
-            sample_per_bucket: 0,
-            write_idx: 0,
-            seconds,
+            seconds: seconds.max(f64::EPSILON),
+            n_cols: 256,
         };
-        buffer.set_seconds(seconds);
-        buffer
+        s.reconfigure();
+        s
     }
 
-    /// Sets the duration of audio history the buffer represents.
-    ///
-    /// Adjusting seconds automatically recalculates `sample_per_bucket` based on the current `n_buckets`.
+    /// Sets the displayed window length.
     pub fn set_seconds(&mut self, seconds: f64) {
-        self.seconds = seconds;
-        self.recalculate_buckets();
+        self.seconds = seconds.max(f64::EPSILON);
+        self.reconfigure();
+    }
+
+    /// Sets the number of columns the window is spread over (typically widget width in pixels
+    /// divided by the wanted column width). Clamped to at least 1.
+    pub fn set_columns(&mut self, n_cols: usize) {
+        self.n_cols = n_cols.max(1);
+        self.reconfigure();
     }
 
     pub fn set_sample_rate(&mut self, sample_rate: f64) {
         self.samplerate = sample_rate;
-        self.recalculate_buckets();
+        self.reconfigure();
     }
 
-    /// Updates the number of buckets (visual segments) then recalculate the number of sample required
-    /// per bucket and resize `buckets`.
-    ///
-    /// **Notes**:
-    /// - This function will allocate.
-    /// - if `num_buckets` is 0, it will be clamped to the minimal value: 1.
-    pub fn set_num_buckets(&mut self, mut num_buckets: usize) {
-        num_buckets = num_buckets.max(1);
-        if num_buckets != self.n_buckets {
-            self.n_buckets = num_buckets;
-            self.recalculate_buckets();
-            self.buckets = vec![B::empty(); self.n_buckets];
-            self.write_idx = 0;
+    /// Samples per bucket (derived).
+    pub fn fine(&self) -> usize {
+        self.fine
+    }
+
+    /// Recomputes `fine` and the ring size. Reallocates and clears the history only if
+    /// one of them changed.
+    fn reconfigure(&mut self) {
+        let window_samples = self.samplerate * self.seconds;
+        let fine = (window_samples / self.n_cols as f64).floor().max(1.0) as usize;
+        let visible = window_samples / fine as f64;
+        // visible + 2 extra output columns + 1 slack
+        let cap = visible.ceil() as usize + 3;
+
+        if fine != self.fine || cap != self.ring.len() {
+            self.fine = fine;
+            self.ring = vec![B::empty(); cap];
+            self.total = 0;
+            self.current = B::empty();
         }
     }
 
-    /// Returns an iterator over the values of all buckets.
+    /// Exact (fractional) number of columns spanning the window. Slightly above `n_cols`
+    /// because `fine` is rounded down.
     ///
-    /// The iterator starts from the `write_idx` and wraps around to show the full history.
-    pub fn iter_values(&self) -> impl Iterator<Item = f32> {
-        let start = (self.write_idx + 1).rem_euclid(self.n_buckets);
-        (start..self.n_buckets)
-            .chain(0..start)
-            .map(|idx| self.buckets[idx].value())
+    /// Use it to size columns so the window fills the widget exactly: `col_w = width / visible_columns()`.
+    pub fn visible_columns(&self) -> f32 {
+        (self.samplerate * self.seconds / self.fine as f64) as f32
     }
 
-    /// Get value at `idx`.
+    /// Number of columns written by [`Self::columns`].
+    pub fn out_len(&self) -> usize {
+        self.ring.len() - 1
+    }
+
+    /// Fills `out` with [`Self::out_len`] columns, oldest first. The last one is the partial
+    /// newest bucket.
     ///
-    /// 0 means oldest while len() - 1 is most recent
-    pub fn get_value(&self, idx: usize) -> Option<f32> {
-        if idx >= self.n_buckets {
-            None
-        } else {
-            Some(self.buckets[(self.write_idx + 1 + idx).rem_euclid(self.n_buckets)].value())
+    /// Returns the scroll phase in 0..1: how far the newest column is filled.
+    /// Draw column `i` counted from the newest (0, 1, 2, ...) with its left edge at
+    /// `width - phase * col_w - i * col_w`, clipped to the widget.
+    pub fn columns(&self, out: &mut Vec<B>) -> f32 {
+        let cap = self.ring.len() as u64;
+        out.clear();
+        for c in (0..self.out_len() as u64).rev() {
+            if c == 0 {
+                out.push(self.current.clone());
+            } else if c <= self.total {
+                out.push(self.ring[((self.total - c) % cap) as usize].clone());
+            } else {
+                out.push(B::empty()); // before the beginning of the stream
+            }
         }
-    }
-
-    /// Returns the total number of [`Bucket`]s currently stored.
-    pub fn num_points(&self) -> usize {
-        self.n_buckets
-    }
-
-    fn recalculate_buckets(&mut self) {
-        let sample_count = self.samplerate * self.seconds;
-        self.sample_per_bucket = (sample_count / self.n_buckets as f64).ceil() as usize;
+        self.current.count() as f32 / self.fine as f32
     }
 
     #[inline]
-    fn push_point(&mut self, y: f32) {
-        let bucket = &mut self.buckets[self.write_idx];
-        bucket.add_sample(y);
-        if bucket.count() >= self.sample_per_bucket {
-            self.write_idx = (self.write_idx + 1) % self.n_buckets;
-            self.buckets[self.write_idx] = B::empty();
-        }
+    fn close_current(&mut self) {
+        let cap = self.ring.len() as u64;
+        let closed = std::mem::replace(&mut self.current, B::empty());
+        self.ring[(self.total % cap) as usize] = closed;
+        self.total += 1;
     }
 }
 
 impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
-    fn consume(&mut self, block: &[f32], info: BlockTime) {
+    fn consume(&mut self, mut block: &[f32], info: BlockTime) {
         if info.sample_rate() != self.samplerate {
             self.set_sample_rate(info.sample_rate());
         }
 
-        for &value in block.iter() {
-            self.push_point(value);
+        while !block.is_empty() {
+            let take = self
+                .fine
+                .saturating_sub(self.current.count())
+                .min(block.len());
+            for &s in &block[..take] {
+                self.current.add_sample(s);
+            }
+            block = &block[take..];
+            if self.current.count() >= self.fine {
+                self.close_current();
+            }
         }
     }
 }
@@ -129,64 +157,211 @@ impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
 mod tests {
     use rift_plugin_types::transport::BlockTime;
 
-    use crate::consumers::windowed_peaks::peaks::PeakBucket;
+    use crate::consumers::Bucket;
+    use crate::consumers::PeakBucket;
 
     use super::*;
 
-    fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuckets<PeakBucket> {
-        let mut buf = WindowBuckets::new(seconds);
-        buf.set_num_buckets(n_buckets);
+    type Wb = WindowBuckets<PeakBucket>;
+
+    /// Sample rate used by `feed_block`, so `consume` never triggers a reconfigure.
+    fn sr() -> f64 {
+        BlockTime::none().sample_rate()
+    }
+
+    fn make_buffer(seconds: f64, n_cols: usize) -> Wb {
+        let mut buf = Wb::new(seconds);
+        buf.set_sample_rate(sr());
+        buf.set_columns(n_cols);
         buf
     }
 
-    fn feed_block(buffer: &mut WindowBuckets<PeakBucket>, block: &[f32]) {
+    fn feed_block(buffer: &mut Wb, block: &[f32]) {
         buffer.consume(block, BlockTime::none());
     }
 
-    #[test]
-    fn test_initial_peaks_are_zero() {
-        let b = make_buffer(64, 1.0);
-        assert!(b.iter_values().all(|p| p == 0.0));
+    fn columns(b: &Wb) -> (Vec<PeakBucket>, f32) {
+        let mut out = Vec::new();
+        let phase = b.columns(&mut out);
+        (out, phase)
+    }
+
+    fn maxes(cols: &[PeakBucket]) -> Vec<f32> {
+        cols.iter().map(|c| c.max()).collect()
+    }
+
+    /// Deterministic, non-repeating-looking signal indexed by absolute sample position.
+    fn signal(range: std::ops::Range<usize>) -> Vec<f32> {
+        range
+            .map(|j| ((j * 37) % 101) as f32 / 100.0 - 0.5)
+            .collect()
     }
 
     #[test]
-    fn test_num_points_matches_n_buckets() {
-        for &n in &[16_usize, 64, 256] {
-            assert_eq!(make_buffer(n, 1.0).num_points(), n);
-        }
+    fn test_initial_columns_are_empty() {
+        let b = make_buffer(1.0, 64);
+        let (cols, phase) = columns(&b);
+        assert_eq!(cols.len(), b.out_len());
+        assert!(cols.iter().all(|c| c.count() == 0 && c.value() == 0.0));
+        assert_eq!(phase, 0.0);
+    }
+
+    #[test]
+    fn test_fine_is_derived_from_window_and_columns() {
+        let b = make_buffer(1.0, 100);
+        assert_eq!(b.fine(), (sr() / 100.0).floor() as usize);
+
+        let n = 100.0_f32;
+        let vis = b.visible_columns();
+        assert!(vis >= n && vis < n + 1.0, "visible = {vis}");
+    }
+
+    #[test]
+    fn test_fine_never_zero() {
+        let b = make_buffer(0.001, 1_000_000);
+        assert_eq!(b.fine(), 1);
+        assert!(b.out_len() >= 1);
     }
 
     #[test]
     fn test_produces_nonzero_peaks() {
-        let mut b = make_buffer(64, 1.0);
-        let block = vec![1.0_f32; 512];
-        feed_block(&mut b, &block);
-        assert!(b.iter_values().any(|p| p > 0.0));
-    }
-
-    #[test]
-    fn test_iter_peaks_length_is_always_n_buckets() {
-        let b = make_buffer(32, 1.0);
-        assert_eq!(b.iter_values().count(), 32);
+        let mut b = make_buffer(1.0, 64);
+        let fine = b.fine();
+        feed_block(&mut b, &vec![1.0; fine * 8 + 10]); // 8 closed buckets + 10 partial samples
+        let (cols, _) = columns(&b);
+        assert!(cols.iter().any(|c| c.max() > 0.0));
+        assert_eq!(cols.last().unwrap().max(), 1.0); // newest column includes the partial bucket
     }
 
     #[test]
     fn test_peaks_update_after_new_data() {
-        let mut b = make_buffer(64, 1.0);
+        let mut b = make_buffer(1.0, 64);
 
-        feed_block(&mut b, &vec![1.0_f32; 2048]);
-        let first: Vec<f32> = b.iter_values().collect();
+        feed_block(&mut b, &vec![1.0; 2048]);
+        let first = maxes(&columns(&b).0);
 
-        feed_block(&mut b, &vec![0.0_f32; 44100]);
-        let second: Vec<f32> = b.iter_values().collect();
+        // two seconds of silence push the ones far out of the window
+        feed_block(&mut b, &vec![0.0; 2 * sr() as usize]);
+        let second = maxes(&columns(&b).0);
 
         assert_ne!(first, second, "peaks should change after new data");
+        assert!(second.iter().all(|&m| m == 0.0));
     }
 
     #[test]
-    fn test_set_num_buckets_updates_num_points() {
-        let mut b = make_buffer(64, 1.0);
-        b.set_num_buckets(128);
-        assert_eq!(b.num_points(), 128);
+    fn test_phase_tracks_partial_bucket() {
+        let mut b = make_buffer(1.0, 64);
+        let fine = b.fine();
+        let half = fine / 2;
+
+        feed_block(&mut b, &vec![0.1; fine * 5 + half]);
+        let expected = half as f32 / fine as f32;
+        assert!((columns(&b).1 - expected).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_phase_is_continuous_across_block_sizes() {
+        // result must depend only on the samples, not on how they were chunked
+        let data = signal(0..5000);
+
+        let mut a = make_buffer(1.0, 32);
+        feed_block(&mut a, &data);
+
+        let mut b = make_buffer(1.0, 32);
+        for chunk in data.chunks(37) {
+            feed_block(&mut b, chunk);
+        }
+
+        let (ca, pa) = columns(&a);
+        let (cb, pb) = columns(&b);
+        assert_eq!(pa, pb);
+        assert_eq!(maxes(&ca), maxes(&cb));
+    }
+
+    #[test]
+    fn test_columns_are_stable_while_scrolling() {
+        let mut b = make_buffer(1.0, 50);
+        let fine = b.fine();
+
+        let start = fine * 80 + 17;
+        feed_block(&mut b, &signal(0..start));
+        let before = columns(&b).0;
+
+        // advance by exactly one bucket
+        feed_block(&mut b, &signal(start..start + fine));
+        let after = columns(&b).0;
+
+        // every finished column just moved one slot to the left, content unchanged
+        // (the newest one was partial, so it is excluded)
+        let n = before.len();
+        for i in 1..n - 1 {
+            assert_eq!(
+                (after[i - 1].min(), after[i - 1].max()),
+                (before[i].min(), before[i].max()),
+                "column {i} changed while scrolling"
+            );
+        }
+    }
+
+    #[test]
+    fn test_columns_before_stream_start_are_empty() {
+        let mut b = make_buffer(1.0, 64);
+        let fine = b.fine();
+        feed_block(&mut b, &vec![1.0; fine * 3]);
+
+        let (cols, _) = columns(&b);
+        let n = cols.len();
+        // oldest columns predate the stream
+        assert!(cols[..n - 4].iter().all(|c| c.count() == 0));
+        // newest partial is empty (exact boundary), the 3 before it are full
+        assert_eq!(cols[n - 1].count(), 0);
+        assert!(cols[n - 4..n - 1].iter().all(|c| c.max() == 1.0));
+    }
+
+    #[test]
+    fn test_old_data_falls_out_of_ring() {
+        let mut b = make_buffer(0.1, 100);
+        feed_block(&mut b, &vec![1.0; 100]);
+        feed_block(&mut b, &vec![0.0; (sr() * 0.5) as usize]);
+
+        let (cols, _) = columns(&b);
+        assert!(cols.iter().all(|c| c.max() == 0.0));
+    }
+
+    #[test]
+    fn test_set_columns_changing_fine_clears_history() {
+        let mut b = make_buffer(1.0, 64);
+        feed_block(&mut b, &vec![1.0; 5000]);
+
+        b.set_columns(128);
+        assert_eq!(b.fine(), (sr() / 128.0).floor() as usize);
+        let (cols, phase) = columns(&b);
+        assert!(cols.iter().all(|c| c.count() == 0));
+        assert_eq!(phase, 0.0);
+    }
+
+    #[test]
+    fn test_unchanged_settings_keep_history() {
+        let mut b = make_buffer(1.0, 64);
+        feed_block(&mut b, &vec![1.0; 5000]);
+
+        b.set_columns(64);
+        b.set_seconds(1.0);
+        b.set_sample_rate(sr());
+        assert!(
+            columns(&b).0.iter().any(|c| c.max() == 1.0),
+            "history was lost"
+        );
+    }
+
+    #[test]
+    fn test_set_seconds_rescales_window() {
+        let mut b = make_buffer(1.0, 100);
+        let fine_1s = b.fine();
+
+        b.set_seconds(2.0);
+        assert!(b.fine() > fine_1s);
+        let vis = b.visible_columns();
+        assert!(vis >= 100.0 && vis < 101.0, "visible = {vis}");
     }
 }
