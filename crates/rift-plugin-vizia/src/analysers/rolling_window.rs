@@ -24,6 +24,10 @@ impl<B: Bucket> RollingWindowUI<B> {
 }
 
 impl<B: Bucket> View for RollingWindowUI<B> {
+    fn element(&self) -> Option<&'static str> {
+        Some("wave")
+    }
+
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
         let Ok(mut consumer) = self.inner.try_borrow_mut() else {
             debug_assert!(false, "Cannot borrow consumer");
