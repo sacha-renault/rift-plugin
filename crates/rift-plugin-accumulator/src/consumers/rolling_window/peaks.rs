@@ -61,6 +61,16 @@ impl Bucket for PeakBucket {
     }
 
     #[inline]
+    fn min(&self) -> f32 {
+        self.min
+    }
+
+    #[inline]
+    fn max(&self) -> f32 {
+        self.max
+    }
+
+    #[inline]
     fn count(&self) -> usize {
         self.count
     }

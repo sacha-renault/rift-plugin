@@ -116,24 +116,22 @@ impl<B: Bucket> RollingWindow<B> {
         self.ring.len() - 1
     }
 
-    /// Fills `out` with [`Self::out_len`] columns, oldest first. The last one is the partial
-    /// newest bucket.
-    ///
-    /// Returns the scroll phase in 0..1: how far the newest column is filled.
-    /// Draw column `i` counted from the newest (0, 1, 2, ...) with its left edge at
-    /// `width - phase * col_w - i * col_w`, clipped to the widget.
-    pub fn columns(&self, out: &mut Vec<B>) -> f32 {
+    /// Buckets from newest (the partial one) to oldest. Yields at most `out_len()` items,
+    /// fewer right after start or a reconfigure (nothing to draw further left).
+    /// Use `.rev()` for oldest first.
+    pub fn iter(&self) -> impl ExactSizeIterator<Item = &B> + DoubleEndedIterator + '_ {
         let cap = self.ring.len() as u64;
-        out.clear();
-        for c in (0..self.out_len() as u64).rev() {
+        let n = (self.out_len() as u64).min(self.total + 1) as usize;
+        (0..n).map(move |c| {
             if c == 0 {
-                out.push(self.current.clone());
-            } else if c <= self.total {
-                out.push(self.ring[((self.total - c) % cap) as usize].clone());
+                &self.current
             } else {
-                out.push(B::empty()); // before the beginning of the stream
+                &self.ring[((self.total - c as u64) % cap) as usize]
             }
-        }
+        })
+    }
+
+    pub fn phase(&self) -> f32 {
         self.current.count() as f32 / self.fine as f32
     }
 
@@ -195,9 +193,9 @@ mod tests {
         buffer.consume(block, BlockTime::none());
     }
 
-    fn columns(b: &Wb) -> (Vec<PeakBucket>, f32) {
-        let mut out = Vec::new();
-        let phase = b.columns(&mut out);
+    fn get_values(b: &Wb) -> (Vec<PeakBucket>, f32) {
+        let out = b.iter().cloned().rev().collect();
+        let phase = b.phase();
         (out, phase)
     }
 
@@ -215,8 +213,8 @@ mod tests {
     #[test]
     fn test_initial_columns_are_empty() {
         let b = make_buffer(1.0, 64);
-        let (cols, phase) = columns(&b);
-        assert_eq!(cols.len(), b.out_len());
+        let (cols, phase) = get_values(&b);
+        assert_eq!(cols.len(), 1); // only the partial bucket exists yet
         assert!(cols.iter().all(|c| c.count() == 0 && c.value() == 0.0));
         assert_eq!(phase, 0.0);
     }
@@ -243,7 +241,7 @@ mod tests {
         let mut b = make_buffer(1.0, 64);
         let fine = b.fine();
         feed_block(&mut b, &vec![1.0; fine * 8 + 10]); // 8 closed buckets + 10 partial samples
-        let (cols, _) = columns(&b);
+        let (cols, _) = get_values(&b);
         assert!(cols.iter().any(|c| c.max() > 0.0));
         assert_eq!(cols.last().unwrap().max(), 1.0); // newest column includes the partial bucket
     }
@@ -253,11 +251,11 @@ mod tests {
         let mut b = make_buffer(1.0, 64);
 
         feed_block(&mut b, &vec![1.0; 2048]);
-        let first = maxes(&columns(&b).0);
+        let first = maxes(&get_values(&b).0);
 
         // two seconds of silence push the ones far out of the window
         feed_block(&mut b, &vec![0.0; 2 * sr() as usize]);
-        let second = maxes(&columns(&b).0);
+        let second = maxes(&get_values(&b).0);
 
         assert_ne!(first, second, "peaks should change after new data");
         assert!(second.iter().all(|&m| m == 0.0));
@@ -271,7 +269,7 @@ mod tests {
 
         feed_block(&mut b, &vec![0.1; fine * 5 + half]);
         let expected = half as f32 / fine as f32;
-        assert!((columns(&b).1 - expected).abs() < 1e-6);
+        assert!((get_values(&b).1 - expected).abs() < 1e-6);
     }
 
     #[test]
@@ -287,8 +285,8 @@ mod tests {
             feed_block(&mut b, chunk);
         }
 
-        let (ca, pa) = columns(&a);
-        let (cb, pb) = columns(&b);
+        let (ca, pa) = get_values(&a);
+        let (cb, pb) = get_values(&b);
         assert_eq!(pa, pb);
         assert_eq!(maxes(&ca), maxes(&cb));
     }
@@ -300,11 +298,11 @@ mod tests {
 
         let start = fine * 80 + 17;
         feed_block(&mut b, &signal(0..start));
-        let before = columns(&b).0;
+        let before = get_values(&b).0;
 
         // advance by exactly one bucket
         feed_block(&mut b, &signal(start..start + fine));
-        let after = columns(&b).0;
+        let after = get_values(&b).0;
 
         // every finished column just moved one slot to the left, content unchanged
         // (the newest one was partial, so it is excluded)
@@ -324,7 +322,7 @@ mod tests {
         let fine = b.fine();
         feed_block(&mut b, &vec![1.0; fine * 3]);
 
-        let (cols, _) = columns(&b);
+        let (cols, _) = get_values(&b);
         let n = cols.len();
         // oldest columns predate the stream
         assert!(cols[..n - 4].iter().all(|c| c.count() == 0));
@@ -339,7 +337,7 @@ mod tests {
         feed_block(&mut b, &vec![1.0; 100]);
         feed_block(&mut b, &vec![0.0; (sr() * 0.5) as usize]);
 
-        let (cols, _) = columns(&b);
+        let (cols, _) = get_values(&b);
         assert!(cols.iter().all(|c| c.max() == 0.0));
     }
 
@@ -350,7 +348,7 @@ mod tests {
 
         b.set_columns(128);
         assert_eq!(b.fine(), (sr() / 128.0).floor() as usize);
-        let (cols, phase) = columns(&b);
+        let (cols, phase) = get_values(&b);
         assert!(cols.iter().all(|c| c.count() == 0));
         assert_eq!(phase, 0.0);
     }
@@ -364,7 +362,7 @@ mod tests {
         b.set_seconds(1.0);
         b.set_sample_rate(sr());
         assert!(
-            columns(&b).0.iter().any(|c| c.max() == 1.0),
+            get_values(&b).0.iter().any(|c| c.max() == 1.0),
             "history was lost"
         );
     }

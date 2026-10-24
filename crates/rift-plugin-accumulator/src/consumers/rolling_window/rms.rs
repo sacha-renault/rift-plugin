@@ -45,6 +45,16 @@ impl Bucket for RmsBucket {
     }
 
     #[inline]
+    fn min(&self) -> f32 {
+        -self.rms()
+    }
+
+    #[inline]
+    fn max(&self) -> f32 {
+        self.rms()
+    }
+
+    #[inline]
     fn count(&self) -> usize {
         self.count
     }

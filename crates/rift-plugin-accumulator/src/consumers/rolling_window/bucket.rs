@@ -1,5 +1,5 @@
-/// A trait that allows [`super::window::WindowBuckets`] to works
-/// with any kind of bucket that implement [`Bucket`].
+/// A trait that allows [`super::window::RollingWindow`] to work
+/// with any kind of bucket that implements [`Bucket`].
 ///
 /// See the implementation of [`super::peaks::PeakBucket`] as example.
 pub trait Bucket: Clone + 'static {
@@ -17,6 +17,12 @@ pub trait Bucket: Clone + 'static {
 
     /// Get the current value of the bucket.
     fn value(&self) -> f32;
+
+    /// Lowest sample accumulated in this bucket.
+    fn min(&self) -> f32;
+
+    /// Highest sample accumulated in this bucket.
+    fn max(&self) -> f32;
 
     /// Get the number of sample that were accumulated in this bucket.
     fn count(&self) -> usize;
