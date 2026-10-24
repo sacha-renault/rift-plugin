@@ -1,16 +1,37 @@
 use crate::dev_prelude::*;
 use vizia::vg::{RRect, Rect};
 
-const SEGMENT: f32 = 3.0;
-const GAP: f32 = 1.5;
-const WARN_FROM: f32 = 0.7;
-const HOT_FROM: f32 = 0.92;
+struct DrawConfig {
+    segment: f32,
+    gap: f32,
+    warn_from: f32,
+    hot_from: f32,
+}
+
+impl DrawConfig {
+    const SEGMENT: f32 = 3.0;
+    const GAP: f32 = 1.5;
+    const WARN_FROM: f32 = 0.7;
+    const HOT_FROM: f32 = 0.92;
+}
+
+impl Default for DrawConfig {
+    fn default() -> Self {
+        Self {
+            segment: Self::SEGMENT,
+            gap: Self::GAP,
+            warn_from: Self::WARN_FROM,
+            hot_from: Self::HOT_FROM,
+        }
+    }
+}
 
 /// A segmented level meter
 pub struct MeterUI {
     level: Signal<f32>,
     peak: Signal<f32>,
     vertical: Signal<bool>,
+    config: DrawConfig,
 }
 
 impl MeterUI {
@@ -24,6 +45,7 @@ impl MeterUI {
         Self {
             level,
             peak,
+            config: DrawConfig::default(),
             vertical: Signal::new(true),
         }
         .build(cx, |_| {})
@@ -54,11 +76,13 @@ impl View for MeterUI {
         } else {
             (bounds.w, bounds.h)
         };
-        let pitch = (SEGMENT + GAP) * scale;
-        let count = ((length + GAP * scale) / pitch).floor().max(1.0) as usize;
+        let pitch = (self.config.segment + self.config.gap) * scale;
+        let count = ((length + self.config.gap * scale) / pitch)
+            .floor()
+            .max(1.0) as usize;
         // Spread the leftover space so both ends are flush with the bounds.
-        let pitch = (length + GAP * scale) / count as f32;
-        let segment = pitch - GAP * scale;
+        let pitch = (length + self.config.gap * scale) / count as f32;
+        let segment = pitch - self.config.gap * scale;
 
         let level = self.level.get_untracked().clamp(0.0, 1.0);
         let peak = self.peak.get_untracked().clamp(0.0, 1.0);
@@ -72,9 +96,9 @@ impl View for MeterUI {
 
         for index in 0..count {
             let t = (index as f32 + 0.5) / count as f32;
-            let lit_color = if t < WARN_FROM {
+            let lit_color = if t < self.config.warn_from {
                 slots.accent
-            } else if t < HOT_FROM {
+            } else if t < self.config.hot_from {
                 warn
             } else {
                 slots.accent_end
@@ -111,10 +135,47 @@ impl View for MeterUI {
 }
 
 #[modifiers(for Handle<'_, MeterUI>)]
-pub trait MeterModifers {
-    #[concrete]
+pub trait MeterUIModifers {
     /// Change direction to horizontal
+    #[concrete]
     fn horizontal(self) -> Self {
         self.modify(|meter| meter.vertical.set(false))
+    }
+
+    /// Change the gap size
+    #[concrete]
+    fn gap(self, gap: f32) -> Self {
+        let mut ui = self.modify(|meter| meter.config.gap = gap);
+        ui.needs_redraw();
+        ui
+    }
+
+    /// Change the segment size
+    #[concrete]
+    fn segment(self, segment: f32) -> Self {
+        let mut ui = self.modify(|meter| meter.config.segment = segment);
+        ui.needs_redraw();
+        ui
+    }
+
+    /// Change the segment size
+    #[concrete]
+    fn hot_from(self, hot_from: f32) -> Self {
+        // We don't ensure here that hot_from > warnfrom. Otherwise, if user
+        // chain hot_from(<value>).warn_from(<other_value>) with a <value>
+        // smaller than the previous_warn from, it would clamp it even if the
+        // pair (<value>, <other_value>) is valid ...
+        let mut ui = self.modify(|meter| meter.config.hot_from = hot_from);
+        ui.needs_redraw();
+        ui
+    }
+
+    /// Change the segment size
+    #[concrete]
+    fn warn_from(self, warn_from: f32) -> Self {
+        // Same comment than in hot from be reversed.
+        let mut ui = self.modify(|meter| meter.config.warn_from = warn_from);
+        ui.needs_redraw();
+        ui
     }
 }

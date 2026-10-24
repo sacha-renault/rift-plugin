@@ -3,4 +3,4 @@ mod meter;
 mod rolling_window;
 
 pub use accumulator_proxy::AccumulatorProxy;
-pub use meter::{MeterModifers, MeterUI};
+pub use meter::{MeterUI, MeterUIModifers};
