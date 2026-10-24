@@ -42,10 +42,6 @@ impl<B: Bucket> RollingWindow<B> {
     pub fn rms(seconds: f64) -> RollingWindow<RmsBucket> {
         RollingWindow::new(seconds)
     }
-
-    pub fn rms_peaks(seconds: f64) -> RollingWindow<PeakRmsBucket> {
-        RollingWindow::new(seconds)
-    }
 }
 
 impl<B: Bucket> RollingWindow<B> {

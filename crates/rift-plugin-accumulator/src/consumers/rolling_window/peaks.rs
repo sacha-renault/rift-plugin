@@ -7,16 +7,6 @@ pub struct PeakBucket {
     count: usize,
 }
 
-impl PeakBucket {
-    pub fn min(&self) -> f32 {
-        self.min
-    }
-
-    pub fn max(&self) -> f32 {
-        self.max
-    }
-}
-
 impl Bucket for PeakBucket {
     #[allow(dead_code)]
     fn new(x: f32) -> Self {
