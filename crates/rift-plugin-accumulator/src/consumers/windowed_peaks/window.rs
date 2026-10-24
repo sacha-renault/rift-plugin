@@ -1,4 +1,5 @@
 use rift_plugin_types::transport::BlockTime;
+use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
 pub use super::bucket::Bucket;
 use crate::prelude::MonoConsumer;
@@ -25,14 +26,14 @@ pub struct WindowBuckets<B: Bucket> {
 }
 
 impl<B: Bucket> WindowBuckets<B> {
-    pub fn new(samplerate: f64, seconds: f64) -> Self {
+    pub fn new(seconds: f64) -> Self {
         let n_buckets = 1;
         let buckets = vec![B::empty(); n_buckets];
 
         let mut buffer = Self {
             buckets,
             n_buckets,
-            samplerate,
+            samplerate: DEFAULT_SAMPLERATE,
             sample_per_bucket: 0,
             write_idx: 0,
             seconds,
@@ -46,6 +47,11 @@ impl<B: Bucket> WindowBuckets<B> {
     /// Adjusting seconds automatically recalculates `sample_per_bucket` based on the current `n_buckets`.
     pub fn set_seconds(&mut self, seconds: f64) {
         self.seconds = seconds;
+        self.recalculate_buckets();
+    }
+
+    pub fn set_sample_rate(&mut self, sample_rate: f64) {
+        self.samplerate = sample_rate;
         self.recalculate_buckets();
     }
 
@@ -100,7 +106,7 @@ impl<B: Bucket> WindowBuckets<B> {
     fn push_point(&mut self, y: f32) {
         let bucket = &mut self.buckets[self.write_idx];
         bucket.add_sample(y);
-        if bucket.count() == self.sample_per_bucket {
+        if bucket.count() >= self.sample_per_bucket {
             self.write_idx = (self.write_idx + 1) % self.n_buckets;
             self.buckets[self.write_idx] = B::empty();
         }
@@ -108,7 +114,11 @@ impl<B: Bucket> WindowBuckets<B> {
 }
 
 impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
-    fn consume(&mut self, block: &[f32], _: BlockTime) {
+    fn consume(&mut self, block: &[f32], info: BlockTime) {
+        if info.sample_rate() != self.samplerate {
+            self.set_sample_rate(info.sample_rate());
+        }
+
         for &value in block.iter() {
             self.push_point(value);
         }
@@ -118,14 +128,13 @@ impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
 #[cfg(test)]
 mod tests {
     use rift_plugin_types::transport::BlockTime;
-    use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
     use crate::consumers::windowed_peaks::peaks::PeakBucket;
 
     use super::*;
 
     fn make_buffer(n_buckets: usize, seconds: f64) -> WindowBuckets<PeakBucket> {
-        let mut buf = WindowBuckets::new(DEFAULT_SAMPLERATE, seconds);
+        let mut buf = WindowBuckets::new(seconds);
         buf.set_num_buckets(n_buckets);
         buf
     }

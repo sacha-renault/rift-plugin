@@ -12,6 +12,7 @@ mod anchor;
 mod channel;
 
 use anchor::Anchor;
+
 pub struct AudioAccumulator {
     /// One producer ring per allocated channel
     channels: Arc<[RingBuffer]>,
