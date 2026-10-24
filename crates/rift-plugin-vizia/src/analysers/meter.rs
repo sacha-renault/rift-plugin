@@ -7,13 +7,13 @@ const WARN_FROM: f32 = 0.7;
 const HOT_FROM: f32 = 0.92;
 
 /// A segmented level meter
-pub struct Meter {
+pub struct MeterUI {
     level: Signal<f32>,
     peak: Signal<f32>,
     vertical: Signal<bool>,
 }
 
-impl Meter {
+impl MeterUI {
     /// A meter showing `level`.
     pub fn new(cx: &mut Context, level: Signal<f32>) -> Handle<'_, Self> {
         Self::with_peak(cx, level, Signal::new(0.0))
@@ -34,7 +34,7 @@ impl Meter {
     }
 }
 
-impl View for Meter {
+impl View for MeterUI {
     fn element(&self) -> Option<&'static str> {
         Some("meter")
     }
@@ -110,7 +110,7 @@ impl View for Meter {
     }
 }
 
-#[modifiers(for Handle<'_, Meter>)]
+#[modifiers(for Handle<'_, MeterUI>)]
 pub trait MeterModifers {
     #[concrete]
     /// Change direction to horizontal

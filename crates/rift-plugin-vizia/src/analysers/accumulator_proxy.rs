@@ -28,7 +28,7 @@ impl AccumulatorProxy {
         Self { consumers }
     }
 
-    pub fn meter<'a>(&self, cx: &'a mut Context, channel: usize) -> Handle<'a, Meter> {
+    pub fn meter<'a>(&self, cx: &'a mut Context, channel: usize) -> Handle<'a, MeterUI> {
         let (level, peak) = (Signal::new(0.0), Signal::new(0.0));
 
         // a proxy that just forward the values of the pump inside
@@ -56,7 +56,7 @@ impl AccumulatorProxy {
             channel,
         );
 
-        Meter::with_peak(cx, level, peak)
+        MeterUI::with_peak(cx, level, peak)
     }
 
     /// Registers `consumer` for every channel independently.
