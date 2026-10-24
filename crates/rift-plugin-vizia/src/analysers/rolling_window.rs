@@ -48,12 +48,12 @@ impl<B: Bucket> View for RollingWindowUI<B> {
 
         let paint = fill_paint(accent);
 
-        let right = x + w;
+        let x0 = x.round();
+        let right = (x + w).round();
         let center = y + h * 0.5;
         let half = h * 0.5;
-        let col_w = w / visible;
-        let phase = consumer.phase();
         let min_height = scale.max(1.0).min(h);
+        let shift = consumer.phase().round();
 
         // TODO: rendering is bucket-dependent. PeakBucket wants min/max rects/step path.
         // RmsBucket's min/max are synthetic ±rms, so a filled top/bottom path looks
@@ -62,18 +62,16 @@ impl<B: Bucket> View for RollingWindowUI<B> {
             if bucket.count() == 0 {
                 continue;
             }
-
             let (lo, hi) = (bucket.min(), bucket.max());
             if !lo.is_finite() || !hi.is_finite() {
                 continue;
             }
 
-            // Column i is from newest
-            // starts at right - phase * col_w and is clipped at the right edge.
-            let col_left = right - phase * col_w - i as f32 * col_w;
-            let left = col_left.max(x);
-            let clipped_right = (col_left + col_w).min(right);
-            if clipped_right <= left {
+            // Always an integer: left edge and width are whole pixels.
+            let col_left = right - shift - i as f32;
+            let left = col_left.max(x0);
+            let col_right = (col_left + 1.0).min(right);
+            if col_right <= left {
                 continue;
             }
 
@@ -90,7 +88,7 @@ impl<B: Bucket> View for RollingWindowUI<B> {
                 continue;
             }
 
-            let rect = Rect::from_xywh(left, top, clipped_right - left, bottom - top);
+            let rect = Rect::from_xywh(left, top, col_right - left, bottom - top);
             canvas.draw_rrect(RRect::new_rect_xy(rect, 0.0, 0.0), &paint);
         }
     }
