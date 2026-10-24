@@ -5,7 +5,7 @@ use rift_plugin_types::transport::BlockTime;
 
 use super::*;
 
-use crate::dev_prelude::*;
+use crate::{analysers::rolling_window::RollingWindowUI, dev_prelude::*};
 
 pub struct AccumulatorProxy {
     consumers: Rc<RefCell<ConsumerDispatcher>>,
@@ -57,6 +57,19 @@ impl AccumulatorProxy {
         );
 
         MeterUI::with_peak(cx, level, peak)
+    }
+
+    pub fn rolling_window<'a, B: Bucket>(
+        &self,
+        cx: &'a mut Context,
+        kind: MonoConsumerKind,
+        seconds: f64,
+    ) -> Handle<'a, RollingWindowUI<B>> {
+        let consumer = self
+            .consumers
+            .borrow_mut()
+            .add_mono_consumer(RollingWindow::new(seconds), kind);
+        RollingWindowUI::new(cx, consumer)
     }
 
     /// Registers `consumer` for every channel independently.

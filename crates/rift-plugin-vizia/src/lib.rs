@@ -20,6 +20,7 @@ pub(crate) mod dev_prelude {
 }
 
 pub mod prelude {
+    pub use super::analysers::AccumulatorProxy;
     pub use super::bridge::{ContextExt, ControlExt};
     pub use super::bridge::{Control, ParamBinding, register_param};
     pub use super::factory::{ViziaFactory, vizia_gui};

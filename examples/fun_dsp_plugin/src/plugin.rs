@@ -72,7 +72,7 @@ impl ClapPlugin for FunDspPlugin {
     fn process(
         &mut self,
         mut buffers: Buffers,
-        _ctx: ProcessContext,
+        ctx: ProcessContext,
         _events: &InputEvents,
         params: &Self::Params,
         data: &Self::SharedData,
@@ -113,6 +113,9 @@ impl ClapPlugin for FunDspPlugin {
             self.graph.fill_frame(frame);
         });
 
+        data.acc
+            .audio_thread_writes(&buffers.main(), *ctx.transport_info());
+
         Ok(ProcessStatus::Continue)
     }
 
@@ -134,8 +137,8 @@ impl ClapPlugin for FunDspPlugin {
         }
     }
 
-    fn gui(params: Arc<Self::Params>, _data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
-        crate::gui::build(params)
+    fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory> {
+        crate::gui::build(params, data)
     }
 
     const ID: &str = "com.rift.fun-dsp-generator";

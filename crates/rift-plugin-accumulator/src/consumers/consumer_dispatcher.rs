@@ -3,6 +3,12 @@ use rift_plugin_utils::ConsumerCell;
 
 use crate::prelude::{MonoConsumer, MultiConsumer};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MonoConsumerKind {
+    Averaged,
+    Channel(usize),
+}
+
 /// A consumer that only receives one channel.
 struct ChannelConsumer {
     consumer: ConsumerCell<dyn MonoConsumer>,
@@ -98,6 +104,18 @@ impl ConsumerDispatcher {
             channel,
         });
         cell
+    }
+
+    /// Add a mono consumer, either `Averaged` or at a specific `Channel`
+    pub fn add_mono_consumer<C: MonoConsumer>(
+        &mut self,
+        consumer: C,
+        kind: MonoConsumerKind,
+    ) -> ConsumerCell<C> {
+        match kind {
+            MonoConsumerKind::Averaged => self.add_consumer_averaged(consumer),
+            MonoConsumerKind::Channel(channel) => self.add_consumer_at_channel(consumer, channel),
+        }
     }
 
     /// Returns the total number of registered consumers (both averaged and

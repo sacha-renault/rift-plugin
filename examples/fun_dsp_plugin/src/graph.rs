@@ -2,12 +2,14 @@ use std::sync::Arc;
 
 use fundsp::prelude32::*;
 use rift_plugin::prelude::*;
+use rift_plugin_accumulator::prelude::AudioAccumulator;
 
 use crate::params::{FilterKind, FunDspParams};
 
 /// Owns the fundsp graph and rebuilds it on a background thread.
 pub struct Shared {
     pub(crate) tasks: BackgroundExecutor<f64, Box<dyn AudioUnit>>,
+    pub(crate) acc: Arc<AudioAccumulator>,
 }
 
 impl FromParams<FunDspParams> for Shared {
@@ -15,7 +17,10 @@ impl FromParams<FunDspParams> for Shared {
         let tasks = BackgroundExecutor::new(16, 16, move |samplerate: f64| {
             build_net(samplerate, &params)
         });
-        Self { tasks }
+        Self {
+            tasks,
+            acc: Arc::new(AudioAccumulator::new(2, 44100)),
+        }
     }
 }
 
