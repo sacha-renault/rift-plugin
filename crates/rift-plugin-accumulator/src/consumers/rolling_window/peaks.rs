@@ -1,4 +1,4 @@
-use crate::consumers::windowed_peaks::window::Bucket;
+use crate::consumers::rolling_window::window::Bucket;
 
 #[derive(Clone)]
 pub struct PeakBucket {
