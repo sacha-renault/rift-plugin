@@ -1,6 +1,6 @@
 use std::thread::{self, JoinHandle};
 
-use crossbeam_channel::{self as channel, Receiver, Sender, TrySendError};
+use crossbeam_channel::{Receiver, Sender, TrySendError, bounded};
 
 /// Runs `Job`s on a dedicated thread and hands their results back to the caller.
 ///
@@ -22,8 +22,8 @@ impl<Job, Res> BackgroundExecutor<Job, Res> {
         Job: Send + 'static,
         Res: Send + 'static,
     {
-        let (jobs, jobs_rx) = channel::bounded(jobs_capacity.max(1));
-        let (results_tx, results) = channel::bounded(results_capacity.max(1));
+        let (jobs, jobs_rx) = bounded(jobs_capacity.max(1));
+        let (results_tx, results) = bounded(results_capacity.max(1));
 
         let handle = thread::spawn(move || run(jobs_rx, results_tx, handler));
 
@@ -110,6 +110,8 @@ fn run<Job, Res>(jobs: Receiver<Job>, results: Sender<Res>, mut handler: impl Fn
 mod tests {
     use std::time::{Duration, Instant};
 
+    use crossbeam_channel::unbounded;
+
     use super::*;
 
     /// Polls `exec` until `expected` results are collected or `timeout` elapses.
@@ -168,8 +170,8 @@ mod tests {
     fn full_jobs_queue_returns_the_job() {
         // Capacity 1, and the first job blocks the worker so the queue can be
         // deterministically filled.
-        let (started_tx, started_rx) = channel::unbounded();
-        let (release_tx, release_rx) = channel::unbounded::<()>();
+        let (started_tx, started_rx) = unbounded();
+        let (release_tx, release_rx) = unbounded::<()>();
 
         let exec = BackgroundExecutor::new(1, 4, move |j: u32| {
             if j == 0 {
