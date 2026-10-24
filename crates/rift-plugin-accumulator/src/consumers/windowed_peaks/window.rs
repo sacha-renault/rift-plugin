@@ -2,6 +2,7 @@ use rift_plugin_types::transport::BlockTime;
 use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
 pub use super::bucket::Bucket;
+use crate::consumers::*;
 use crate::prelude::MonoConsumer;
 
 /// Rolling history for waveform display, one bucket per display column.
@@ -33,7 +34,21 @@ pub struct RollingWindow<B: Bucket> {
     n_cols: usize,
 }
 
-impl<B: Bucket> WindowBuckets<B> {
+impl<B: Bucket> RollingWindow<B> {
+    pub fn peaks(seconds: f64) -> RollingWindow<PeakBucket> {
+        RollingWindow::new(seconds)
+    }
+
+    pub fn rms(seconds: f64) -> RollingWindow<RmsBucket> {
+        RollingWindow::new(seconds)
+    }
+
+    pub fn rms_peaks(seconds: f64) -> RollingWindow<PeakRmsBucket> {
+        RollingWindow::new(seconds)
+    }
+}
+
+impl<B: Bucket> RollingWindow<B> {
     pub fn new(seconds: f64) -> Self {
         let mut s = Self {
             ring: Vec::new(),
