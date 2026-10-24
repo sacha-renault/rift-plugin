@@ -25,7 +25,7 @@ impl<B: Bucket> RollingWindowUI<B> {
 
 impl<B: Bucket> View for RollingWindowUI<B> {
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
-        let Ok(consumer) = self.inner.try_borrow() else {
+        let Ok(mut consumer) = self.inner.try_borrow_mut() else {
             debug_assert!(false, "Cannot borrow consumer");
             return;
         };
@@ -34,6 +34,9 @@ impl<B: Bucket> View for RollingWindowUI<B> {
         if w < 1.0 || h < 1.0 {
             return;
         }
+
+        // Noop if nothing changes
+        consumer.set_columns(w.floor() as usize);
 
         let visible = consumer.visible_columns();
         if !visible.is_finite() || visible <= 0.0 {
