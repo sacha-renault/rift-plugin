@@ -18,7 +18,7 @@ use crate::prelude::MonoConsumer;
 /// value (typically a widget resize). Setters that leave `fine` unchanged keep the history.
 ///
 /// Channel routing is handled upstream by `ConsumerDispatcher`.
-pub struct WindowBuckets<B: Bucket> {
+pub struct RollingWindow<B: Bucket> {
     /// Closed buckets (ring).
     ring: Vec<B>,
     /// Number of closed buckets since the start (absolute index).
@@ -131,7 +131,7 @@ impl<B: Bucket> WindowBuckets<B> {
     }
 }
 
-impl<B: Bucket> MonoConsumer for WindowBuckets<B> {
+impl<B: Bucket> MonoConsumer for RollingWindow<B> {
     fn consume(&mut self, mut block: &[f32], info: BlockTime) {
         if info.sample_rate() != self.samplerate {
             self.set_sample_rate(info.sample_rate());
@@ -162,7 +162,7 @@ mod tests {
 
     use super::*;
 
-    type Wb = WindowBuckets<PeakBucket>;
+    type Wb = RollingWindow<PeakBucket>;
 
     /// Sample rate used by `feed_block`, so `consume` never triggers a reconfigure.
     fn sr() -> f64 {
