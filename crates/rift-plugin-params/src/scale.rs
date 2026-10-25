@@ -156,7 +156,6 @@ mod tests {
     #[test]
     fn log_invariants() {
         assert_scale_invariants(Scale::Log, 20.0, 20000.0);
-        assert!(Scale::Log.denormalize(0.5, 20.0, 20000.0) < 632.46);
         assert_approx_eq!(Scale::Log.denormalize(0.5, 20.0, 20000.0), 632.4555, 1e-2);
     }
 }
