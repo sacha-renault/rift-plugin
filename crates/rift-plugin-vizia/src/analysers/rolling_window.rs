@@ -1,5 +1,5 @@
 use crate::dev_prelude::*;
-use rift_plugin_accumulator::prelude::{Bucket, ConsumerCell, RollingWindow};
+use rift_plugin_accumulator::prelude::*;
 
 pub struct RollingWindowUI<B: Bucket> {
     inner: ConsumerCell<RollingWindow<B>>,

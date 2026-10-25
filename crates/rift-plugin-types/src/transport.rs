@@ -210,6 +210,11 @@ impl BlockTime {
         Self::new(0, TransportInfo::new(DEFAULT_SAMPLERATE))
     }
 
+    #[inline]
+    pub fn empty_with_sr(samplerate: f64) -> Self {
+        Self::new(0, TransportInfo::new(samplerate))
+    }
+
     /// Returns the timing `samples` later (or earlier if negative),
     /// extrapolating the transport.
     #[inline]
