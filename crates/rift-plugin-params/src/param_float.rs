@@ -37,23 +37,23 @@ impl<S: Atomic<f32> + 'static> ParamKind for _Float<S> {
     }
 
     fn min(range: &FloatRange) -> f32 {
-        range.min
+        range.min()
     }
 
     fn max(range: &FloatRange) -> f32 {
-        range.max
+        range.max()
     }
 
     fn normalize(range: &FloatRange, value: f32) -> f32 {
-        range.scale.normalize(value, range.min, range.max)
+        range.normalize(value)
     }
 
     fn denormalize(range: &FloatRange, normalized: f32) -> f32 {
-        range.scale.denormalize(normalized, range.min, range.max)
+        range.denormalize(normalized)
     }
 
     fn clamp(range: &FloatRange, value: f32) -> f32 {
-        value.clamp(range.min, range.max)
+        value.clamp(range.min(), range.max())
     }
 
     fn default_flags() -> ParamInfoFlags {

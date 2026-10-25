@@ -7,7 +7,7 @@
 //! # Adding a new curve
 //!
 //! Worked example: adding `Scale::Log(f32)`, reachable from the derive as
-//! `range = log(min, max, base)`.
+//! `range = log(min, max)`.
 //!
 //! 1. In this file (`scale.rs`), add the variant to [`Scale`] and handle it in
 //!    [`Scale::denormalize`] and [`Scale::normalize`]. Keep them exact inverses
@@ -15,7 +15,7 @@
 //!    (`denormalize(0.0) == min`, `denormalize(1.0) == max`). Cover it with
 //!    `assert_scale_invariants` in the tests module, plus any shape specific check.
 //! 2. In `range.rs`, add a matching `const fn` on `crate::FloatRange` (e.g.
-//!    `FloatRange::log(min, max, base)`) with its own argument asserts. That is the
+//!    `FloatRange::log(min, max)`) with its own argument asserts. That is the
 //!    whole DSL surface: the derive forwards `range = log(..)` to
 //!    `<FloatRange|IntRange>::log(..)` inside a `const` block, so the asserts run
 //!    at compile time.
@@ -37,6 +37,9 @@ pub enum Scale {
     /// top (factor < 1), and it accepts any range, including one that crosses
     /// zero (unlike a plain log curve).
     Exponential(f32),
+
+    /// Log curve
+    Log,
 }
 
 impl Scale {
@@ -47,27 +50,41 @@ impl Scale {
             normalized.clamp(0f32, 1f32)
         };
 
-        let t = match self {
-            Self::Linear => normalized,
-            Self::Skew(s) => normalized.powf(*s),
-            Self::Exponential(f) => (f.powf(normalized) - 1f32) / (f - 1f32),
-        };
-        min + t * (max - min)
+        match self {
+            Self::Linear => linedenorm(normalized, min, max),
+            Self::Skew(s) => linedenorm(normalized.powf(*s), min, max),
+            Self::Exponential(f) => {
+                let t = (f.powf(normalized) - 1f32) / (f - 1f32);
+                linedenorm(t, min, max)
+            }
+            Self::Log => min * (max / min).powf(normalized),
+        }
     }
 
     pub fn normalize(&self, value: f32, min: f32, max: f32) -> f32 {
-        if value.is_nan() {
+        let value = if value.is_nan() {
             return 0f32; // fallback ...
-        }
-
-        let t = (value - min) / (max - min);
+        } else {
+            value.clamp(min, max)
+        };
 
         match self {
-            Self::Linear => t,
-            Self::Skew(s) => t.powf(1.0 / s),
-            Self::Exponential(f) => (1f32 + t * (f - 1f32)).ln() / f.ln(),
+            Self::Linear => lineblend(value, min, max),
+            Self::Skew(s) => lineblend(value, min, max).powf(1.0 / s),
+            Self::Exponential(f) => (1f32 + lineblend(value, min, max) * (f - 1f32)).ln() / f.ln(),
+            Self::Log => (value.ln() - min.ln()) / (max.ln() - min.ln()),
         }
     }
+}
+
+#[inline]
+fn linedenorm(t: f32, min: f32, max: f32) -> f32 {
+    min + t * (max - min)
+}
+
+#[inline]
+fn lineblend(value: f32, min: f32, max: f32) -> f32 {
+    (value - min) / (max - min)
 }
 
 #[cfg(test)]
@@ -134,5 +151,12 @@ mod tests {
         assert!(Scale::Exponential(3.0).denormalize(0.5, 0.0, 1000.0) < 500.0);
         // A factor below 1 pushes it above.
         assert!(Scale::Exponential(0.3).denormalize(0.5, 0.0, 1000.0) > 500.0);
+    }
+
+    #[test]
+    fn log_invariants() {
+        assert_scale_invariants(Scale::Log, 20.0, 20000.0);
+        assert!(Scale::Log.denormalize(0.5, 20.0, 20000.0) < 632.46);
+        assert_approx_eq!(Scale::Log.denormalize(0.5, 20.0, 20000.0), 632.4555, 1e-2);
     }
 }

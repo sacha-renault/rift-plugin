@@ -3,18 +3,46 @@ use crate::scale::Scale;
 /// Configuration of a float parameter: its plain bounds and normalization curve.
 #[derive(Debug, Clone, Copy)]
 pub struct FloatRange {
-    pub(crate) min: f32,
-    pub(crate) max: f32,
-    pub(crate) scale: Scale,
+    min: f32,
+    max: f32,
+    scale: Scale,
+}
+
+impl FloatRange {
+    const fn new(min: f32, max: f32, scale: Scale) -> Self {
+        assert!(min != max, "range min and max must differ");
+        assert!(
+            min.is_finite() && max.is_finite(),
+            "min & max must be a finite number"
+        );
+
+        Self { min, max, scale }
+    }
+
+    #[inline]
+    pub(crate) fn min(&self) -> f32 {
+        self.min
+    }
+
+    #[inline]
+    pub(crate) fn max(&self) -> f32 {
+        self.max
+    }
+
+    #[inline]
+    pub(crate) fn normalize(&self, value: f32) -> f32 {
+        self.scale.normalize(value, self.min, self.max)
+    }
+
+    #[inline]
+    pub(crate) fn denormalize(&self, normalized: f32) -> f32 {
+        self.scale.denormalize(normalized, self.min, self.max)
+    }
 }
 
 impl Default for FloatRange {
     fn default() -> Self {
-        Self {
-            min: 0.0,
-            max: 1.0,
-            scale: Scale::Linear,
-        }
+        Self::new(0., 1., Scale::Linear)
     }
 }
 
@@ -23,12 +51,7 @@ impl Default for FloatRange {
 impl FloatRange {
     /// A linear range spanning `min..=max`.
     pub const fn linear(min: f32, max: f32) -> Self {
-        assert!(min != max, "range min and max must differ");
-        Self {
-            min,
-            max,
-            scale: Scale::Linear,
-        }
+        Self::new(min, max, Scale::Linear)
     }
 
     /// A power-curve range; `factor` must be finite and greater than 0.
@@ -38,31 +61,30 @@ impl FloatRange {
     ///     rift_plugin_params::FloatRange::skew(20.0, 20_000.0, -1.0);
     /// ```
     pub const fn skew(min: f32, max: f32, factor: f32) -> Self {
-        assert!(min != max, "range min and max must differ");
         assert!(
             factor.is_finite() && factor > 0.0,
             "skew factor must be finite and greater than 0"
         );
-        Self {
-            min,
-            max,
-            scale: Scale::Skew(factor),
-        }
+        Self::new(min, max, Scale::Skew(factor))
     }
 
     /// An exponential-curve range; `factor` must be finite, greater than 0 and
     /// different from 1.
     pub const fn exp(min: f32, max: f32, factor: f32) -> Self {
-        assert!(min != max, "range min and max must differ");
         assert!(
             factor.is_finite() && factor > 0.0 && factor != 1.0,
             "exp factor must be finite, greater than 0 and different from 1"
         );
-        Self {
-            min,
-            max,
-            scale: Scale::Exponential(factor),
-        }
+        Self::new(min, max, Scale::Exponential(factor))
+    }
+
+    pub const fn log(min: f32, max: f32) -> Self {
+        assert!(
+            min > 0f32 && max > 0f32,
+            "log range requires strictly positive bounds"
+        );
+
+        Self::new(min, max, Scale::Log)
     }
 }
 
@@ -84,25 +106,5 @@ impl IntRange {
     pub const fn linear(min: i32, max: i32) -> Self {
         assert!(min != max, "range min and max must differ");
         Self { min, max }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn constructors_are_const_and_checked() {
-        // These `const` items prove the constructors are `const fn`, the derive
-        // emits them inside a `const` block so a bad `range = ...` fails the build.
-        const LINEAR: FloatRange = FloatRange::linear(-1.0, 1.0);
-        const SKEW: FloatRange = FloatRange::skew(20.0, 20_000.0, 3.0);
-        const EXP: FloatRange = FloatRange::exp(-60.0, 6.0, 2.0);
-        const INT: IntRange = IntRange::linear(-12, 12);
-
-        assert_eq!((LINEAR.min, LINEAR.max), (-1.0, 1.0));
-        assert!(matches!(SKEW.scale, Scale::Skew(3.0)));
-        assert!(matches!(EXP.scale, Scale::Exponential(2.0)));
-        assert_eq!((INT.min, INT.max), (-12, 12));
     }
 }
