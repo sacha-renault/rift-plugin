@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
+use accumulator::prelude::AudioAccumulator;
 use fundsp::prelude32::*;
 use rift_plugin::prelude::*;
-use rift_plugin_accumulator::prelude::AudioAccumulator;
 
 use crate::params::{FilterKind, FunDspParams};
 

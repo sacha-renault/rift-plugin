@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use rift_plugin::prelude::*;
-use rift_plugin_accumulator::prelude::*;
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::*;
 
@@ -35,7 +34,7 @@ pub fn build(params: Arc<FunDspParams>, data: Arc<Shared>) -> Box<dyn GuiFactory
             Panel::new(cx, "N Analyzer", |cx| {
                 proxy
                     .rolling_window::<RmsBucket>(cx, MonoConsumerKind::Averaged, 0.25)
-                    .height(Units::Pixels(250.));
+                    .height(Units::Stretch(1.));
             });
         });
     })

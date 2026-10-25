@@ -9,7 +9,6 @@ crate-type = ["cdylib"]
 [dependencies]
 rift-plugin = { workspace = true, features = ["assert-no-alloc"] }
 rift-plugin-vizia = { workspace = true }
-rift-plugin-accumulator = { workspace = true}
 rift-fun-dsp = { workspace = true }
 fundsp = { workspace = true }
 bitflags = { workspace = true }

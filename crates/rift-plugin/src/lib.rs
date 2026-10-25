@@ -26,6 +26,7 @@ pub mod prelude {
 
     // Reexport the rift-plugin crates
     pub use rift_plugin_accumulator as accumulator;
+    pub use rift_plugin_accumulator::prelude::*;
     pub use rift_plugin_buffers::*;
     pub use rift_plugin_context::*;
     pub use rift_plugin_gui::{ClapGui, GuiFactory};
