@@ -1,8 +1,10 @@
 mod frame_signal;
 mod paint;
+mod wave;
 
 pub use frame_signal::FrameSignal;
 pub(crate) use paint::*;
+pub(crate) use wave::*;
 
 #[derive(Clone, Copy)]
 pub struct Drag {
