@@ -2069,6 +2069,7 @@ dependencies = [
  "clack-extensions",
  "clack-plugin",
  "rift-fun-dsp",
+ "rift-plugin-accumulator",
  "rift-plugin-buffers",
  "rift-plugin-context",
  "rift-plugin-derive",
@@ -2190,6 +2191,7 @@ dependencies = [
  "rift-plugin-gui",
  "rift-plugin-params",
  "rift-plugin-types",
+ "rift-plugin-utils",
  "vizia",
 ]
 
