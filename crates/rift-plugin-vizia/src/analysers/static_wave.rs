@@ -19,6 +19,10 @@ pub struct StaticWaveform<B: Bucket> {
 }
 
 impl<B: Bucket> View for StaticWaveform<B> {
+    fn element(&self) -> Option<&'static str> {
+        Some("wave")
+    }
+
     fn draw(&self, cx: &mut DrawContext, canvas: &Canvas) {
         let left = self.left_padding.get_untracked();
         let right = self.right_padding.get_untracked();
