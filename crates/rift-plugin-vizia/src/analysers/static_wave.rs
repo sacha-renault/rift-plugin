@@ -5,14 +5,14 @@ use rift_plugin_accumulator::prelude::*;
 use rift_plugin_types::transport::BlockTime;
 use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 struct Padding {
     sample_amount: usize,
     value: f32,
 }
 
 pub struct StaticWaveform<B: Bucket> {
-    wave: Signal<Box<[f32]>>,
+    wave: Signal<Vec<f32>>,
     left_padding: Signal<Padding>,
     right_padding: Signal<Padding>,
     _p: PhantomData<fn() -> B>,
@@ -66,7 +66,7 @@ impl<B: Bucket> View for StaticWaveform<B> {
 impl<B: Bucket> StaticWaveform<B> {
     pub fn new<D>(cx: &mut Context, wave: D) -> Handle<'_, Self>
     where
-        D: Res<Box<[f32]>> + 'static,
+        D: Res<Vec<f32>> + 'static,
     {
         let signal = wave.to_signal(cx);
         let left_padding = Signal::default();
@@ -81,5 +81,28 @@ impl<B: Bucket> StaticWaveform<B> {
         .build(cx, |_| {})
         .bind(signal, |mut handle| handle.needs_redraw())
         .role(Role::Canvas)
+    }
+}
+
+#[modifiers(for Handle<'_, StaticWaveform<B>> where B: Bucket)]
+pub trait StaticWaveformModifiers {
+    #[concrete]
+    fn left_padding(self, sample_amount: usize, value: f32) -> Self {
+        self.modify(|wave| {
+            wave.left_padding.set_if_changed(Padding {
+                sample_amount,
+                value,
+            })
+        })
+    }
+
+    #[concrete]
+    fn right_padding(self, sample_amount: usize, value: f32) -> Self {
+        self.modify(|wave| {
+            wave.right_padding.set_if_changed(Padding {
+                sample_amount,
+                value,
+            })
+        })
     }
 }
