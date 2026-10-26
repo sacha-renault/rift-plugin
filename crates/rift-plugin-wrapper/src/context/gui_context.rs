@@ -32,10 +32,6 @@ impl GuiContext for GuiContextImpl {
         self.params.clone()
     }
 
-    fn is_playing(&self) -> bool {
-        self.states.is_playing()
-    }
-
     fn pop_in_gui(&self) -> Option<HostParamChange> {
         self.states.gui_param_changes().pop()
     }

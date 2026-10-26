@@ -17,8 +17,7 @@ bitflags! {
     #[derive(Debug, Clone, Copy)]
     struct SharedStateFlags: u32 {
         const IS_GUI_OPENED = 1 << 0;
-        const IS_PLAYING = 1 << 1;
-        const PARAM_RESCAN = 1 << 2;
+        const PARAM_RESCAN = 1 << 1;
     }
 }
 
@@ -113,20 +112,6 @@ impl PluginSharedState {
     #[inline]
     pub(crate) fn context_menu_requests(&self) -> &TaskQueue<ParamContextMenu> {
         &self.context_menu_requests
-    }
-
-    pub(crate) fn is_playing(&self) -> bool {
-        self.states_flags
-            .load(Ordering::Relaxed)
-            .contains(SharedStateFlags::IS_PLAYING)
-    }
-
-    pub(crate) fn set_is_playing(&self, is_playing: bool) {
-        if is_playing {
-            self.states_flags.set(SharedStateFlags::IS_PLAYING, REL)
-        } else {
-            self.states_flags.unset(SharedStateFlags::IS_PLAYING, REL)
-        };
     }
 
     pub(crate) fn set_samplerate(&self, value: f64) {

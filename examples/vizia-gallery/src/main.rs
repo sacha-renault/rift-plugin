@@ -77,10 +77,6 @@ impl GuiContext for StandaloneContext {
 
     fn global_context_menu(&self, _x: i32, _y: i32, _screen: i32) {}
 
-    fn is_playing(&self) -> bool {
-        false
-    }
-
     fn pop_in_gui(&self) -> Option<HostParamChange> {
         None
     }

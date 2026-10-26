@@ -15,7 +15,6 @@ pub trait GuiContext: Send + Sync {
     fn params(&self) -> Arc<dyn ParamCollection>;
     fn param_context_menu(&self, param_id: ClapId, x: i32, y: i32, screen: i32);
     fn global_context_menu(&self, x: i32, y: i32, screen: i32);
-    fn is_playing(&self) -> bool;
     /// Returns the next host-side parameter change, oldest first.
     fn pop_in_gui(&self) -> Option<HostParamChange>;
 
