@@ -47,7 +47,7 @@ impl ViziaGui {
         let host = context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
 
-        let frame_signal = FrameSignal::new();
+        let frame_signal = FrameSignal::default();
 
         let application = Application::new(move |cx| {
             crate::theme::install(cx);

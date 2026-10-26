@@ -1,8 +1,8 @@
-mod frame_signal;
 mod paint;
 mod wave;
 
-pub use frame_signal::FrameSignal;
+pub mod common_signal;
+
 pub(crate) use paint::*;
 pub(crate) use wave::*;
 
