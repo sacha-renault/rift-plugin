@@ -4,7 +4,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{Expr, ExprLit, ExprUnary, Lit, LitFloat, LitStr, PathArguments, Type, UnOp};
 
-use super::parse::{Field, LeafParam, LeafPersist, Nested, ParamKind, Params, RangeSpec};
+use super::parse::{Field, LeafParam, LeafPersist, Nested, ParamKind, Params, RangeSpec, Skipped};
 
 /// Entry point: render the `new`/`Default`/`UserParams` implementations.
 pub(crate) fn expand(params: Params) -> TokenStream2 {
@@ -65,11 +65,13 @@ fn expand_construct(fields: &[Field]) -> TokenStream2 {
             Field::Param(leaf) => &leaf.ident,
             Field::Persist(leaf) => &leaf.ident,
             Field::Nested(nested) => &nested.ident,
+            Field::Skip(skip) => &skip.ident,
         };
         let value = match field {
             Field::Param(leaf) => expand_leaf(leaf),
             Field::Persist(leaf) => expand_persist(leaf),
             Field::Nested(nested) => expand_nested(nested),
+            Field::Skip(skip) => expand_skip(skip),
         };
         quote! { #ident: #value, }
     });
@@ -148,6 +150,15 @@ fn expand_persist(leaf: &LeafPersist) -> TokenStream2 {
     }
 }
 
+/// The construction of a `#[skip]` field: its explicit default when given, and
+/// `Default::default()` otherwise.
+fn expand_skip(skip: &Skipped) -> TokenStream2 {
+    match skip.default.as_ref() {
+        Some(expr) => quote! { #expr },
+        None => quote! { ::core::default::Default::default() },
+    }
+}
+
 /// Render a `range = ...` into the kind-specific constructor call.
 ///
 /// The call is wrapped in a `const` block so the constructor's asserts run at
@@ -212,8 +223,8 @@ fn expand_all_params(fields: &[Field]) -> TokenStream2 {
                 __params.push(::rift_plugin::prelude::Param::as_ptr(&self.#ident));
             }
         }
-        // Persist fields are host-invisible and must stay out of `all_params`.
-        Field::Persist(_) => quote! {},
+        // Persist and skipped fields are host-invisible and stay out of `all_params`.
+        Field::Persist(_) | Field::Skip(_) => quote! {},
         Field::Nested(nested) => {
             let ident = &nested.ident;
             if nested.array_len.is_some() {
@@ -264,7 +275,7 @@ fn expand_all_persist(fields: &[Field]) -> TokenStream2 {
                 }
             }
         }
-        Field::Param(_) => quote! {},
+        Field::Param(_) | Field::Skip(_) => quote! {},
     });
 
     quote! { #( #statements )* }

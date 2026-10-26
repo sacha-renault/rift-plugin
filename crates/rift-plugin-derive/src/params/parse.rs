@@ -5,9 +5,10 @@
 //! from the field type stay hand-written.
 //!
 //! Every field must carry exactly one of `#[param(...)]` (a host-visible leaf
-//! parameter), `#[persist(...)]` (a host-invisible persistent value) or
+//! parameter), `#[persist(...)]` (a host-invisible persistent value),
 //! `#[nested]` / `#[nested(module = "...")]` (a struct, or an array of structs,
-//! that itself derives `Params`).
+//! that itself derives `Params`) or `#[skip]` / `#[skip(default = ...)]` (a
+//! plain field left out of the parameter tree entirely).
 
 use std::collections::HashSet;
 
@@ -42,6 +43,13 @@ struct NestedArgs {
     module: Option<String>,
 }
 
+/// Receiver for `#[skip(...)]` on a skipped field.
+#[derive(FromField)]
+#[darling(attributes(skip))]
+struct SkipArgs {
+    default: Option<Expr>,
+}
+
 /// A parsed `#[derive(Params)]` struct.
 #[derive(Debug)]
 pub(crate) struct Params {
@@ -52,13 +60,14 @@ pub(crate) struct Params {
 
 /// A field of the struct.
 // The IR is built once per macro invocation, so the size difference between the
-// two variants does not matter.
+// variants does not matter.
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 pub(crate) enum Field {
     Param(LeafParam),
     Persist(LeafPersist),
     Nested(Nested),
+    Skip(Skipped),
 }
 
 /// The numeric flavour of a leaf parameter, used to coerce literals and to
@@ -107,6 +116,15 @@ impl LeafPersist {
     pub fn resolve_string_id(&self) -> String {
         self.id.clone().unwrap_or(self.ident.to_string())
     }
+}
+
+/// A `#[skip]` field: neither a host parameter nor persisted state. It is
+/// initialized from `default = ...` when given, and from `Default::default()`
+/// otherwise.
+#[derive(Debug)]
+pub(crate) struct Skipped {
+    pub ident: Ident,
+    pub default: Option<Expr>,
 }
 
 /// A parsed `range = ...` declaration: the constructor to call (e.g. `linear`,
@@ -185,18 +203,20 @@ fn parse_field(field: &syn::Field) -> syn::Result<Field> {
         .attrs
         .iter()
         .any(|attr| attr.path().is_ident("persist"));
+    let has_skip = field.attrs.iter().any(|attr| attr.path().is_ident("skip"));
 
-    match (has_param, has_persist, has_nested) {
-        (true, false, false) => parse_param_leaf(field),
-        (false, true, false) => parse_persist_leaf(field),
-        (false, false, true) => parse_nested(field),
-        (false, false, false) => Err(syn::Error::new(
+    match (has_param, has_persist, has_nested, has_skip) {
+        (true, false, false, false) => parse_param_leaf(field),
+        (false, true, false, false) => parse_persist_leaf(field),
+        (false, false, true, false) => parse_nested(field),
+        (false, false, false, true) => parse_skip(field),
+        (false, false, false, false) => Err(syn::Error::new(
             ident.span(),
-            "every field must be marked `#[param]`, `#[persist]` or `#[nested]`",
+            "every field must be marked `#[param]`, `#[persist]`, `#[nested]` or `#[skip]`",
         )),
         _ => Err(syn::Error::new(
             ident.span(),
-            "a field can have only one of `#[param]`, `#[persist]` and `#[nested]`",
+            "a field can have only one of `#[param]`, `#[persist]`, `#[nested]` and `#[skip]`",
         )),
     }
 }
@@ -249,6 +269,13 @@ fn parse_param_leaf(field: &syn::Field) -> syn::Result<Field> {
 
     validate_leaf(&leaf)?;
     Ok(Field::Param(leaf))
+}
+
+fn parse_skip(field: &syn::Field) -> syn::Result<Field> {
+    let ident = field.ident.clone().expect("named field");
+    let SkipArgs { default } = SkipArgs::from_field(field)?;
+
+    Ok(Field::Skip(Skipped { ident, default }))
 }
 
 fn parse_nested(field: &syn::Field) -> syn::Result<Field> {
@@ -369,6 +396,8 @@ fn validate_resolved_ids(fields: &[Field]) -> syn::Result<()> {
             Field::Param(leaf) => (leaf.resolve_string_id(), &leaf.ident),
             Field::Persist(leaf) => (leaf.resolve_string_id(), &leaf.ident),
             Field::Nested(nested) => (nested.resolve_string_id(), &nested.ident),
+            // Skipped fields have no id.
+            Field::Skip(_) => continue,
         };
 
         if resolved_id.is_empty() {

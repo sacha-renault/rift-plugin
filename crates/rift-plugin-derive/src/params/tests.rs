@@ -55,6 +55,19 @@ const PERSIST: &str = r#"
     }
 "#;
 
+const SKIP: &str = r#"
+    struct MyParams {
+        #[param]
+        pub gain: FloatParam,
+
+        #[skip]
+        pub cache: usize,
+
+        #[skip(default = 42)]
+        pub answer: u32,
+    }
+"#;
+
 #[test]
 fn leaf_id_defaults_to_field_ident() {
     let out = expand(ROOT);
@@ -195,9 +208,66 @@ fn rejects_fields_without_attribute() {
 
     assert!(
         err.to_string()
-            .contains("`#[param]`, `#[persist]` or `#[nested]`"),
+            .contains("`#[param]`, `#[persist]`, `#[nested]` or `#[skip]`"),
         "{err}"
     );
+}
+
+#[test]
+fn skip_defaults_to_default_trait() {
+    let out = expand(SKIP);
+    assert!(out.contains("::core::default::Default::default()"), "{out}");
+}
+
+#[test]
+fn skip_uses_explicit_default() {
+    let out = expand(SKIP);
+
+    assert!(out.contains("answer:42,"), "{out}");
+}
+
+#[test]
+fn skip_is_kept_out_of_params_and_persist() {
+    let out = expand(SKIP);
+
+    assert!(!out.contains("Param::as_ptr(&self.cache)"), "{out}");
+    assert!(!out.contains("Param::as_ptr(&self.answer)"), "{out}");
+    assert!(!out.contains("__persist.push(&self.cache)"), "{out}");
+    assert!(!out.contains("__persist.push(&self.answer)"), "{out}");
+    assert!(out.contains("Param::as_ptr(&self.gain)"), "{out}");
+}
+
+#[test]
+fn skip_has_no_id_and_does_not_participate_in_duplicate_checks() {
+    // A skipped field may share its identifier with a param id: it has no id of
+    // its own, so it cannot collide.
+    let out = expand(
+        r#"
+        struct P {
+            #[param(id = "scratch")]
+            pub gain: FloatParam,
+
+            #[skip]
+            pub scratch: usize,
+        }
+        "#,
+    );
+
+    assert!(
+        out.contains("scratch:::core::default::Default::default()"),
+        "{out}"
+    );
+}
+
+#[test]
+fn reject_unknown_skip_key() {
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>(r#"struct P { #[skip(id = "cache")] pub cache: usize }"#)
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("Unknown field: `id`"), "{err}");
 }
 
 #[test]
@@ -255,6 +325,14 @@ fn all_persist_walks_leaves_and_nested_fields() {
 fn rejects_multiple_field_attributes() {
     let err = super::parse::Params::from_derive_input(
         &syn::parse_str::<DeriveInput>("struct P { #[param] #[persist] pub gain: StringParam }")
+            .unwrap(),
+    )
+    .unwrap_err();
+
+    assert!(err.to_string().contains("can have only one of"), "{err}");
+
+    let err = super::parse::Params::from_derive_input(
+        &syn::parse_str::<DeriveInput>("struct P { #[skip] #[param] pub gain: FloatParam }")
             .unwrap(),
     )
     .unwrap_err();
