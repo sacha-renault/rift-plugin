@@ -1,8 +1,6 @@
+use clack_plugin::events::event_types::TransportEvent;
 pub use clack_plugin::events::event_types::TransportFlags;
-use clack_plugin::{
-    events::event_types::TransportEvent,
-    utils::{BeatTime, SecondsTime},
-};
+pub use clack_plugin::utils::{BeatTime, SecondsTime};
 use rift_plugin_utils::{DEFAULT_SAMPLERATE, DEFAULT_TEMPO};
 
 #[derive(Clone, Copy)]

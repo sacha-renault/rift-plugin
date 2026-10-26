@@ -5,6 +5,7 @@
 
 use std::ops::Deref;
 
+use rift_plugin_types::transport::{BarInfo, BeatTime, LoopRegion, SecondsTime, TimeSignature};
 use rift_plugin_utils::{DEFAULT_SAMPLERATE, DEFAULT_TEMPO};
 
 use crate::dev_prelude::*;
@@ -21,7 +22,9 @@ macro_rules! declare_common_signal {
         impl CommonSignalKind for $name {
             type Type = $type;
 
-            const DEFAULT: Self::Type = $default;
+            fn default_value() -> Self::Type {
+                $default
+            }
         }
 
         pub type $common_name = CommonSignal<$name>;
@@ -35,7 +38,10 @@ mod __sealed {
 pub trait CommonSignalKind: __sealed::Sealed + Copy + 'static {
     type Type: Copy + 'static;
 
-    const DEFAULT: Self::Type;
+    /// Value the signal holds between `install` and the first update from the
+    /// host. Not a `const`: transport timestamps are only constructible through
+    /// a non-const `From<f64>`.
+    fn default_value() -> Self::Type;
 }
 
 #[derive(Clone, Copy)]
@@ -94,7 +100,7 @@ impl<T: CommonSignalKind> CommonSignal<T> {
 
 impl<T: CommonSignalKind> Default for CommonSignal<T> {
     fn default() -> Self {
-        Self::new(T::DEFAULT)
+        Self::new(T::default_value())
     }
 }
 
@@ -115,9 +121,29 @@ where
     }
 }
 
-declare_common_signal!(SamplerateSignal, _SrSignalInner, f64, DEFAULT_SAMPLERATE);
-declare_common_signal!(FrameSignal, _FrameSignalInner, (), ());
-declare_common_signal!(TempoSignal, _TempoSignalInner, f64, DEFAULT_TEMPO);
+declare_common_signal!(SamplerateSignal, _SampleRateInner, f64, DEFAULT_SAMPLERATE);
+declare_common_signal!(FrameSignal, _FrameInner, (), ());
+
+// Transport state: one signal per field, so a view only redraws for the value
+// it actually reads.
+declare_common_signal!(IsPlayingSignal, _IsPlayingInner, bool, false);
+declare_common_signal!(IsRecordingSignal, _IsRecordingInner, bool, false);
+declare_common_signal!(IsPrerollSignal, _IsPrerollInner, bool, false);
+
+declare_common_signal!(SongPosBeatsSignal, _SongPosBeatsInner, BeatTime, 0.0.into());
+declare_common_signal!(SongPosSecsSignal, _SongPosSecInner, SecondsTime, 0.0.into());
+
+declare_common_signal!(TempoSignal, _TempoInner, f64, DEFAULT_TEMPO);
+declare_common_signal!(TempoIncSignal, _TempoIncInner, f64, 0.0);
+
+declare_common_signal!(LoopRegionSignal, _LoopRegionInner, Option<LoopRegion>, None);
+declare_common_signal!(
+    TimeSignatureSignal,
+    _TimeSigInner,
+    Option<TimeSignature>,
+    None
+);
+declare_common_signal!(BarSignal, _BarInner, Option<BarInfo>, None);
 
 impl FrameSignal {
     pub fn tick(&self) {

@@ -43,12 +43,39 @@ pub fn pump(cx: &mut Context, host: &dyn GuiContext) {
 
 pub fn install_common_signals(cx: &mut Context) {
     SamplerateSignal::default().install(cx);
+
+    IsPlayingSignal::default().install(cx);
+    IsRecordingSignal::default().install(cx);
+    IsPrerollSignal::default().install(cx);
+
+    SongPosBeatsSignal::default().install(cx);
+    SongPosSecsSignal::default().install(cx);
+
     TempoSignal::default().install(cx);
+    TempoIncSignal::default().install(cx);
+
+    LoopRegionSignal::default().install(cx);
+    TimeSignatureSignal::default().install(cx);
+    BarSignal::default().install(cx);
 }
 
 fn update_common_signals(cx: &mut Context, info: TransportInfo) {
-    SamplerateSignal::signal(cx).set_if_changed(info.sample_rate); // Should never change but meh
+    // Should never change but meh
+    SamplerateSignal::signal(cx).set_if_changed(info.sample_rate);
+
+    IsPlayingSignal::signal(cx).set_if_changed(info.is_playing);
+    IsRecordingSignal::signal(cx).set_if_changed(info.is_recording);
+    IsPrerollSignal::signal(cx).set_if_changed(info.is_preroll);
+
+    SongPosBeatsSignal::signal(cx).set_if_changed(info.song_pos_beats);
+    SongPosSecsSignal::signal(cx).set_if_changed(info.song_pos_seconds);
+
     TempoSignal::signal(cx).set_if_changed(info.tempo);
+    TempoIncSignal::signal(cx).set_if_changed(info.tempo_inc);
+
+    LoopRegionSignal::signal(cx).set_if_changed(info.loop_region);
+    TimeSignatureSignal::signal(cx).set_if_changed(info.time_signature);
+    BarSignal::signal(cx).set_if_changed(info.bar);
 }
 
 #[cfg(test)]
