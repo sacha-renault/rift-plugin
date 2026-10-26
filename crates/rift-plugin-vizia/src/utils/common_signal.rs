@@ -5,7 +5,7 @@
 
 use std::ops::Deref;
 
-use rift_plugin_utils::DEFAULT_SAMPLERATE;
+use rift_plugin_utils::{DEFAULT_SAMPLERATE, DEFAULT_TEMPO};
 
 use crate::dev_prelude::*;
 
@@ -62,8 +62,12 @@ impl<T: CommonSignalKind> CommonSignal<T> {
         }
     }
 
-    pub(crate) fn set(&self, v: T::Type) {
+    pub fn set(&self, v: T::Type) {
         self.write.set(v);
+    }
+
+    pub fn update<F: FnOnce(&mut T::Type)>(&self, f: F) {
+        self.write.update(f);
     }
 
     /// Install the signal on the root entity
@@ -80,6 +84,11 @@ impl<T: CommonSignalKind> CommonSignal<T> {
                 .expect("CommonSignal wasn't install in the app")
         })
     }
+
+    /// Retrieve the signal then get the value
+    pub fn value(cx: &mut Context) -> T::Type {
+        Self::signal(cx).get()
+    }
 }
 
 impl<T: CommonSignalKind> Default for CommonSignal<T> {
@@ -93,7 +102,13 @@ where
     T::Type: PartialEq,
 {
     pub fn set_if_changed(&self, v: T::Type) {
-        if v != *self.read.read() {
+        let equal = self
+            .read
+            .try_read_untracked()
+            .map(|current| *current == v)
+            .unwrap_or(false);
+
+        if !equal {
             self.set(v);
         }
     }
@@ -101,6 +116,7 @@ where
 
 declare_common_signal!(SamplerateSignal, _SrSignalInner, f64, DEFAULT_SAMPLERATE);
 declare_common_signal!(FrameSignal, _FrameSignalInner, (), ());
+declare_common_signal!(TempoSignal, _TempoSignalInner, f64, DEFAULT_TEMPO);
 
 impl FrameSignal {
     pub fn tick(&self) {

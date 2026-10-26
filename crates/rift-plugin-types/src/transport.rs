@@ -3,9 +3,7 @@ use clack_plugin::{
     events::event_types::TransportEvent,
     utils::{BeatTime, SecondsTime},
 };
-use rift_plugin_utils::DEFAULT_SAMPLERATE;
-
-const DEFAULT_TEMPO: f64 = 130.;
+use rift_plugin_utils::{DEFAULT_SAMPLERATE, DEFAULT_TEMPO};
 
 #[derive(Clone, Copy)]
 pub struct ChannelsInfo {

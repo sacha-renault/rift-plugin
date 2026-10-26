@@ -23,6 +23,7 @@ pub use bounded_vec::BoundedVec;
 pub use multi_channel::MultiChannel;
 
 pub const DEFAULT_SAMPLERATE: f64 = 48000.;
+pub const DEFAULT_TEMPO: f64 = 130.;
 
 pub use graveyard::{drop_rt_safe, init_graveyard, swap_in};
 
