@@ -86,9 +86,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         // The GUI context must be `'static` because vizia stores it in window callbacks
         // on its own event-loop thread. `ClapGui::destroy` closes the window before the
         // plugin is torn down, so this handle is never used after the host goes away.
-        let handle = unsafe {
-            std::mem::transmute::<HostSharedHandle<'a>, HostSharedHandle<'static>>(host.shared())
-        };
+        let handle = unsafe { std::mem::transmute(host.shared()) };
 
         let context = Arc::new(
             GuiContextImpl::builder()
