@@ -21,7 +21,9 @@ macro_rules! declare_common_signal {
 
         impl CommonSignalKind for $name {
             type Type = $type;
+        }
 
+        impl CommonSignalDefault for $name {
             fn default_value() -> Self::Type {
                 $default
             }
@@ -37,7 +39,9 @@ mod __sealed {
 
 pub trait CommonSignalKind: __sealed::Sealed + Copy + 'static {
     type Type: Copy + 'static;
+}
 
+pub trait CommonSignalDefault: CommonSignalKind {
     /// Value the signal holds between `install` and the first update from the
     /// host. Not a `const`: transport timestamps are only constructible through
     /// a non-const `From<f64>`.
@@ -98,7 +102,10 @@ impl<T: CommonSignalKind> CommonSignal<T> {
     }
 }
 
-impl<T: CommonSignalKind> Default for CommonSignal<T> {
+impl<T: CommonSignalKind> Default for CommonSignal<T>
+where
+    T: CommonSignalDefault,
+{
     fn default() -> Self {
         Self::new(T::default_value())
     }
