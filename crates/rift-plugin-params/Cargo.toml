@@ -7,6 +7,7 @@ edition = "2024"
 fun-dsp = ["dep:fundsp"]
 
 [dependencies]
+rift-plugin-types = { workspace = true }
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
 arc-swap = { workspace = true }

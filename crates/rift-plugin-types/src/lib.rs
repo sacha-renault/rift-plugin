@@ -1,6 +1,7 @@
 //! Shared types used across the plugin crates: audio and note ports, MIDI
 //! messages, transport, task queues, and cross-thread buffers.
 
+mod atomic_floats;
 mod audio_ports;
 mod event_pre_process;
 mod event_source;
@@ -12,6 +13,7 @@ mod triple_buffer;
 
 pub mod transport;
 
+pub use atomic_floats::{AtomicF32, AtomicF64};
 pub use audio_ports::{AudioPort, MainAudioPort, PAIR_PORT_ID};
 pub use event_pre_process::*;
 pub use event_source::EventSource;

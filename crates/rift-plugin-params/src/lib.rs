@@ -5,7 +5,6 @@
 //! ([`FloatParam`], [`IntParam`], [`BoolParam`], [`EnumParam`], [`StringParam`])
 //! and the [`ParamCollection`] / [`UserParams`] collection traits.
 
-mod atomic_floats;
 mod id;
 mod param_bool;
 mod param_enum;
@@ -28,7 +27,6 @@ mod param_float_fun_dsp;
 mod atomic_param;
 mod test_macros;
 
-pub use atomic_floats::{AtomicF32, AtomicF64};
 pub use clack_plugin::utils::ClapId;
 pub use id::param_id;
 pub use param_bool::BoolParam;

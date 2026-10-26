@@ -4,7 +4,7 @@ use atomic_bitflags::AtomicFlags;
 use bitflags::bitflags;
 use crossbeam_queue::ArrayQueue;
 use rift_plugin_gui::{GuiParamEvent, HostParamChange};
-use rift_plugin_params::AtomicF64;
+use rift_plugin_types::AtomicF64;
 use rift_plugin_types::{TaskCapacity, TaskQueue, TransportInfo};
 use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
