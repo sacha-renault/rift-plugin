@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use atomic_bitflags::AtomicFlags;
@@ -27,7 +26,7 @@ bitflags! {
 /// evict the oldest task; see [`TaskQueue`].
 pub(crate) struct PluginSharedState {
     pub(crate) latency: AtomicU32,
-    pub(crate) samplerate: Arc<AtomicF64>,
+    pub(crate) samplerate: AtomicF64,
 
     /// Queues that audio / main thread can read
     context_menu_requests: TaskQueue<ParamContextMenu>,
@@ -50,7 +49,7 @@ impl PluginSharedState {
     ) -> Self {
         Self {
             latency: AtomicU32::new(0),
-            samplerate: Arc::new(AtomicF64::new(DEFAULT_SAMPLERATE)),
+            samplerate: AtomicF64::new(DEFAULT_SAMPLERATE),
 
             context_menu_requests: TaskQueue::new(context_menu),
             param_events: TaskQueue::new(param_events),

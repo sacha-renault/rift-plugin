@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, atomic::Ordering};
 
 use rift_plugin_gui::{
     GuiContext, GuiParamEvent, GuiParamEventKind, HostParamChange, HostSharedHandle,
@@ -56,6 +56,10 @@ impl GuiContext for GuiContextImpl {
 
     fn latest_transport_info(&self) -> Option<rift_plugin_types::TransportInfo> {
         self.states.latest_transport_info()
+    }
+
+    fn samplerate(&self) -> f64 {
+        self.states.samplerate.load(Ordering::Relaxed)
     }
 }
 

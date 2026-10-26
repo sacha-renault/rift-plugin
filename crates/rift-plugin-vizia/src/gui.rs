@@ -46,13 +46,14 @@ impl ViziaGui {
         let context = self.context.clone();
         let host = context.clone();
         let wsize = WindowSize::new(self.size.width, self.size.height);
+        let samplerate = host.samplerate();
 
         let frame_signal = FrameSignal::default();
 
         let application = Application::new(move |cx| {
             crate::theme::install(cx);
             crate::bridge::install_event_listener(cx, context.clone());
-            crate::bridge::install_common_signals(cx);
+            crate::bridge::install_common_signals(cx, samplerate);
 
             // Handle frame signal independantly
             frame_signal.install(cx);

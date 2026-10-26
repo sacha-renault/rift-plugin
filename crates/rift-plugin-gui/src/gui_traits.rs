@@ -23,6 +23,7 @@ pub trait GuiContext: Send + Sync {
     fn take_refresh_request(&self) -> bool;
     fn handle(&self) -> Option<HostSharedHandle<'static>>;
     fn latest_transport_info(&self) -> Option<TransportInfo>;
+    fn samplerate(&self) -> f64;
 
     #[inline]
     fn request_flush(&self) {

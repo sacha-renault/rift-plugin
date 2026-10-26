@@ -92,6 +92,10 @@ impl GuiContext for StandaloneContext {
     fn latest_transport_info(&self) -> Option<TransportInfo> {
         None
     }
+
+    fn samplerate(&self) -> f64 {
+        utils::DEFAULT_SAMPLERATE
+    }
 }
 
 fn main() {

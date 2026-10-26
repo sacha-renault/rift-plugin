@@ -22,9 +22,9 @@ pub struct BundledTransportSignals {
 impl Model for BundledTransportSignals {}
 
 impl BundledTransportSignals {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(samplerate: f64) -> Self {
         Self {
-            samplerate: SamplerateSignal::default(),
+            samplerate: SamplerateSignal::new(samplerate),
             is_playing: IsPlayingSignal::default(),
             is_recording: IsRecordingSignal::default(),
             is_preroll: IsPrerollSignal::default(),

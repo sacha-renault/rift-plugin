@@ -39,8 +39,8 @@ pub fn pump(cx: &mut Context, host: &dyn GuiContext) {
     }
 }
 
-pub fn install_common_signals(cx: &mut Context) {
-    BundledTransportSignals::new().install(cx);
+pub fn install_common_signals(cx: &mut Context, samplerate: f64) {
+    BundledTransportSignals::new(samplerate).install(cx);
 }
 
 #[cfg(test)]
@@ -55,7 +55,7 @@ mod tests {
     #[test]
     fn updated_signals_are_installed() {
         let mut cx = Context::new();
-        install_common_signals(&mut cx);
+        install_common_signals(&mut cx, DEFAULT_SAMPLERATE);
         BundledTransportSignals::from_context(&mut cx)
             .update(TransportInfo::new(DEFAULT_SAMPLERATE));
     }
