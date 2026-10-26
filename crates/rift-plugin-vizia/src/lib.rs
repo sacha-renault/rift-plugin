@@ -24,6 +24,7 @@ pub mod prelude {
     pub use super::bridge::{ContextExt, ControlExt};
     pub use super::bridge::{Control, ParamBinding, register_param};
     pub use super::factory::{ViziaFactory, vizia_gui};
+    pub use super::utils::bundled_transport_signals::BundledTransportSignals;
     pub use super::utils::common_signal::*;
 
     pub use rift_plugin_derive::modifiers;

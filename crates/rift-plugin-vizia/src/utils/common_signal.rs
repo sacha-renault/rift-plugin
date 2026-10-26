@@ -33,7 +33,7 @@ macro_rules! declare_common_signal {
     };
 }
 
-mod __sealed {
+pub(super) mod __sealed {
     pub trait Sealed {}
 }
 

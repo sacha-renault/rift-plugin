@@ -1,6 +1,7 @@
 mod paint;
 mod wave;
 
+pub mod bundled_transport_signals;
 pub mod common_signal;
 
 pub(crate) use paint::*;
