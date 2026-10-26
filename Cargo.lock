@@ -2070,7 +2070,6 @@ dependencies = [
  "rift-fun-dsp",
  "rift-plugin-accumulator",
  "rift-plugin-buffers",
- "rift-plugin-context",
  "rift-plugin-derive",
  "rift-plugin-gui",
  "rift-plugin-params",
@@ -2097,22 +2096,6 @@ version = "0.1.0"
 dependencies = [
  "clack-plugin",
  "rift-plugin-types",
-]
-
-[[package]]
-name = "rift-plugin-context"
-version = "0.1.0"
-dependencies = [
- "atomic-bitflags",
- "bitflags 2.13.2",
- "bon",
- "clack-extensions",
- "clack-plugin",
- "log",
- "rift-plugin-gui",
- "rift-plugin-params",
- "rift-plugin-types",
- "rift-plugin-utils",
 ]
 
 [[package]]
@@ -2199,11 +2182,13 @@ name = "rift-plugin-wrapper"
 version = "0.1.0"
 dependencies = [
  "assert_no_alloc",
+ "atomic-bitflags",
+ "bitflags 2.13.2",
+ "bon",
  "clack-extensions",
  "clack-plugin",
  "log",
  "rift-plugin-buffers",
- "rift-plugin-context",
  "rift-plugin-gui",
  "rift-plugin-params",
  "rift-plugin-types",

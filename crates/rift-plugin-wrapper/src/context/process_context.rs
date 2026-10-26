@@ -7,11 +7,10 @@ use clack_plugin::prelude::OutputEvents;
 use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
-
-use crate::PluginSharedState;
 use rift_plugin_types::{MidiMessage, TransportInfo};
 
-#[derive(bon::Builder)]
+use crate::shared::PluginSharedState;
+
 pub struct ProcessContext<'a, 'e> {
     host: &'a HostAudioProcessorHandle<'a>,
     states: Arc<PluginSharedState>,
@@ -23,6 +22,24 @@ pub struct ProcessContext<'a, 'e> {
 }
 
 impl<'a, 'e> ProcessContext<'a, 'e> {
+    pub(crate) fn new(
+        host: &'a HostAudioProcessorHandle<'a>,
+        states: Arc<PluginSharedState>,
+        transport_info: &'a TransportInfo,
+        outputs_events: &'e mut OutputEvents<'e>,
+        host_params: Arc<ParamsWrapper>,
+        notify_gui: bool,
+    ) -> Self {
+        Self {
+            host,
+            states,
+            transport_info,
+            outputs_events,
+            host_params,
+            notify_gui,
+        }
+    }
+
     pub fn transport_info(&self) -> &TransportInfo {
         self.transport_info
     }

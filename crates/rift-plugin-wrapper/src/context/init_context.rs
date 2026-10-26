@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use clack_plugin::host::HostMainThreadHandle;
 
-use crate::PluginSharedState;
+use crate::shared::PluginSharedState;
 
 /// Context for initializing plugin state during host callback requests.
 pub struct InitContext<'a> {
@@ -11,7 +11,7 @@ pub struct InitContext<'a> {
 }
 
 impl<'a> InitContext<'a> {
-    pub fn new(host: &'a HostMainThreadHandle<'a>, states: Arc<PluginSharedState>) -> Self {
+    pub(crate) fn new(host: &'a HostMainThreadHandle<'a>, states: Arc<PluginSharedState>) -> Self {
         Self { host, states }
     }
 

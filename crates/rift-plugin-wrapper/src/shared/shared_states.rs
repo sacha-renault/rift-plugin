@@ -8,13 +8,13 @@ use rift_plugin_params::AtomicF64;
 use rift_plugin_types::{TaskCapacity, TaskQueue};
 use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
-use crate::tasks::ParamContextMenu;
+use super::tasks::ParamContextMenu;
 
 const REL: Ordering = Ordering::Relaxed;
 
 bitflags! {
     #[derive(Debug, Clone, Copy)]
-    pub struct SharedStateFlags: u32 {
+    struct SharedStateFlags: u32 {
         const IS_GUI_OPENED = 1 << 0;
         const IS_PLAYING = 1 << 1;
         const PARAM_RESCAN = 1 << 2;
@@ -25,7 +25,7 @@ bitflags! {
 ///
 /// Contains bounded queues for posting tasks to the opposite thread. Full queues
 /// evict the oldest task; see [`TaskQueue`].
-pub struct PluginSharedState {
+pub(crate) struct PluginSharedState {
     pub(crate) latency: AtomicU32,
     pub(crate) samplerate: Arc<AtomicF64>,
 
@@ -38,7 +38,7 @@ pub struct PluginSharedState {
 }
 
 impl PluginSharedState {
-    pub fn new(
+    pub(crate) fn new(
         TaskCapacity {
             gui_param_changes,
             param_events,
@@ -59,12 +59,12 @@ impl PluginSharedState {
 
     /// Updates the plugin's processing latency in samples.
     #[inline]
-    pub fn set_latency(&self, latency: u32) {
+    pub(crate) fn set_latency(&self, latency: u32) {
         self.latency.store(latency, REL);
     }
 
     #[inline]
-    pub fn get_latency(&self) -> u32 {
+    pub(crate) fn get_latency(&self) -> u32 {
         self.latency.load(REL)
     }
 
@@ -73,7 +73,7 @@ impl PluginSharedState {
     /// Drained by the audio processor, or by the main-thread flush when the
     /// plugin is inactive.
     #[inline]
-    pub fn param_events(&self) -> &TaskQueue<GuiParamEvent> {
+    pub(crate) fn param_events(&self) -> &TaskQueue<GuiParamEvent> {
         &self.param_events
     }
 
@@ -83,17 +83,17 @@ impl PluginSharedState {
     /// inactive flushes. Drained by the GUI; a full queue evicts the oldest
     /// change, which the GUI detects through [`TaskQueue::take_overflow`].
     #[inline]
-    pub fn gui_param_changes(&self) -> &TaskQueue<HostParamChange> {
+    pub(crate) fn gui_param_changes(&self) -> &TaskQueue<HostParamChange> {
         &self.gui_param_changes
     }
 
     /// Asks the GUI to reload every parameter value, e.g. after a state load.
-    pub fn request_param_rescan(&self) {
+    pub(crate) fn request_param_rescan(&self) {
         self.states_flags.set(SharedStateFlags::PARAM_RESCAN, REL);
     }
 
     /// Consumes a pending rescan request. Returns `true` at most once per request.
-    pub fn take_param_rescan(&self) -> bool {
+    pub(crate) fn take_param_rescan(&self) -> bool {
         !self
             .states_flags
             .take(SharedStateFlags::PARAM_RESCAN, REL)
@@ -102,17 +102,17 @@ impl PluginSharedState {
 
     /// Context-menu requests posted by the GUI for the main thread.
     #[inline]
-    pub fn context_menu_requests(&self) -> &TaskQueue<ParamContextMenu> {
+    pub(crate) fn context_menu_requests(&self) -> &TaskQueue<ParamContextMenu> {
         &self.context_menu_requests
     }
 
-    pub fn is_playing(&self) -> bool {
+    pub(crate) fn is_playing(&self) -> bool {
         self.states_flags
             .load(Ordering::Relaxed)
             .contains(SharedStateFlags::IS_PLAYING)
     }
 
-    pub fn set_is_playing(&self, is_playing: bool) {
+    pub(crate) fn set_is_playing(&self, is_playing: bool) {
         if is_playing {
             self.states_flags.set(SharedStateFlags::IS_PLAYING, REL)
         } else {
@@ -120,22 +120,17 @@ impl PluginSharedState {
         };
     }
 
-    pub fn samplerate(&self) -> f64 {
-        self.samplerate.load(Ordering::Relaxed)
-    }
-
-    #[doc(hidden)]
-    pub fn set_samplerate(&self, value: f64) {
+    pub(crate) fn set_samplerate(&self, value: f64) {
         self.samplerate.store(value, Ordering::Relaxed);
     }
 
-    pub fn is_gui_opened(&self) -> bool {
+    pub(crate) fn is_gui_opened(&self) -> bool {
         self.states_flags
             .load(Ordering::Relaxed)
             .contains(SharedStateFlags::IS_GUI_OPENED)
     }
 
-    pub fn set_gui_opened(&self, is_opened: bool) {
+    pub(crate) fn set_gui_opened(&self, is_opened: bool) {
         if is_opened {
             self.states_flags.set(SharedStateFlags::IS_GUI_OPENED, REL)
         } else {

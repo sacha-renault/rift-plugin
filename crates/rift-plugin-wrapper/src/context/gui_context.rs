@@ -3,13 +3,12 @@ use std::sync::Arc;
 use rift_plugin_gui::{
     GuiContext, GuiParamEvent, GuiParamEventKind, HostParamChange, HostSharedHandle,
 };
-
-use crate::ParamContextMenu;
-use crate::PluginSharedState;
 use rift_plugin_params::{ClapId, ParamCollection};
 
+use crate::shared::{ParamContextMenu, PluginSharedState};
+
 #[derive(bon::Builder)]
-pub struct GuiContextImpl {
+pub(crate) struct GuiContextImpl {
     states: Arc<PluginSharedState>,
     params: Arc<dyn ParamCollection>,
     handle: HostSharedHandle<'static>,

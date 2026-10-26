@@ -5,8 +5,8 @@ use clack_plugin::prelude::*;
 
 use rift_plugin_gui::ClapGui;
 
+use crate::shared::PluginSharedState;
 use crate::{ClapPlugin, shared::WrapperShared};
-use rift_plugin_context::PluginSharedState;
 
 pub(crate) mod context_menu;
 mod latency;

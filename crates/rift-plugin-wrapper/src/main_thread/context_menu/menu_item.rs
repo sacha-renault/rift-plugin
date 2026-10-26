@@ -1,8 +1,9 @@
 use std::ffi::CStr;
 
 use clack_extensions::context_menu::{ContextMenuBuilder, ContextMenuError, Item};
-use rift_plugin_context::MenuContext;
 use rift_plugin_params::ClapId;
+
+use crate::MenuContext;
 
 const FIRST_ACTION_ID: u32 = 1;
 

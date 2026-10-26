@@ -1,7 +1,7 @@
 use clack_plugin::{
     events::{
-        Pckn, UnknownEvent,
         event_types::{ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent},
+        Pckn, UnknownEvent,
     },
     utils::{ClapId, Cookie},
 };
@@ -84,8 +84,7 @@ impl GuiParamEvent {
     }
 }
 
-/// Event to be sent through internal messagine in
-/// [`crate::wrapper::shared_states::PluginSharedState`]
+/// Event sent through the wrapper's internal messaging between threads.
 pub enum RawParamEvent {
     Value(ParamValueEvent),
     GestureBegin(ParamGestureBeginEvent),

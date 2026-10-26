@@ -12,10 +12,10 @@ use rift_plugin_gui::HostSharedHandle;
 use rift_plugin_utils::init_graveyard;
 
 use crate::ClapPlugin;
+use crate::context::GuiContextImpl;
 use crate::main_thread::WrapperMainThread;
 use crate::processor::WrapperProcessor;
 use crate::shared::WrapperShared;
-use rift_plugin_context::GuiContextImpl;
 
 /// Wrapper that declares audio ports, state, and GUI extensions, and validates descriptor fields at compile time.
 pub struct PluginWrapper<P: ClapPlugin>(PhantomData<P>);

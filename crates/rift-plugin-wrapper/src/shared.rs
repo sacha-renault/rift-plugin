@@ -1,11 +1,22 @@
+//! Wrapper-owned state shared between the plugin's threads.
+//!
+//! `PluginSharedState` and the task queues it contains are deliberately
+//! crate-private: plugins receive contexts that expose only the operations
+//! they need, never the raw cross-thread state.
+
 use std::sync::Arc;
 
 use clack_plugin::plugin::PluginShared;
 
 use crate::ClapPlugin;
-use rift_plugin_context::PluginSharedState;
 use rift_plugin_params::UserParams;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
+
+mod shared_states;
+mod tasks;
+
+pub(crate) use shared_states::PluginSharedState;
+pub(crate) use tasks::ParamContextMenu;
 
 pub struct WrapperShared<P: ClapPlugin> {
     /// Params of the plugin, defined by the user.

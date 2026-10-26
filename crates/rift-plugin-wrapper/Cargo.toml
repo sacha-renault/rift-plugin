@@ -11,9 +11,11 @@ rift-plugin-gui = { workspace = true }
 rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-buffers = { workspace = true }
-rift-plugin-context = { workspace = true }
 rift-plugin-utils = { workspace = true }
 
+bitflags = { workspace = true }
+atomic-bitflags = { workspace = true }
+bon = { workspace = true }
 clack-plugin = { workspace = true }
 clack-extensions = { workspace = true }
 log = { workspace = true }

@@ -10,7 +10,6 @@ rift-plugin-gui = { workspace = true }
 rift-plugin-params = { workspace = true }
 rift-plugin-types = { workspace = true }
 rift-plugin-buffers = { workspace = true }
-rift-plugin-context = { workspace = true }
 rift-plugin-wrapper = { workspace = true }
 rift-plugin-accumulator = { workspace = true }
 rift-fun-dsp = { workspace = true, optional = true }

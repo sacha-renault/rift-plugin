@@ -2,10 +2,10 @@ use clack_extensions::params::*;
 use clack_plugin::prelude::*;
 
 use rift_plugin_buffers::Buffers;
-use rift_plugin_context::{InitContext, ProcessContext};
 use rift_plugin_types::TransportInfo;
 
 use crate::ClapPlugin;
+use crate::context::{InitContext, ProcessContext};
 use crate::main_thread::WrapperMainThread;
 use crate::shared::WrapperShared;
 
@@ -76,14 +76,14 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 .states
                 .set_is_playing(self.transport_info.is_playing);
 
-            let context = ProcessContext::builder()
-                .host(&self.host)
-                .states(self.shared.states.clone())
-                .outputs_events(events.output)
-                .host_params(self.shared.host_params.clone())
-                .notify_gui(self.notify_gui)
-                .transport_info(&self.transport_info)
-                .build();
+            let context = ProcessContext::new(
+                &self.host,
+                self.shared.states.clone(),
+                &self.transport_info,
+                events.output,
+                self.shared.host_params.clone(),
+                self.notify_gui,
+            );
 
             self.plugin.process(
                 buffers,

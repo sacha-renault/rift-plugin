@@ -28,7 +28,6 @@ pub mod prelude {
     pub use rift_plugin_accumulator as accumulator;
     pub use rift_plugin_accumulator::prelude::*;
     pub use rift_plugin_buffers::*;
-    pub use rift_plugin_context::*;
     pub use rift_plugin_gui::{ClapGui, GuiFactory};
     pub use rift_plugin_params::*;
     pub use rift_plugin_types::transport::*;

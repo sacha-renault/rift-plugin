@@ -1,7 +1,7 @@
 use clack_extensions::context_menu::{ContextMenuTarget, HostContextMenu};
-use rift_plugin_context::{MenuContext, ParamContextMenu};
 
-use crate::{ClapPlugin, MenuItem, main_thread::WrapperMainThread};
+use crate::shared::ParamContextMenu;
+use crate::{ClapPlugin, MenuContext, MenuItem, main_thread::WrapperMainThread};
 
 pub mod menu;
 pub mod menu_item;
