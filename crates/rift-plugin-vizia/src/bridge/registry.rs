@@ -54,7 +54,7 @@ impl ParamRegistry {
         // notifies its subscribers.
         let entry = self.entries.borrow().get(&id).copied();
         if let Some(Entry { ptr, signal }) = entry {
-            signal.set(ptr.normalize(plain));
+            signal.set_if_changed(ptr.normalize(plain));
         }
     }
 
