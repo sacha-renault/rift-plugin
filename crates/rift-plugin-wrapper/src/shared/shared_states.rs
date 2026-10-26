@@ -3,9 +3,10 @@ use std::sync::atomic::{AtomicU32, Ordering};
 
 use atomic_bitflags::AtomicFlags;
 use bitflags::bitflags;
+use crossbeam_queue::ArrayQueue;
 use rift_plugin_gui::{GuiParamEvent, HostParamChange};
 use rift_plugin_params::AtomicF64;
-use rift_plugin_types::{TaskCapacity, TaskQueue};
+use rift_plugin_types::{TaskCapacity, TaskQueue, TransportInfo};
 use rift_plugin_utils::DEFAULT_SAMPLERATE;
 
 use super::tasks::ParamContextMenu;
@@ -34,6 +35,9 @@ pub(crate) struct PluginSharedState {
     param_events: TaskQueue<GuiParamEvent>,
     gui_param_changes: TaskQueue<HostParamChange>,
 
+    /// Queue that actually just represent the last transport event
+    transport_info: ArrayQueue<TransportInfo>,
+
     states_flags: AtomicFlags<SharedStateFlags>,
 }
 
@@ -52,6 +56,11 @@ impl PluginSharedState {
             context_menu_requests: TaskQueue::new(context_menu),
             param_events: TaskQueue::new(param_events),
             gui_param_changes: TaskQueue::new(gui_param_changes),
+
+            // There should be always at most 1
+            // if the GUI didn't drain, we just replace with
+            // the newest info ...
+            transport_info: ArrayQueue::new(1),
 
             states_flags: AtomicFlags::new(SharedStateFlags::empty()),
         }
@@ -137,6 +146,14 @@ impl PluginSharedState {
             self.states_flags
                 .unset(SharedStateFlags::IS_GUI_OPENED, REL)
         };
+    }
+
+    pub(crate) fn push_transport_info(&self, info: TransportInfo) {
+        _ = self.transport_info.force_push(info);
+    }
+
+    pub(crate) fn latest_transport_info(&self) -> Option<TransportInfo> {
+        self.transport_info.pop()
     }
 }
 

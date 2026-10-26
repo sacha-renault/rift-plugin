@@ -92,6 +92,10 @@ impl GuiContext for StandaloneContext {
     fn handle(&self) -> Option<HostSharedHandle<'static>> {
         None
     }
+
+    fn latest_transport_info(&self) -> Option<TransportInfo> {
+        None
+    }
 }
 
 fn main() {

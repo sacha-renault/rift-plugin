@@ -2122,6 +2122,7 @@ dependencies = [
  "clack-extensions",
  "clack-plugin",
  "rift-plugin-params",
+ "rift-plugin-types",
 ]
 
 [[package]]
@@ -2187,6 +2188,7 @@ dependencies = [
  "bon",
  "clack-extensions",
  "clack-plugin",
+ "crossbeam-queue",
  "log",
  "rift-plugin-buffers",
  "rift-plugin-gui",

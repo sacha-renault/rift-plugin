@@ -52,7 +52,11 @@ impl ViziaGui {
         let application = Application::new(move |cx| {
             crate::theme::install(cx);
             crate::bridge::install_event_listener(cx, context.clone());
+            crate::bridge::install_common_signals(cx);
+
+            // Handle frame signal independantly
             frame_signal.install(cx);
+
             app_fn(cx, context.clone());
         })
         .on_idle(move |cx| {

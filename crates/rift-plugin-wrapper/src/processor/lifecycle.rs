@@ -72,6 +72,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
 
             // update transport
             self.transport_info.update(process.transport, frame_count);
+            self.shared.states.push_transport_info(self.transport_info);
             self.shared
                 .states
                 .set_is_playing(self.transport_info.is_playing);

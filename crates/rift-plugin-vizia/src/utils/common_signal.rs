@@ -15,6 +15,7 @@ macro_rules! declare_common_signal {
         #[derive(Clone, Copy)]
         #[doc(hidden)]
         pub struct $name;
+
         impl __sealed::Sealed for $name {}
 
         impl CommonSignalKind for $name {

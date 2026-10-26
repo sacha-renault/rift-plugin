@@ -4,6 +4,7 @@ use clack_extensions::{gui::*, params::HostParams};
 use clack_plugin::{host::HostSharedHandle, plugin::PluginError, utils::ClapId};
 
 use rift_plugin_params::ParamCollection;
+use rift_plugin_types::TransportInfo;
 
 use crate::{HostParamChange, ParamSync};
 
@@ -22,6 +23,7 @@ pub trait GuiContext: Send + Sync {
     /// because changes were dropped or the host loaded a new state.
     fn take_refresh_request(&self) -> bool;
     fn handle(&self) -> Option<HostSharedHandle<'static>>;
+    fn latest_transport_info(&self) -> Option<TransportInfo>;
 
     #[inline]
     fn request_flush(&self) {

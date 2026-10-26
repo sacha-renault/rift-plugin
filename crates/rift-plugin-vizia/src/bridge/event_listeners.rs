@@ -23,7 +23,7 @@ pub fn install_event_listener(cx: &mut Context, host: Arc<dyn GuiContext>) {
 
 /// Applies what the host sent since the last call (automation, preset loads...)
 /// to the widgets. Call it on every frame, e.g. from `on_idle`.
-pub fn pump(cx: &Context, host: &dyn GuiContext) {
+pub fn pump(cx: &mut Context, host: &dyn GuiContext) {
     // audio thread => GUI
     let registry = ParamRegistry::from_context(cx);
     while let Some(change) = host.pop_in_gui() {
@@ -33,4 +33,14 @@ pub fn pump(cx: &Context, host: &dyn GuiContext) {
     if host.take_refresh_request() {
         registry.refresh_param_values();
     }
+
+    if let Some(info) = host.latest_transport_info() {
+        SamplerateSignal::signal(cx).set_if_changed(info.sample_rate); // Should never change but meh
+        TempoSignal::signal(cx).set_if_changed(info.tempo);
+    }
+}
+
+pub fn install_common_signals(cx: &mut Context) {
+    SamplerateSignal::default().install(cx);
+    TempoSignal::default().install(cx);
 }

@@ -57,6 +57,10 @@ impl GuiContext for GuiContextImpl {
     fn handle(&self) -> Option<HostSharedHandle<'static>> {
         Some(self.handle)
     }
+
+    fn latest_transport_info(&self) -> Option<rift_plugin_types::TransportInfo> {
+        self.states.latest_transport_info()
+    }
 }
 
 impl GuiContextImpl {
