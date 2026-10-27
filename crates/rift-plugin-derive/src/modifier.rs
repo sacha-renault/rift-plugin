@@ -8,8 +8,10 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{
-    GenericParam, Generics, ItemTrait, Token, TraitItem, TraitItemFn, TypeParam, WhereClause,
-    WherePredicate, parse::Parse, parse::ParseStream, punctuated::Punctuated,
+    Attribute, GenericParam, Generics, Ident, ItemTrait, Token, TraitItem, TypeParam, WhereClause,
+    WherePredicate,
+    parse::{Parse, ParseStream},
+    punctuated::Punctuated,
 };
 
 /// Arguments of `#[modifiers(for <Type> [where ...])]`.
@@ -95,14 +97,9 @@ pub(crate) fn modifiers(attr: TokenStream, item: TokenStream) -> syn::Result<Tok
             continue;
         };
 
-        if !is_concrete(method) {
+        if remove_attr_by_ident(&mut method.attrs, "concrete").is_none() {
             continue;
         }
-
-        // The marker is a helper only; it must not reach the compiler.
-        method
-            .attrs
-            .retain(|attr| !attr.path().is_ident("concrete"));
 
         let Some(block) = method.default.take() else {
             return Err(syn::Error::new_spanned(
@@ -115,8 +112,14 @@ pub(crate) fn modifiers(attr: TokenStream, item: TokenStream) -> syn::Result<Tok
         // signature terminated by a `;`.
         method.semi_token = Some(Default::default());
 
+        // Clone now attrs
+        let concrete_attrs = method.attrs.clone();
+
+        // Some path items shouldn't exist on trait
+        remove_attr_by_ident(&mut method.attrs, "inline");
+
         concrete.push(syn::ImplItemFn {
-            attrs: method.attrs.clone(),
+            attrs: concrete_attrs,
             vis: syn::Visibility::Inherited,
             defaultness: None,
             sig: method.sig.clone(),
@@ -142,9 +145,14 @@ pub(crate) fn modifiers(attr: TokenStream, item: TokenStream) -> syn::Result<Tok
     })
 }
 
-fn is_concrete(method: &TraitItemFn) -> bool {
-    method
-        .attrs
-        .iter()
-        .any(|attr| attr.path().is_ident("concrete"))
+fn remove_attr_by_ident<I>(attrs: &mut Vec<Attribute>, ident: &I) -> Option<Attribute>
+where
+    I: ?Sized,
+    Ident: PartialEq<I>,
+{
+    if let Some(idx) = attrs.iter().position(|attr| attr.path().is_ident(ident)) {
+        Some(attrs.remove(idx))
+    } else {
+        None
+    }
 }
