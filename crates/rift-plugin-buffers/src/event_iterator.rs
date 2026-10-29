@@ -1,4 +1,7 @@
+use std::{iter::FusedIterator, ops::Range};
+
 use clack_plugin::events::{
+    UnknownEvent,
     event_types::{MidiEvent, ParamValueEvent},
     io::InputEvents,
 };
@@ -36,8 +39,7 @@ impl<'a> EventsCursor<'a> {
         let (start, end) = self.bounds(frame);
         FrameEventsIter {
             events: self.events,
-            position: start,
-            end,
+            indices: start..end,
         }
     }
 
@@ -70,8 +72,7 @@ impl<'a> EventsCursor<'a> {
 
 pub struct FrameEventsIter<'a> {
     events: &'a InputEvents<'a>,
-    position: usize,
-    end: usize,
+    indices: Range<usize>,
 }
 
 impl<'a> Iterator for FrameEventsIter<'a> {
@@ -79,18 +80,33 @@ impl<'a> Iterator for FrameEventsIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.position < self.end {
-            let event = &self.events[self.position];
-            self.position += 1;
+        self.indices.by_ref().find_map(|i| convert(&self.events[i]))
+    }
 
-            if let Some(&param_event) = event.as_event::<ParamValueEvent>() {
-                return Some(InputEvent::ParamEvent(param_event));
-            } else if let Some(&midi_event) = event.as_event::<MidiEvent>() {
-                return Some(InputEvent::MidiEvent(midi_event.into()));
-            }
-            // Unknown event type, skip it, try next
-        }
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.indices.len()))
+    }
+}
 
+impl<'a> DoubleEndedIterator for FrameEventsIter<'a> {
+    #[inline]
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.indices
+            .by_ref()
+            .rev()
+            .find_map(|i| convert(&self.events[i]))
+    }
+}
+
+impl<'a> FusedIterator for FrameEventsIter<'a> {}
+
+fn convert(event: &UnknownEvent) -> Option<InputEvent> {
+    if let Some(&p) = event.as_event::<ParamValueEvent>() {
+        Some(InputEvent::ParamEvent(p))
+    } else if let Some(&m) = event.as_event::<MidiEvent>() {
+        Some(InputEvent::MidiEvent(m.into()))
+    } else {
         None
     }
 }
