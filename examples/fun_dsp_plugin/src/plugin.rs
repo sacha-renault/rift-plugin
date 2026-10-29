@@ -72,8 +72,7 @@ impl ClapPlugin for FunDspPlugin {
     fn process(
         &mut self,
         mut buffers: Buffers,
-        ctx: ProcessContext<Self>,
-        _events: &InputEvents,
+        mut ctx: ProcessContext<Self>,
         params: &Self::Params,
         data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
@@ -82,7 +81,9 @@ impl ClapPlugin for FunDspPlugin {
             utils::swap_in(&mut self.graph, graph);
         }
 
-        buffers.main().for_each_stereo_frame(|_, frame| {
+        buffers.main().for_each_stereo_frame(|time, frame| {
+            ctx.handle_events(self, time);
+
             frame.fill(0.);
 
             for ((osc, oscp), wavetable) in self

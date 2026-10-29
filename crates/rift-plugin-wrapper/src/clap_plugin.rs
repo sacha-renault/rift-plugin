@@ -1,9 +1,6 @@
 use std::{ffi::CStr, sync::Arc};
 
-use clack_plugin::{
-    events::io::InputEvents,
-    process::{PluginAudioConfiguration, ProcessStatus},
-};
+use clack_plugin::process::{PluginAudioConfiguration, ProcessStatus};
 use rift_plugin_buffers::Buffers;
 use rift_plugin_gui::{GuiFactory, PluginError};
 use rift_plugin_params::{ClapId, UserParams};
@@ -91,7 +88,6 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
         &mut self,
         buffers: Buffers,
         ctx: ProcessContext<Self>,
-        events: &InputEvents,
         params: &Self::Params,
         data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError>;

@@ -32,6 +32,11 @@ impl<'a> EventsCursor<'a> {
         }
     }
 
+    #[inline]
+    pub fn events(&self) -> &'a InputEvents<'a> {
+        &self.events
+    }
+
     /// Returns an iterator for the current frame and increment
     /// the frame so that next call is on next frame
     pub fn next_frame(&mut self) -> FrameEventsIter<'a> {
@@ -42,8 +47,8 @@ impl<'a> EventsCursor<'a> {
 
     /// Events of `frame`. Cheapest when called with increasing frames;
     /// going backwards restarts the scan from the beginning.
-    pub fn iter_events_at(&mut self, frame: u32) -> FrameEventsIter<'a> {
-        let (start, end) = self.bounds(frame);
+    pub fn iter_events_at(&mut self, time: u32) -> FrameEventsIter<'a> {
+        let (start, end) = self.bounds(time);
         FrameEventsIter {
             events: self.events,
             indices: start..end,

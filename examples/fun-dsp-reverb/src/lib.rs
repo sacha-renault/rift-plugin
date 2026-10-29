@@ -90,7 +90,6 @@ impl ClapPlugin for FunDspReverb {
         &mut self,
         mut buffers: Buffers,
         _ctx: ProcessContext<Self>,
-        _events: &InputEvents,
         _params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {

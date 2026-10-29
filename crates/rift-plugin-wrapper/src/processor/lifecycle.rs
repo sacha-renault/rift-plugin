@@ -1,7 +1,7 @@
 use clack_extensions::params::*;
 use clack_plugin::prelude::*;
 
-use rift_plugin_buffers::Buffers;
+use rift_plugin_buffers::{Buffers, EventsCursor};
 use rift_plugin_types::TransportInfo;
 
 use crate::ClapPlugin;
@@ -78,6 +78,8 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 host: &self.host,
                 states: self.shared.states.clone(),
                 transport_info: &self.transport_info,
+
+                cursor_events: EventsCursor::new(events.input),
                 output_events: events.output,
                 user_params: self.shared.user_params.clone(),
                 shared: self.shared.data.clone(),
@@ -88,7 +90,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             self.plugin.process(
                 buffers,
                 context,
-                events.input,
                 self.shared.user_params.as_ref(),
                 self.shared.data.as_ref(),
             )

@@ -28,7 +28,7 @@ pub struct Garbage {
 }
 
 impl Garbage {
-    fn new<T: Send + 'static>(value: T) -> Self {
+    const fn new<T: Send + 'static>(value: T) -> Self {
         // Compile-time errors if the type doesn't fit
         const { assert!(size_of::<T>() <= SLOT_SIZE, "type too big for Garbage slot") };
         const {
