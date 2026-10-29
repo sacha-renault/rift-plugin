@@ -25,3 +25,7 @@
 - [x] Validate `Scale` at construction. `Scale` is a public enum, so a zero, negative or infinite factor compiles and makes `normalize` / `denormalize` return `inf` or `NaN` (`crates/rift-plugin-params/src/scale.rs`). Make a bad curve unrepresentable with a private field and `const fn` constructors that assert, and guard `min == max` separately since the assert cannot see the range. The derive already covers literal factors, but not a `const VALUE: f32`.
 - [x] `BlobParam` (bytes). Host invisible `Persistent` sibling of `StringParam` for binary data such as wavetables, IRs or serialized graphs. Back it with `ArcSwap<Arc<[u8]>>` so audio thread reads stay lock free.
 - [x] Path or file param. A `StringParam` flavour holding a path, with a change notification so the plugin can reload, for example a sample or an IR. Probably a thin flavour over `StringParam` or `BlobParam`.
+
+## Audio buffers
+
+- [ ] Sub-block chunking for `Buffer`. `for_each_frame` / `for_each_stereo_frame` hand out `0..samples()` one frame at a time (`crates/rift-plugin-buffers/src/buffer.rs`). Add a chunked variant that yields contiguous `block_start..block_end` ranges, so work with a fixed cost per call (FFT, lookahead, tempo mapping) can size a scratch buffer once per chunk instead of per frame. The `pos` argument is already the frame's index in the whole buffer rather than a 0-based per-callback counter, precisely so chunking does not silently change what callers see.

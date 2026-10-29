@@ -132,6 +132,24 @@ impl<'a> Buffer<'a> {
         }
     }
 
+    /// Calls `f` on each frame, with all `N` channels gathered into one array.
+    ///
+    /// Audio is planar (one contiguous buffer per channel), so a frame is copied
+    /// out across the channel pointers, given to `f`, then copied back, writes
+    /// through `frame` are kept. One array is reused for the whole block, so this
+    /// allocates nothing.
+    ///
+    /// `pos` is the frame's index inside the buffer. Treat it as absolute
+    /// within the block, not as a counter of callbacks: it stays valid if the
+    /// block is later walked in sub-blocks.
+    ///
+    /// The per-frame gather defeats auto-vectorization, like
+    /// [`Buffer::iter_samples`]. For pure per-channel processing prefer
+    /// [`Buffer::iter_channels_mut`].
+    ///
+    /// # Panics
+    ///
+    /// Panics if `N` differs from [`Buffer::channels`].
     pub fn for_each_frame<const N: usize>(&'a mut self, mut f: impl FnMut(u32, &mut [f32; N])) {
         assert_eq!(self.channels(), N);
 
@@ -152,6 +170,7 @@ impl<'a> Buffer<'a> {
         }
     }
 
+    /// [`for_each_frame`][Self::for_each_frame] with `N = 2`.
     pub fn for_each_stereo_frame(&'a mut self, f: impl FnMut(u32, &mut [f32; 2])) {
         self.for_each_frame::<2>(f)
     }
