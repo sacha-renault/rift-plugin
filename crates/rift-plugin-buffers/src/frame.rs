@@ -1,7 +1,3 @@
-use clack_plugin::events::io::InputEvents;
-
-use crate::zip_event::FramesEventZipped;
-
 /// Iterates over the buffer one sample frame at a time.
 ///
 /// Each frame yields all channels at a given time step. For a stereo buffer
@@ -45,35 +41,6 @@ impl<'a> SampleFrames<'a> {
     #[inline]
     pub fn position(&self) -> usize {
         self.position
-    }
-
-    /// Pairs each audio frame with its corresponding CLAP input events.
-    ///
-    /// This is an extension over [`SampleFrames`]: it zips the frame iterator with
-    /// an event stream, yielding `(FrameEvents, Frame)` pairs where each
-    /// `FrameEvents` contains only the events whose timestamp matches that frame's
-    /// position.
-    ///
-    /// Every MIDI and parameter event of the block is yielded here, independently of the
-    /// wrapper's auto-handling. If the plugin also opts into auto-handling for a given
-    /// event type, that type is consumed twice (once automatically, once here): choose one
-    /// path per event type.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// for (events, frame) in sample_frames.zip_events(&input_events) {
-    ///     for event in events {
-    ///         match event {
-    ///             InputEvent::MidiEvent(msg) => { /* handle MIDI */ }
-    ///             InputEvent::ParamEvent(val) => { /* handle param change */ }
-    ///         }
-    ///     }
-    ///     // process `frame` audio data
-    /// }
-    /// ```
-    pub fn zip_events(self, events: &'a InputEvents) -> FramesEventZipped<'a> {
-        FramesEventZipped::from_frame_iter(self, events)
     }
 }
 

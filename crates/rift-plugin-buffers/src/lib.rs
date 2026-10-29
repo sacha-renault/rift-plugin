@@ -5,7 +5,6 @@ mod buffers;
 pub mod event_handling;
 mod event_iterator;
 pub mod frame;
-mod zip_event;
 
 pub use buffer::Buffer;
 pub use buffers::Buffers;
