@@ -54,7 +54,7 @@ impl ClapPlugin for MinimalGain {
     fn process(
         &mut self,
         mut buffers: Buffers,
-        context: ProcessContext,
+        context: ProcessContext<Self>,
         _input_events: &InputEvents,
         params: &Self::Params,
         data: &Self::SharedData,

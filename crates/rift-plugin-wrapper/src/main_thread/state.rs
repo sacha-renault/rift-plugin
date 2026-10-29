@@ -15,10 +15,10 @@ impl<'a, P: ClapPlugin> PluginStateImpl for super::WrapperMainThread<'a, P> {
         log::debug!("save (state)");
 
         let mut params = serde_json::Map::new();
-        self.shared.params.serialize_params(&mut params)?;
+        self.shared.user_params.serialize_params(&mut params)?;
 
         let mut persist = serde_json::Map::new();
-        self.shared.params.serialize_persist(&mut persist)?;
+        self.shared.user_params.serialize_persist(&mut persist)?;
 
         let mut root = serde_json::Map::new();
         root.insert(
@@ -72,13 +72,13 @@ impl<'a, P: ClapPlugin> super::WrapperMainThread<'a, P> {
             .get("params")
             .and_then(serde_json::Value::as_object)
             .ok_or(PluginError::Message("Missing params"))?;
-        self.shared.params.deserialize_params(params)?;
+        self.shared.user_params.deserialize_params(params)?;
 
         let persist = root
             .get("persist")
             .and_then(serde_json::Value::as_object)
             .ok_or(PluginError::Message("Missing persist"))?;
-        self.shared.params.deserialize_persist(persist)?;
+        self.shared.user_params.deserialize_persist(persist)?;
 
         Ok(())
     }

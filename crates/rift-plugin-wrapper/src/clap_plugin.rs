@@ -90,7 +90,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     fn process(
         &mut self,
         buffers: Buffers,
-        ctx: ProcessContext,
+        ctx: ProcessContext<Self>,
         events: &InputEvents,
         params: &Self::Params,
         data: &Self::SharedData,

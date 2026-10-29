@@ -89,13 +89,14 @@ impl ClapPlugin for FunDspReverb {
     fn process(
         &mut self,
         mut buffers: Buffers,
-        _ctx: ProcessContext,
+        _ctx: ProcessContext<Self>,
         _events: &InputEvents,
         _params: &Self::Params,
         _data: &Self::SharedData,
     ) -> Result<ProcessStatus, PluginError> {
+        let mut output = [0.; 2];
+
         buffers.main().for_each_stereo_frame(|frame| {
-            let mut output = [0.; 2];
             self.graph.tick(frame, &mut output);
             frame.copy_from_slice(&output);
         });

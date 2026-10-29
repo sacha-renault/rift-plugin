@@ -20,7 +20,7 @@ pub(crate) use tasks::ParamContextMenu;
 
 pub struct WrapperShared<P: ClapPlugin> {
     /// Params of the plugin, defined by the user.
-    pub(crate) params: Arc<P::Params>,
+    pub(crate) user_params: Arc<P::Params>,
     /// Host-facing view over the very same parameters, keyed by [`ClapId`] for
     /// fast lookups.
     ///
@@ -35,7 +35,7 @@ pub struct WrapperShared<P: ClapPlugin> {
 impl<P: ClapPlugin> Clone for WrapperShared<P> {
     fn clone(&self) -> Self {
         Self {
-            params: Arc::clone(&self.params),
+            user_params: Arc::clone(&self.user_params),
             host_params: Arc::clone(&self.host_params),
             data: Arc::clone(&self.data),
             states: Arc::clone(&self.states),
@@ -52,7 +52,7 @@ impl<P: ClapPlugin> Default for WrapperShared<P> {
         let data = P::SharedData::from_params(params.clone());
 
         Self {
-            params,
+            user_params: params,
             host_params,
             data: Arc::new(data),
             states: Arc::new(PluginSharedState::new(P::TASKS_CAPACITY)),

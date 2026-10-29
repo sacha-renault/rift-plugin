@@ -38,7 +38,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                 if flags.contains(EventPreProcess::PARAM_NOTIFY_CHANGE) {
                     self.plugin.on_param_change(
                         id,
-                        &self.shared.params,
+                        &self.shared.user_params,
                         &self.shared.data,
                         EventSource::Host,
                     );
@@ -58,7 +58,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
             {
                 self.plugin.on_midi_message(
                     (*event).into(),
-                    &self.shared.params,
+                    &self.shared.user_params,
                     &self.shared.data,
                 );
             }
@@ -85,7 +85,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                 self.shared.host_params.set_value(id, value);
                 self.plugin.on_param_change(
                     id,
-                    &self.shared.params,
+                    &self.shared.user_params,
                     &self.shared.data,
                     EventSource::GUI,
                 );
@@ -93,7 +93,7 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
             GuiParamEventKind::Persistent => {
                 self.plugin.on_param_change(
                     event.param_id,
-                    &self.shared.params,
+                    &self.shared.user_params,
                     &self.shared.data,
                     EventSource::GUI,
                 );

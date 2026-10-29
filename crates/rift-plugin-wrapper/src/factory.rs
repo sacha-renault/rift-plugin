@@ -80,7 +80,7 @@ impl<P: ClapPlugin> DefaultPluginFactory for PluginWrapper<P> {
         shared: &'a Self::Shared<'a>,
     ) -> Result<Self::MainThread<'a>, PluginError> {
         log::debug!("Create new MainThread<'a>");
-        let into_gui = P::gui(shared.params.clone(), shared.data.clone());
+        let into_gui = P::gui(shared.user_params.clone(), shared.data.clone());
 
         // SAFETY: the host handle is valid for the lifetime of the plugin instance.
         // The GUI context must be `'static` because vizia stores it in window callbacks

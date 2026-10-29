@@ -36,7 +36,7 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<Self, PluginError> {
         // Create the plugin instance & activate right away
         let init_context = InitContext::new(&main_thread.host, shared.states.clone());
-        let plugin = P::create(shared.params.as_ref(), audio_config, init_context);
+        let plugin = P::create(shared.user_params.as_ref(), audio_config, init_context);
         shared.states.set_samplerate(audio_config.sample_rate);
 
         // After the plugin is created, we set latency
@@ -74,20 +74,22 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
             self.transport_info.update(process.transport, frame_count);
             self.shared.states.push_transport_info(self.transport_info);
 
-            let context = ProcessContext::new(
-                &self.host,
-                self.shared.states.clone(),
-                &self.transport_info,
-                events.output,
-                self.shared.host_params.clone(),
-                self.notify_gui,
-            );
+            let context = ProcessContext {
+                host: &self.host,
+                states: self.shared.states.clone(),
+                transport_info: &self.transport_info,
+                output_events: events.output,
+                user_params: self.shared.user_params.clone(),
+                shared: self.shared.data.clone(),
+                host_params: self.shared.host_params.clone(),
+                notify_gui: self.notify_gui,
+            };
 
             self.plugin.process(
                 buffers,
                 context,
                 events.input,
-                self.shared.params.as_ref(),
+                self.shared.user_params.as_ref(),
                 self.shared.data.as_ref(),
             )
         })

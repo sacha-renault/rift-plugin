@@ -4,49 +4,35 @@ use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 
+use rift_plugin_buffers::InputEvent;
 use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::ParamCollection;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
-use rift_plugin_types::{MidiMessage, TransportInfo};
+use rift_plugin_types::{EventSource, MidiMessage, TransportInfo};
 
+use crate::ClapPlugin;
 use crate::shared::PluginSharedState;
 
-pub struct ProcessContext<'a, 'e> {
-    host: &'a HostAudioProcessorHandle<'a>,
-    states: Arc<PluginSharedState>,
-    transport_info: &'a TransportInfo,
+pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
+    pub(crate) host: &'a HostAudioProcessorHandle<'a>,
+    pub(crate) states: Arc<PluginSharedState>,
+    pub(crate) transport_info: &'a TransportInfo,
 
-    outputs_events: &'e mut OutputEvents<'e>,
-    host_params: Arc<ParamsWrapper>,
-    notify_gui: bool,
+    pub(crate) output_events: &'e mut OutputEvents<'e>,
+    pub(crate) user_params: Arc<P::Params>,
+    pub(crate) shared: Arc<P::SharedData>,
+    pub(crate) host_params: Arc<ParamsWrapper>,
+    pub(crate) notify_gui: bool,
 }
 
-impl<'a, 'e> ProcessContext<'a, 'e> {
-    pub(crate) fn new(
-        host: &'a HostAudioProcessorHandle<'a>,
-        states: Arc<PluginSharedState>,
-        transport_info: &'a TransportInfo,
-        outputs_events: &'e mut OutputEvents<'e>,
-        host_params: Arc<ParamsWrapper>,
-        notify_gui: bool,
-    ) -> Self {
-        Self {
-            host,
-            states,
-            transport_info,
-            outputs_events,
-            host_params,
-            notify_gui,
-        }
-    }
-
+impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
     pub fn transport_info(&self) -> &TransportInfo {
         self.transport_info
     }
 
     /// Add a midi message as output event
     pub fn add_output_midi_event(&mut self, event: MidiMessage) {
-        let _ = self.outputs_events.try_push::<MidiEvent>(event.into());
+        let _ = self.output_events.try_push::<MidiEvent>(event.into());
     }
 
     /// Asks the host to restart the plugin.
@@ -67,6 +53,7 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
     }
 
     /// Set a parameter from a host change
+    #[inline]
     pub fn set_parameter_from_host_event(&mut self, param_event: ParamValueEvent) {
         if let Some(id) = param_event.param_id() {
             let value = param_event.value() as f32;
@@ -79,6 +66,31 @@ impl<'a, 'e> ProcessContext<'a, 'e> {
                 self.states
                     .gui_param_changes()
                     .post(HostParamChange { id, value });
+            }
+        }
+    }
+
+    pub fn handle_events<I>(&mut self, plugin: &mut P, events: I)
+    where
+        I: Iterator<Item = InputEvent>,
+    {
+        for event in events {
+            match event {
+                InputEvent::MidiEvent(midi) => {
+                    plugin.on_midi_message(midi, self.user_params.as_ref(), self.shared.as_ref())
+                }
+                InputEvent::ParamEvent(param) => {
+                    let Some(id) = param.param_id() else {
+                        continue;
+                    };
+
+                    plugin.on_param_change(
+                        id,
+                        self.user_params.as_ref(),
+                        self.shared.as_ref(),
+                        EventSource::Host,
+                    );
+                }
             }
         }
     }
