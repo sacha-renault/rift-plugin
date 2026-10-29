@@ -9,8 +9,10 @@ use std::sync::Arc;
 use clack_plugin::plugin::PluginShared;
 
 use crate::ClapPlugin;
+use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::UserParams;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
+use rift_plugin_params::{ClapId, ParamCollection};
 
 mod shared_states;
 mod tasks;
@@ -72,5 +74,30 @@ where
 {
     fn from_params(_: Arc<P>) -> Self {
         Self::default()
+    }
+}
+
+/// Writes a host-driven parameter value and, when the GUI is open, queues it so
+/// widgets follow automation.
+///
+/// `apply` is false when the plugin asked to own that value: the pre-block pass and
+/// the per-frame one each apply only the half the other skipped.
+#[inline]
+pub(crate) fn apply_host_param(
+    host_params: &ParamsWrapper,
+    states: &PluginSharedState,
+    apply: bool,
+    notify_gui: bool,
+    id: ClapId,
+    value: f32,
+) {
+    if apply {
+        host_params.set_value(id, value);
+    }
+
+    if notify_gui && states.is_gui_opened() {
+        states
+            .gui_param_changes()
+            .post(HostParamChange { id, value });
     }
 }

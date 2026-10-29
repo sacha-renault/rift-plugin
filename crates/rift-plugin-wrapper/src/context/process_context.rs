@@ -6,13 +6,11 @@ use clack_plugin::host::HostAudioProcessorHandle;
 use clack_plugin::prelude::OutputEvents;
 
 use rift_plugin_buffers::{EventsCursor, InputEvent};
-use rift_plugin_gui::HostParamChange;
 use rift_plugin_params::params_wrapper::ParamsWrapper;
-use rift_plugin_params::{ClapId, ParamCollection};
 use rift_plugin_types::{EventPreProcess, EventSource, MidiMessage, TransportInfo};
 
 use crate::ClapPlugin;
-use crate::shared::PluginSharedState;
+use crate::shared::{PluginSharedState, apply_host_param};
 
 pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) host: &'a HostAudioProcessorHandle<'a>,
@@ -99,9 +97,14 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
                         continue;
                     };
 
-                    if set_param_change {
-                        self.set_parameter_from_host_event(id, param.value() as f32);
-                    }
+                    apply_host_param(
+                        &self.host_params,
+                        &self.states,
+                        set_param_change,
+                        set_param_change && self.notify_gui,
+                        id,
+                        param.value() as f32,
+                    );
 
                     if call_parm_change {
                         plugin.on_param_change(

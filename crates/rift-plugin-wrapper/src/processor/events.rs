@@ -1,11 +1,12 @@
 use clack_plugin::events::event_types::{MidiEvent, ParamValueEvent};
 use clack_plugin::prelude::*;
 
-use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind, HostParamChange};
+use rift_plugin_gui::{GuiParamEvent, GuiParamEventKind};
 use rift_plugin_params::ParamCollection;
 use rift_plugin_types::{EventPreProcess, EventSource};
 
 use crate::ClapPlugin;
+use crate::shared::apply_host_param;
 
 use super::WrapperProcessor;
 
@@ -30,10 +31,14 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                     continue;
                 };
 
-                if flags.contains(EventPreProcess::PARAM_APPLY_CHANGE) {
-                    let value = event.value();
-                    self.shared.host_params.set_value(id, value as f32);
-                }
+                apply_host_param(
+                    &self.shared.host_params,
+                    &self.shared.states,
+                    flags.contains(EventPreProcess::PARAM_APPLY_CHANGE),
+                    self.notify_gui,
+                    id,
+                    event.value() as f32,
+                );
 
                 if flags.contains(EventPreProcess::PARAM_NOTIFY_CHANGE) {
                     self.plugin.on_param_change(
@@ -42,16 +47,6 @@ impl<'a, P: ClapPlugin> WrapperProcessor<'a, P> {
                         &self.shared.data,
                         EventSource::Host,
                     );
-                }
-
-                if should_notify_gui {
-                    self.shared
-                        .states
-                        .gui_param_changes()
-                        .post(HostParamChange {
-                            id,
-                            value: event.value() as f32,
-                        });
                 }
             } else if flags.contains(EventPreProcess::MIDI_NOTIFY_EVENT)
                 && let Some(event) = event.as_event::<MidiEvent>()
