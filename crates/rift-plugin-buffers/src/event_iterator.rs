@@ -8,10 +8,17 @@ use clack_plugin::events::{
 
 use crate::InputEvent;
 
+/// Walks a block's input events frame by frame.
+///
+/// `next_frame` and `iter_events_at` share one scan hint, so interleaving them
+/// changes how much rescanning happens.
 pub struct EventsCursor<'a> {
+    /// `(start, end, frame)` of the last [`Self::bounds`] query.
     hint: Option<(usize, usize, u32)>,
     events: &'a InputEvents<'a>,
+    /// `events.len()`, cached for the scan loops.
     events_len: usize,
+    /// Frame the next [`Self::next_frame`] hands out.
     current_frame: u32,
 }
 
@@ -43,6 +50,8 @@ impl<'a> EventsCursor<'a> {
         }
     }
 
+    /// Indices of the events at `time`, resuming from the last query when going
+    /// forward. Events are time ordered, so only a backward jump rescans.
     fn bounds(&mut self, time: u32) -> (usize, usize) {
         let t = |i: usize| self.events[i].header().time();
 
@@ -72,6 +81,7 @@ impl<'a> EventsCursor<'a> {
 
 pub struct FrameEventsIter<'a> {
     events: &'a InputEvents<'a>,
+    /// Indices into `events`; every one has the same `header().time()`.
     indices: Range<usize>,
 }
 
@@ -101,6 +111,7 @@ impl<'a> DoubleEndedIterator for FrameEventsIter<'a> {
 
 impl<'a> FusedIterator for FrameEventsIter<'a> {}
 
+/// Only param and MIDI events are modeled; the rest are skipped.
 fn convert(event: &UnknownEvent) -> Option<InputEvent> {
     if let Some(&p) = event.as_event::<ParamValueEvent>() {
         Some(InputEvent::ParamEvent(p))
