@@ -36,24 +36,23 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///   incoming MIDI events.
     ///
     /// Use `EventPreProcess::empty()` to opt out entirely: the plugin then consumes every
-    /// event itself, for example through
-    /// `buffers.main().iter_samples().zip_events(events)`.
+    /// event itself, for example through [`ProcessContext::handle_events`].
     ///
-    /// # Auto-handling vs. `zip_events`
+    /// # Auto-handling vs. `handle_events`
     ///
-    /// `zip_events` always yields every MIDI and parameter event, regardless of this
-    /// value. A set flag means the wrapper has *already* acted on that event type, so
-    /// handling the same type from `zip_events` as well acts on it twice. Pick one path
-    /// per event type: set the flag to have the wrapper do it block-level, or leave it
-    /// unset and read it sample-accurately from `zip_events`.
+    /// [`ProcessContext::handle_events`] dispatches every MIDI and parameter event it is
+    /// asked about, regardless of this value. A set flag means the wrapper has *already*
+    /// acted on that event type, so `handle_events` skips it. Pick one path per event
+    /// type: set the flag to have the wrapper do it block-level, or leave it unset and
+    /// handle it sample-accurately from `handle_events`.
     ///
     /// [`EventPreProcess::PARAM_NOTIFY_CHANGE`] without [`EventPreProcess::PARAM_APPLY_CHANGE`] notifies
-    /// you of a change *without* updating the store, apply the new value yourself from
-    /// the event yielded by `zip_events`.
+    /// you of a change *without* updating the store: read the new value from
+    /// [`ProcessContext::input_events`] and apply it yourself.
     ///
     /// ```ignore
     /// // Apply host automation and receive a `param_changed` notification, but handle
-    /// // MIDI sample-accurately via `zip_events`.
+    /// // MIDI sample-accurately via `handle_events`.
     /// const EVENT_PRE_PROCESS: EventPreProcess =
     ///     EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
     /// ```
@@ -82,8 +81,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// This is the "Hot Path." **Strictly avoid any operations that can block**,
     /// such as memory allocation, file I/O, or acquiring non-recursive mutexes.
     ///
-    /// To handle events sample-accurately, zip the input events with the audio frames:
-    /// `buffers.main().iter_samples().zip_events(events)`.
+    /// To handle events sample-accurately, call [`ProcessContext::handle_events`] at the
+    /// start of each frame.
     fn process(
         &mut self,
         buffers: Buffers,
@@ -94,12 +93,14 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
 
     /// Called when a MIDI message is received.
     ///
-    /// This is only triggered when [`EventPreProcess::MIDI_NOTIFY_EVENT`] is set in
-    /// [`Self::EVENT_PRE_PROCESS`]. Messages are delivered once per block, before the
-    /// call to [`Self::process`].
+    /// This fires when [`EventPreProcess::MIDI_NOTIFY_EVENT`] is set in
+    /// [`Self::EVENT_PRE_PROCESS`], once per block before [`Self::process`]. With the flag
+    /// unset it fires at the event's frame instead, through
+    /// [`ProcessContext::handle_events`].
     ///
-    /// This is the auto-handling path and is mutually exclusive with reading MIDI events
-    /// from `zip_events`: handling them there as well delivers every message twice.
+    /// This is the auto-handling path and is mutually exclusive with reading MIDI from
+    /// [`ProcessContext::input_events`]: handling them there as well delivers every
+    /// message twice.
     fn on_midi_message(
         &mut self,
         _midi: MidiMessage,
@@ -119,8 +120,8 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     ///
     /// This flag controls only the *notification*: the value is written into the
     /// parameter store only when [`EventPreProcess::PARAM_APPLY_CHANGE`] is also set. With
-    /// `PARAM_NOTIFY_CHANGE` but not `PARAM_APPLY_CHANGE`, read the new value from the event yielded by
-    /// `zip_events`.
+    /// `PARAM_NOTIFY_CHANGE` but not `PARAM_APPLY_CHANGE`, read the new value from
+    /// [`ProcessContext::input_events`].
     fn on_param_change(
         &mut self,
         _id: ClapId,

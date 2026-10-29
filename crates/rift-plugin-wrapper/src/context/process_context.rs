@@ -35,6 +35,12 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
         let _ = self.output_events.try_push::<MidiEvent>(event.into());
     }
 
+    /// Every input event of the block, unfiltered and in time order.
+    ///
+    /// This is the raw view for plugins that dispatch events by hand: nothing
+    /// here is filtered by [`ClapPlugin::EVENT_PRE_PROCESS`], so a type the
+    /// wrapper also handles reaches the plugin twice. [`Self::handle_events`]
+    /// is the sample-accurate entry point that respects the flags.
     pub fn input_events(&self) -> &InputEvents<'_> {
         self.cursor_events.events()
     }
@@ -56,21 +62,21 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
         self.request_restart();
     }
 
-    /// Set a parameter from a host change
-    #[inline]
-    pub fn set_parameter_from_host_event(&mut self, id: ClapId, value: f32) {
-        self.host_params.set_value(id, value);
-
-        // Notify GUI about the param change.
-        // this function is called from ParamValueEvent from the
-        // host, it would be an error to notify host too.
-        if self.notify_gui && self.states.is_gui_opened() {
-            self.states
-                .gui_param_changes()
-                .post(HostParamChange { id, value });
-        }
-    }
-
+    /// Dispatches the input events scheduled at `time` to the plugin.
+    ///
+    /// Call it for every frame, before processing that frame's audio. Events are
+    /// matched on their exact header time, so a frame that is never queried
+    /// silently loses its events.
+    ///
+    /// This is the sample-accurate half of [`ClapPlugin::EVENT_PRE_PROCESS`]: a
+    /// flag the plugin set was already handled by the wrapper before the block,
+    /// and its branch is skipped here. With every flag set the call returns
+    /// immediately, so plugins that opt into full auto-handling pay nothing.
+    ///
+    /// MIDI goes to [`ClapPlugin::on_midi_message`], parameter changes to
+    /// [`ClapPlugin::on_param_change`] with [`EventSource::Host`]. The store is
+    /// written *before* the callback, so a handler that reads the parameter sees
+    /// the value the event carried.
     pub fn handle_events(&mut self, plugin: &mut P, time: u32) {
         let flags = P::EVENT_PRE_PROCESS;
 
