@@ -96,7 +96,7 @@ impl ClapPlugin for FunDspReverb {
     ) -> Result<ProcessStatus, PluginError> {
         let mut output = [0.; 2];
 
-        buffers.main().for_each_stereo_frame(|frame| {
+        buffers.main().for_each_stereo_frame(|_, frame| {
             self.graph.tick(frame, &mut output);
             frame.copy_from_slice(&output);
         });

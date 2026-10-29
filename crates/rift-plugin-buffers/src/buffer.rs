@@ -132,7 +132,7 @@ impl<'a> Buffer<'a> {
         }
     }
 
-    pub fn for_each_frame<const N: usize>(&'a mut self, mut f: impl FnMut(&mut [f32; N])) {
+    pub fn for_each_frame<const N: usize>(&'a mut self, mut f: impl FnMut(u32, &mut [f32; N])) {
         assert_eq!(self.channels(), N);
 
         let samples = self.samples();
@@ -144,7 +144,7 @@ impl<'a> Buffer<'a> {
                 *s = unsafe { *vec[ch].add(pos) };
             }
 
-            f(&mut frame);
+            f(pos as u32, &mut frame);
 
             for (ch, s) in frame.iter().enumerate() {
                 unsafe { *vec[ch].add(pos) = *s };
@@ -152,8 +152,7 @@ impl<'a> Buffer<'a> {
         }
     }
 
-    #[allow(unused_mut)]
-    pub fn for_each_stereo_frame(&'a mut self, mut f: impl FnMut(&mut [f32; 2])) {
+    pub fn for_each_stereo_frame(&'a mut self, f: impl FnMut(u32, &mut [f32; 2])) {
         self.for_each_frame::<2>(f)
     }
 

@@ -82,7 +82,7 @@ impl ClapPlugin for FunDspPlugin {
             utils::swap_in(&mut self.graph, graph);
         }
 
-        buffers.main().for_each_stereo_frame(|frame| {
+        buffers.main().for_each_stereo_frame(|_, frame| {
             frame.fill(0.);
 
             for ((osc, oscp), wavetable) in self

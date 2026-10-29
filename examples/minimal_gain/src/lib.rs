@@ -62,7 +62,7 @@ impl ClapPlugin for MinimalGain {
         let gain = params.gain.value();
 
         let mut main = buffers.main();
-        main.for_each_stereo_frame(|[l, r]| {
+        main.for_each_stereo_frame(|_, [l, r]| {
             *l *= gain;
             *r *= gain;
         });
