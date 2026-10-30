@@ -43,9 +43,3 @@ serde_json = { version = "1" }
 fundsp = { version = "0.23.0" }
 bitflags = "2.13.2"
 atomic-bitflags = "0.2.0"
-
-# baseview 0.2.2 registers its macOS frame timer in kCFRunLoopDefaultMode, which
-# starves when a host runs the run loop in another mode (e.g. event tracking).
-# This fork switches it to kCFRunLoopCommonModes so on_frame ticks every frame.
-[patch.crates-io]
-baseview = { git = "https://github.com/sacha-renault/baseview", rev = "239f944aa089bc15e241b92212530768e5b219bf" }

@@ -300,7 +300,8 @@ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
 [[package]]
 name = "baseview"
 version = "0.2.2"
-source = "git+https://github.com/sacha-renault/baseview?rev=239f944aa089bc15e241b92212530768e5b219bf#239f944aa089bc15e241b92212530768e5b219bf"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fee31c5ff593b43ef62afbaea18a6b3fa62e84171d00aaf014b9d4ea128776e"
 dependencies = [
  "block2",
  "bytemuck",
@@ -313,6 +314,34 @@ dependencies = [
  "objc2-foundation",
  "percent-encoding",
  "polling",
+ "raw-window-handle",
+ "windows",
+ "windows-core",
+ "windows-sys 0.61.2",
+ "x11-dl",
+ "x11rb",
+ "xkbcommon-dl",
+]
+
+[[package]]
+name = "baseview"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d74c34d835411d7fcc30896cd37d28f0f6f11415ac116898546c6e019762a7d"
+dependencies = [
+ "block2",
+ "bytemuck",
+ "calloop",
+ "dispatch2",
+ "dpi",
+ "keyboard-types",
+ "libloading",
+ "objc2",
+ "objc2-app-kit",
+ "objc2-core-foundation",
+ "objc2-foundation",
+ "objc2-quartz-core",
+ "percent-encoding",
  "raw-window-handle",
  "windows",
  "windows-core",
@@ -438,6 +467,19 @@ name = "bytes"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
+
+[[package]]
+name = "calloop"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4dbf9978365bac10f54d1d4b04f7ce4427e51f71d61f2fe15e3fed5166474df7"
+dependencies = [
+ "bitflags 2.13.2",
+ "polling",
+ "rustix",
+ "slab",
+ "tracing",
+]
 
 [[package]]
 name = "cc"
@@ -2903,6 +2945,7 @@ version = "0.1.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63e71662fa4b2a2c3a26f570f037eb95bb1f85397f3cd8076caed2f026a6d100"
 dependencies = [
+ "log",
  "pin-project-lite",
  "tracing-attributes",
  "tracing-core",
@@ -3051,7 +3094,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vizia"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "skia-safe",
  "vizia_baseview",
@@ -3062,7 +3105,7 @@ dependencies = [
 name = "vizia-gallery"
 version = "0.1.0"
 dependencies = [
- "baseview",
+ "baseview 0.2.2",
  "rift-plugin",
  "rift-plugin-dsp",
  "rift-plugin-gui",
@@ -3072,9 +3115,9 @@ dependencies = [
 [[package]]
 name = "vizia_baseview"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
- "baseview",
+ "baseview 0.4.2",
  "gl",
  "raw-window-handle",
  "skia-safe",
@@ -3086,7 +3129,7 @@ dependencies = [
 [[package]]
 name = "vizia_core"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "accesskit",
  "bitflags 2.13.2",
@@ -3116,12 +3159,12 @@ dependencies = [
 [[package]]
 name = "vizia_id"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 
 [[package]]
 name = "vizia_input"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "bitflags 2.13.2",
  "keyboard-types",
@@ -3131,7 +3174,7 @@ dependencies = [
 [[package]]
 name = "vizia_reactive"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "parking_lot",
  "smallvec",
@@ -3140,7 +3183,7 @@ dependencies = [
 [[package]]
 name = "vizia_storage"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "vizia_id",
 ]
@@ -3148,7 +3191,7 @@ dependencies = [
 [[package]]
 name = "vizia_style"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "bitflags 2.13.2",
  "cssparser",
@@ -3163,7 +3206,7 @@ dependencies = [
 [[package]]
 name = "vizia_window"
 version = "0.4.0"
-source = "git+https://github.com/vizia/vizia?rev=426d2e7b8533d485e78ab7f07f9f81d8324c256d#426d2e7b8533d485e78ab7f07f9f81d8324c256d"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
 dependencies = [
  "bitflags 2.13.2",
  "vizia_input",

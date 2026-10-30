@@ -4,10 +4,10 @@ use clack_plugin::prelude::*;
 use rift_plugin_buffers::{Buffers, EventsCursor};
 use rift_plugin_types::TransportInfo;
 
-use crate::ClapPlugin;
 use crate::context::{InitContext, ProcessContext};
 use crate::main_thread::WrapperMainThread;
 use crate::shared::WrapperShared;
+use crate::ClapPlugin;
 
 use super::WrapperProcessor;
 

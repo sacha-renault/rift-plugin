@@ -5,8 +5,8 @@ use baseview::{Event, EventStatus, Window, WindowContext, WindowHandler, WindowO
 
 use rift_plugin::prelude::*;
 use rift_plugin_gui::{
-    ClapGui, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind, HostParamChange,
-    HostSharedHandle, Window as ClapWindow,
+    ClapGui, ClapWindow, GuiConfiguration, GuiContext, GuiParamEvent, GuiParamEventKind,
+    HostParamChange, HostSharedHandle,
 };
 use rift_plugin_vizia::prelude::*;
 use rift_plugin_vizia::widgets::PopupSelector;

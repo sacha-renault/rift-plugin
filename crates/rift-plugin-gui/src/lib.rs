@@ -8,7 +8,7 @@ pub use events::{GuiParamEvent, GuiParamEventKind, HostParamChange};
 pub use gui_traits::{ClapGui, GuiContext, GuiFactory};
 
 // Reexport some clack stuff
-pub use clack_extensions::gui::{GuiConfiguration, GuiSize, Window};
+pub use clack_extensions::gui::{GuiConfiguration, GuiSize, Window as ClapWindow};
 pub use clack_plugin::host::HostSharedHandle;
 pub use clack_plugin::plugin::PluginError;
 pub use param_sync::ParamSync;

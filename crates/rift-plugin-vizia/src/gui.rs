@@ -5,7 +5,7 @@ use std::sync::Arc;
 #[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
 use raw_window_handle::{HandleError, HasRawWindowHandle, HasWindowHandle, RawWindowHandle};
 use rift_plugin_gui::*;
-use vizia::{Application, WindowHandle};
+use vizia::{Application, Window};
 
 use crate::dev_prelude::*;
 
@@ -17,7 +17,7 @@ pub struct ViziaGui {
     /// Holds raw handle to parent window.
     parent: Option<RawWindowHandle>,
     /// Holds handle to plugin window.
-    handle: Option<WindowHandle>,
+    handle: Option<Window>,
     /// The fn that will be used for mainloop in ViziaApp
     app_fn: Arc<AppFn>,
     /// (width, height)
@@ -60,6 +60,7 @@ impl ViziaGui {
 
             app_fn(cx, context.clone());
         })
+        .with_frame_policy(FramePolicy::Continuous)
         .on_idle(move |cx| {
             crate::bridge::pump(cx, host.as_ref());
             frame_signal.tick();
@@ -77,7 +78,7 @@ impl ClapGui for ViziaGui {
     }
 
     #[allow(deprecated)] // clack only exposes the deprecated `HasRawWindowHandle` for rwh 0.6
-    fn set_parent(&mut self, window: Window) -> Result<(), PluginError> {
+    fn set_parent(&mut self, window: ClapWindow) -> Result<(), PluginError> {
         let raw = window
             .raw_window_handle()
             .map_err(|_| PluginError::Message("Unsupported parent window API"))?;
@@ -125,7 +126,7 @@ impl ClapGui for ViziaGui {
         Err(PluginError::Message("Not supported"))
     }
 
-    fn set_transient(&mut self, _: Window) -> Result<(), PluginError> {
+    fn set_transient(&mut self, _: ClapWindow) -> Result<(), PluginError> {
         // baseview doesn't support floating, this is no-op
         Err(PluginError::Message(
             "Baseview doesn't support floating windows ...",
