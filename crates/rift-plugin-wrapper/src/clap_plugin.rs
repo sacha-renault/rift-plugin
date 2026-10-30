@@ -137,9 +137,16 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// communication with the processor must happen via `params` or `shared`.
     fn gui(params: Arc<Self::Params>, data: Arc<Self::SharedData>) -> Box<dyn GuiFactory>;
 
+    /// See [`PluginAudioProcessor::deactivate`][clack_plugin::plugin::PluginAudioProcessor::deactivate]
     fn deactivate(self) {}
+
+    /// See [`PluginAudioProcessor::reset`][clack_plugin::plugin::PluginAudioProcessor::reset]
     fn reset(&mut self) {}
+
+    /// See [`PluginAudioProcessor::stop_processing`][clack_plugin::plugin::PluginAudioProcessor::stop_processing]
     fn stop_processing(&mut self) {}
+
+    /// See [`PluginAudioProcessor::start_processing`][clack_plugin::plugin::PluginAudioProcessor::start_processing]
     fn start_processing(&mut self) -> Result<(), PluginError> {
         Ok(())
     }
