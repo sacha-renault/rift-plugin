@@ -17,6 +17,7 @@ pub trait ButtonExt {
 
             Label::new(cx, text)
         })
+        .cursor(CursorIcon::Hand)
     }
 
     #[concrete]
@@ -27,7 +28,7 @@ pub trait ButtonExt {
     {
         // todo!(), there is a weird bug ?
         // it doesn't allow to click on the label, only on padding wth
-        Button::new(cx, move |cx| Label::new(cx, text))
+        Button::new(cx, move |cx| Label::new(cx, text)).cursor(CursorIcon::Hand)
     }
 }
 

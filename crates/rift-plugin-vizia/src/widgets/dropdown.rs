@@ -71,6 +71,7 @@ impl PopupSelector {
             })
             .class("dropdown-trigger")
             .toggle_class("open", is_open)
+            .cursor(CursorIcon::Hand)
             .on_mouse_down(|cx, mb| {
                 if matches!(mb, MouseButton::Left) {
                     cx.emit(PopupEvent::Open);
@@ -86,6 +87,7 @@ impl PopupSelector {
                             Label::new(cx, option)
                                 .class("segment")
                                 .toggle_class("selected", selected)
+                                .cursor(CursorIcon::Hand)
                                 .on_press(move |cx| {
                                     cx.emit(DropdownEvent::Pick(index));
                                     cx.emit(PopupEvent::Close);

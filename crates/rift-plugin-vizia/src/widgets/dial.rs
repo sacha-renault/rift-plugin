@@ -37,6 +37,7 @@ impl View for Dial {
                         last_y: cx.mouse().cursor_y,
                         value: self.value.get_untracked(),
                     });
+                    cx.lock_cursor_icon();
                     cx.capture();
                     cx.focus_with_visibility(false);
                     cx.toggle_class("dragging", true);
@@ -50,6 +51,7 @@ impl View for Dial {
 
             WindowEvent::MouseUp(MouseButton::Left) => {
                 if self.drag.take().is_some() {
+                    cx.unlock_cursor_icon();
                     cx.release();
                     cx.toggle_class("dragging", false);
                     self.update_hot(cx);
@@ -125,6 +127,7 @@ impl Dial {
                 .hoverable(false)
                 .rotate(value.map(|v| Angle::Deg(-SWEEP / 2.0 + SWEEP * v.clamp(0.0, 1.0))));
             })
+            .cursor(CursorIcon::RowResize)
             .class("dial-face");
 
             if let Some((label, readout)) = texts {
@@ -140,6 +143,7 @@ impl Dial {
         })
         .role(Role::Slider)
         .numeric_value(value.map(|v| (*v as f64 * 100.0).round()))
+        .cursor(CursorIcon::RowResize)
         .navigable(true)
     }
 

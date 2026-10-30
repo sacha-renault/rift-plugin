@@ -82,6 +82,7 @@ fn segmented(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
         Label::new(cx, option)
             .class("segment")
             .toggle_class("selected", selected)
+            .cursor(CursorIcon::Hand)
             .on_press(move |cx| {
                 cx.emit(SelectorEvent::Pick(index));
             });
@@ -95,6 +96,7 @@ fn arrow_selected(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
     })
     .class("step")
     .disabled(value.map(move |v| index_of(*v, count) == 0))
+    .cursor(CursorIcon::Hand)
     .on_press(|cx| cx.emit(SelectorEvent::Step(-1)));
 
     let current = value.map(move |v| options[index_of(*v, count)].clone());
@@ -105,6 +107,7 @@ fn arrow_selected(cx: &mut Context, value: Signal<f32>, options: Vec<String>) {
     })
     .class("step")
     .disabled(value.map(move |v| index_of(*v, count) == count - 1))
+    .cursor(CursorIcon::Hand)
     .on_press(|cx| cx.emit(SelectorEvent::Step(1)));
 }
 

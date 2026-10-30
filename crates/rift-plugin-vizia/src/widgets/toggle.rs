@@ -48,6 +48,7 @@ impl Toggle {
         })
         .checked(on)
         .role(Role::Switch)
+        .cursor(CursorIcon::Hand)
         .navigable(true)
     }
 }

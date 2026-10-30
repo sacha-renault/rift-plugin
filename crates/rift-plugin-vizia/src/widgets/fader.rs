@@ -69,6 +69,7 @@ impl Fader {
         })
         .role(Role::Slider)
         .numeric_value(value.map(|v| (*v as f64 * 100.0).round()))
+        .cursor(CursorIcon::RowResize)
         .navigable(true)
     }
 
@@ -131,6 +132,7 @@ pub trait FaderModifers {
     /// Slider becomes horizontal
     fn horizontal(self) -> Self {
         self.class("horizontal")
+            .cursor(CursorIcon::ColResize)
             .modify(|fader| fader.vertical.set(false))
     }
 }
@@ -163,6 +165,7 @@ impl View for Fader {
                         last_y: axis.along(x, y),
                         value: self.value.get_untracked(),
                     });
+                    cx.lock_cursor_icon();
                     cx.capture();
                     cx.focus_with_visibility(false);
                     cx.toggle_class("dragging", true);
@@ -177,6 +180,7 @@ impl View for Fader {
 
             WindowEvent::MouseUp(MouseButton::Left) => {
                 if self.drag.take().is_some() {
+                    cx.unlock_cursor_icon();
                     cx.release();
                     cx.toggle_class("dragging", false);
                     self.callbacks.end(cx);
