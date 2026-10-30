@@ -29,3 +29,7 @@
 ## Audio buffers
 
 - [ ] Sub-block chunking for `Buffer`. `for_each_frame` / `for_each_stereo_frame` hand out `0..samples()` one frame at a time (`crates/rift-plugin-buffers/src/buffer.rs`). Add a chunked variant that yields contiguous `block_start..block_end` ranges, so work with a fixed cost per call (FFT, lookahead, tempo mapping) can size a scratch buffer once per chunk instead of per frame. The `pos` argument is already the frame's index in the whole buffer rather than a 0-based per-callback counter, precisely so chunking does not silently change what callers see.
+
+## Events
+
+- [ ] Sample-accurate events are handled by two mirrored code paths. `EventPreProcess` describes what the wrapper does *before* the block (`processor/events.rs`); `ProcessContext::handle_events` recomputes the same set of decisions as the negation of those flags, per frame (`context/process_context.rs`). One flag therefore means two opposite things depending on where it is read - set: the wrapper did it, unset: someone else must - and the only thing tying the halves together is hand-written symmetry. Adding or changing a flag touches the enum, the pre-block loop, the inverted booleans in `handle_events` (`call_midi_change` and `set_param_change` are both `!flags.contains(..)`) and three doc comments, and a mismatch is silent: the event fires twice or not at all. The split leaks into helpers as well, hence `apply_host_param` taking a `notify_gui` that one of its two callers always passes `false`.

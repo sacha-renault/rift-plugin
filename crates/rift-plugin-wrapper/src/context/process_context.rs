@@ -22,7 +22,6 @@ pub struct ProcessContext<'a, 'e, P: ClapPlugin> {
     pub(crate) user_params: Arc<P::Params>,
     pub(crate) shared: Arc<P::SharedData>,
     pub(crate) host_params: Arc<ParamsWrapper>,
-    pub(crate) notify_gui: bool,
 }
 
 impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
@@ -107,7 +106,9 @@ impl<'a, 'e, P: ClapPlugin> ProcessContext<'a, 'e, P> {
                         &self.host_params,
                         &self.states,
                         set_param_change,
-                        set_param_change && self.notify_gui,
+                        // FIX: GUI updates are already done pre block
+                        // This would double notify ...
+                        false,
                         id,
                         param.value() as f32,
                     );

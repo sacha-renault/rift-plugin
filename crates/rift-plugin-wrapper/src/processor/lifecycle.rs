@@ -84,7 +84,6 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
                 user_params: self.shared.user_params.clone(),
                 shared: self.shared.data.clone(),
                 host_params: self.shared.host_params.clone(),
-                notify_gui: self.notify_gui,
             };
 
             self.plugin.process(
