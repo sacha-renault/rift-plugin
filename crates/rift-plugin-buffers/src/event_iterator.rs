@@ -1,10 +1,6 @@
 use std::{iter::FusedIterator, ops::Range};
 
-use clack_plugin::events::{
-    UnknownEvent,
-    event_types::{MidiEvent, ParamValueEvent},
-    io::InputEvents,
-};
+use clack_plugin::events::io::InputEvents;
 
 use crate::InputEvent;
 
@@ -95,7 +91,9 @@ impl<'a> Iterator for FrameEventsIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        self.indices.by_ref().find_map(|i| convert(&self.events[i]))
+        self.indices
+            .by_ref()
+            .find_map(|i| InputEvent::try_from(&self.events[i]).ok())
     }
 
     #[inline]
@@ -110,19 +108,8 @@ impl<'a> DoubleEndedIterator for FrameEventsIter<'a> {
         self.indices
             .by_ref()
             .rev()
-            .find_map(|i| convert(&self.events[i]))
+            .find_map(|i| InputEvent::try_from(&self.events[i]).ok())
     }
 }
 
 impl<'a> FusedIterator for FrameEventsIter<'a> {}
-
-/// Only param and MIDI events are modeled; the rest are skipped.
-fn convert(event: &UnknownEvent) -> Option<InputEvent> {
-    if let Some(&p) = event.as_event::<ParamValueEvent>() {
-        Some(InputEvent::ParamEvent(p))
-    } else if let Some(&m) = event.as_event::<MidiEvent>() {
-        Some(InputEvent::MidiEvent(m.into()))
-    } else {
-        None
-    }
-}
