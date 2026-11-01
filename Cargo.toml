@@ -17,8 +17,8 @@ rift-plugin-wrapper = { path = "crates/rift-plugin-wrapper" }
 rift-plugin-vizia = { path = "crates/rift-plugin-vizia" }
 rift-plugin-dsp = { path = "crates/rift-plugin-dsp" }
 
-clack-plugin = { git = "https://github.com/prokopyl/clack" }
-clack-extensions = { git = "https://github.com/prokopyl/clack", features = [
+clack-plugin = { git = "https://github.com/prokopyl/clack", tag="v0.1.1" }
+clack-extensions = { git = "https://github.com/prokopyl/clack", tag="v0.1.1" , features = [
   "audio-ports",
   "clack-plugin",
   "gui",
