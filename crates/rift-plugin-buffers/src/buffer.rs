@@ -196,7 +196,7 @@ impl<'a> Buffer<'a> {
     }
 
     /// Fill the entire buffer with 0s
-    pub fn zero_fill(&'a mut self) {
+    pub fn clear(&'a mut self) {
         for channel in self.iter_channels_mut() {
             channel.fill(0f32);
         }
