@@ -92,6 +92,12 @@ where
         }
     }
 
+    /// Set the samplerate in place [`Self::set_samplerate`]
+    pub fn with_samplerate(mut self, samplerate: f32) -> Self {
+        self.set_samplerate(samplerate);
+        self
+    }
+
     /// Returns the index of an unused slot, or `None` when every voice is
     /// already sounding.
     fn free_slot(&self) -> Option<usize> {
@@ -135,6 +141,11 @@ where
             }
             _ => {}
         }
+    }
+
+    #[inline]
+    pub fn active_count(&self) -> usize {
+        self.active_voices.len()
     }
 
     /// F: FnMut(voice: &mut V, adsr_gain: f32, info: VoiceSlotInfo),
