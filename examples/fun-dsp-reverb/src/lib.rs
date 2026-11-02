@@ -77,12 +77,12 @@ impl ClapPlugin for FunDspReverb {
     const EVENT_PRE_PROCESS: EventPreProcess = EventPreProcess::all();
 
     fn create(
-        params: &Self::Params,
+        params: Arc<Self::Params>,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
         Self {
-            graph: build_graph(params, config.sample_rate, DEFAULT_TIME_S),
+            graph: build_graph(&params, config.sample_rate, DEFAULT_TIME_S),
         }
     }
 

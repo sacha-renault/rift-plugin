@@ -44,7 +44,7 @@ impl ClapPlugin for MinimalGain {
         EventPreProcess::PARAM_APPLY_CHANGE.union(EventPreProcess::PARAM_NOTIFY_CHANGE);
 
     fn create(
-        _params: &Self::Params,
+        _params: Arc<Self::Params>,
         _config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {

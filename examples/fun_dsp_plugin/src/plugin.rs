@@ -29,7 +29,7 @@ impl ClapPlugin for FunDspPlugin {
     const EVENT_PRE_PROCESS: EventPreProcess = EventPreProcess::all();
 
     fn create(
-        params: &Self::Params,
+        params: Arc<Self::Params>,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {
@@ -54,7 +54,7 @@ impl ClapPlugin for FunDspPlugin {
         );
         oscillator.set_samplerate(config.sample_rate as f32);
 
-        let graph = build_net(config.sample_rate, params);
+        let graph = build_net(config.sample_rate, &params);
 
         let need_rebuild = HashSet::from_iter(
             params.params_by_tags(|tags| tags.intersects(ParamFlags::NEED_REBUILD)),
