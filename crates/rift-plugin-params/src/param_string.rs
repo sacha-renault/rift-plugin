@@ -7,7 +7,7 @@ pub type StringParamValue = SwapParamValue<String>;
 mod tests {
     use clack_plugin::utils::ClapId;
 
-    use crate::{Persistent, Tags};
+    use crate::{PersistentParam, Tags};
 
     use super::*;
 

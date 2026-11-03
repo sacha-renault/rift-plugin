@@ -1,7 +1,7 @@
 use clack_plugin::prelude::PluginError;
 use clack_plugin::utils::ClapId;
 
-use super::{Param, Persistent};
+use super::{Param, PersistentParam};
 use crate::{ParamPtr, Tags};
 
 /// Implemented by the `#[derive(Params)]` structs written by the user.
@@ -27,7 +27,7 @@ pub trait UserParams {
     /// `&dyn Persistent` because persist fields are host-invisible and have no
     /// [`ParamPtr`] equivalent. Defaulted to empty for structs without persist
     /// fields.
-    fn all_persist(&self) -> Vec<&dyn Persistent> {
+    fn all_persist(&self) -> Vec<&dyn PersistentParam> {
         Vec::new()
     }
 

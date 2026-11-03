@@ -1,7 +1,7 @@
 use clack_plugin::utils::ClapId;
 
 use crate::range::FloatRange;
-use crate::{FloatParam, Param, ParamPtr, Persistent, StringParam, Tags, UserParams};
+use crate::{FloatParam, Param, ParamPtr, PersistentParam, StringParam, Tags, UserParams};
 
 /// A hand-written stand-in for a `#[derive(Params)]` struct.
 struct MockParams {
@@ -73,7 +73,7 @@ impl UserParams for MockParamsWithPersist {
         vec![self.gain.as_ptr()]
     }
 
-    fn all_persist(&self) -> Vec<&dyn Persistent> {
+    fn all_persist(&self) -> Vec<&dyn PersistentParam> {
         vec![&self.pattern]
     }
 }

@@ -4,7 +4,7 @@ mod events;
 mod gui_traits;
 mod param_sync;
 
-pub use events::{GuiParamEvent, GuiParamEventKind, HostParamChange, set_persistent};
+pub use events::{GuiParamEvent, GuiParamEventKind, HostParamChange, set_persistent, set_swap};
 pub use gui_traits::{ClapGui, GuiContext, GuiFactory};
 
 // Reexport some clack stuff

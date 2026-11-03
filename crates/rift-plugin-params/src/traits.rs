@@ -6,7 +6,7 @@ mod user_params;
 
 pub use param::Param;
 pub use param_collection::ParamCollection;
-pub use persistent::Persistent;
+pub use persistent::PersistentParam;
 pub use typed_param::TypedParam;
 pub use user_params::UserParams;
 

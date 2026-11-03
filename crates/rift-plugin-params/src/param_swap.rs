@@ -15,7 +15,13 @@ use clack_plugin::utils::ClapId;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 
-use crate::{Persistent, Tags};
+use crate::{PersistentParam, Tags};
+
+/// Values a persist parameter can hold: default-constructible, cloneable, and
+/// round-trippable through the state file.
+pub trait PersistValue: Default + Clone + Serialize + DeserializeOwned {}
+
+impl<T> PersistValue for T where T: Default + Clone + Serialize + DeserializeOwned {}
 
 /// A shared T parameter: a host-invisible, [`Persistent`] value.
 ///
@@ -24,7 +30,7 @@ use crate::{Persistent, Tags};
 #[derive(bon::Builder)]
 pub struct SwapParam<T>
 where
-    T: Default + Sized + Clone + Serialize + DeserializeOwned,
+    T: PersistValue,
 {
     /// Value used until (and if) the saved state provides one.
     #[builder(default)]
@@ -48,7 +54,7 @@ where
 
 impl<T> SwapParam<T>
 where
-    T: Default + Sized + Clone + Serialize + DeserializeOwned,
+    T: PersistValue,
 {
     /// A snapshot of the current value.
     ///
@@ -77,11 +83,11 @@ where
 
 pub struct SwapParamValue<T>(arc_swap::Guard<Arc<T>>)
 where
-    T: Default + Sized + Clone + Serialize + DeserializeOwned;
+    T: PersistValue;
 
 impl<T> Deref for SwapParamValue<T>
 where
-    T: Default + Sized + Clone + Serialize + DeserializeOwned,
+    T: PersistValue,
 {
     type Target = T;
 
@@ -93,16 +99,16 @@ where
 
 impl<T> std::fmt::Debug for SwapParamValue<T>
 where
-    T: Default + Sized + Clone + Serialize + DeserializeOwned + std::fmt::Debug,
+    T: PersistValue + std::fmt::Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(&**self, f)
     }
 }
 
-impl<T> Persistent for SwapParam<T>
+impl<T> PersistentParam for SwapParam<T>
 where
-    T: Default + Sized + Clone + Serialize + DeserializeOwned,
+    T: PersistValue,
 {
     fn create(id: ClapId, name: String, module: Option<String>, tags: impl Into<Tags>) -> Self {
         Self::builder()
@@ -148,7 +154,7 @@ mod tests {
     use clack_plugin::utils::ClapId;
     use serde::{Deserialize, Serialize};
 
-    use crate::Persistent;
+    use crate::PersistentParam;
 
     use super::*;
 

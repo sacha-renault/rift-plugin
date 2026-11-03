@@ -34,12 +34,12 @@ pub use param_enum::{EnumParam, EnumValues};
 pub use param_float::FloatParam;
 pub use param_int::IntParam;
 pub use param_string::{StringParam, StringParamValue};
-pub use param_swap::{SwapParam, SwapParamValue};
+pub use param_swap::{PersistValue, SwapParam, SwapParamValue};
 pub use ptr::ParamPtr;
 pub use range::{FloatRange, IntRange};
 pub use scale::Scale;
 pub use tags::Tags;
-pub use traits::{Param, ParamCollection, Persistent, TypedParam, UserParams};
+pub use traits::{Param, ParamCollection, PersistentParam, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]
 pub use param_float_fun_dsp::SharedFloatParam;

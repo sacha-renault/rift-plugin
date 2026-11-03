@@ -10,7 +10,7 @@ use crate::Tags;
 /// in this plugin.
 ///
 /// Each implementor is responsible for writing a single valid JSON value to the writer and reading it back.
-pub trait Persistent {
+pub trait PersistentParam {
     fn create(id: ClapId, name: String, module: Option<String>, tags: impl Into<Tags>) -> Self
     where
         Self: Sized;

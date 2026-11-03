@@ -5,7 +5,7 @@ use clack_plugin::{
     },
     utils::{ClapId, Cookie},
 };
-use rift_plugin_params::Persistent;
+use rift_plugin_params::{PersistValue, PersistentParam, SwapParam};
 
 /// Publishes a value to a persistent parameter, then builds the event that tells the
 /// audio thread it changed.
@@ -13,9 +13,14 @@ use rift_plugin_params::Persistent;
 /// The audio thread re-reads the parameter when it receives the event, so the write
 /// has to be visible before the event is emitted. Doing both here keeps that ordering
 /// in one place: a backend only has to forward the returned event.
-pub fn set_persistent<P: Persistent, F: FnOnce(&P)>(p: &P, set: F) -> GuiParamEvent {
+pub fn set_persistent<P: PersistentParam, F: FnOnce(&P)>(p: &P, set: F) -> GuiParamEvent {
     set(p);
     GuiParamEvent::persistent(p.id())
+}
+
+pub fn set_swap<T: PersistValue>(param: &SwapParam<T>, value: impl Into<T>) -> GuiParamEvent {
+    param.set_value(value);
+    GuiParamEvent::persistent(param.id())
 }
 
 #[derive(Debug, Clone, Copy)]

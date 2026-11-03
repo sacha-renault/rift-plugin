@@ -1,9 +1,14 @@
-use rift_plugin_params::Persistent;
+use rift_plugin_params::{PersistValue, PersistentParam, SwapParam};
 
 use crate::dev_prelude::*;
 
 #[modifiers(for T where T: EmitContext)]
 pub trait ContextExt {
+    #[concrete]
+    fn set_swap_param<V: PersistValue>(&mut self, param: &SwapParam<V>, value: impl Into<V>) {
+        self.emit_to(Entity::root(), rift_plugin_gui::set_swap(param, value));
+    }
+
     /// Publishes a value to a persistent parameter, then tells the audio thread it
     /// changed.
     ///
@@ -13,7 +18,7 @@ pub trait ContextExt {
     /// cx.set_persistent(&params.sample, |p| p.set_value(path));
     /// ```
     #[concrete]
-    fn set_persistent<P: Persistent, F: FnOnce(&P)>(&mut self, p: &P, set: F) {
+    fn set_persistent<P: PersistentParam, F: FnOnce(&P)>(&mut self, p: &P, set: F) {
         self.emit_to(Entity::root(), rift_plugin_gui::set_persistent(p, set));
     }
 

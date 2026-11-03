@@ -48,9 +48,9 @@ pub(crate) fn expand(params: Params) -> TokenStream2 {
                 __params
             }
 
-            fn all_persist(&self) -> ::std::vec::Vec<&dyn ::rift_plugin::prelude::Persistent> {
+            fn all_persist(&self) -> ::std::vec::Vec<&dyn ::rift_plugin::prelude::PersistentParam> {
                 let mut __persist =
-                    ::std::vec::Vec::<&dyn ::rift_plugin::prelude::Persistent>::new();
+                    ::std::vec::Vec::<&dyn ::rift_plugin::prelude::PersistentParam>::new();
                 #all_persist
                 __persist
             }
@@ -138,7 +138,7 @@ fn expand_persist(leaf: &LeafPersist) -> TokenStream2 {
     };
 
     quote! {
-        <#ty as ::rift_plugin::prelude::Persistent>::create(
+        <#ty as ::rift_plugin::prelude::PersistentParam>::create(
             ::rift_plugin::prelude::param_id(
                 __module.as_deref().unwrap_or(""),
                 #id_lit
