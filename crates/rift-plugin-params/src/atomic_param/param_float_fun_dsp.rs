@@ -2,8 +2,8 @@ use fundsp::prelude32::{An, Shared, var};
 
 use fundsp::shared::Var;
 
+use super::param_float::_Float;
 use crate::atomic_param::{Atomic, AtomicParam};
-use crate::param_float::_Float;
 
 impl Atomic<f32> for Shared {
     fn new(v: f32) -> Self {

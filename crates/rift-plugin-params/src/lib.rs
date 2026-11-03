@@ -6,10 +6,6 @@
 //! and the [`ParamCollection`] / [`UserParams`] collection traits.
 
 mod id;
-mod param_bool;
-mod param_enum;
-mod param_float;
-mod param_int;
 mod param_string;
 mod param_swap;
 mod ptr;
@@ -18,21 +14,15 @@ mod scale;
 mod tags;
 mod traits;
 
-#[doc(hidden)]
-pub mod params_wrapper;
-
-#[cfg(feature = "fun-dsp")]
-mod param_float_fun_dsp;
-
 mod atomic_param;
 mod test_macros;
 
+#[doc(hidden)]
+pub mod params_wrapper;
+
+pub use atomic_param::{BoolParam, EnumParam, EnumValues, FloatParam, IntParam};
 pub use clack_plugin::utils::ClapId;
 pub use id::param_id;
-pub use param_bool::BoolParam;
-pub use param_enum::{EnumParam, EnumValues};
-pub use param_float::FloatParam;
-pub use param_int::IntParam;
 pub use param_string::{StringParam, StringParamValue};
 pub use param_swap::{PersistValue, SwapParam, SwapParamValue};
 pub use ptr::ParamPtr;
@@ -42,4 +32,4 @@ pub use tags::Tags;
 pub use traits::{Param, ParamCollection, PersistentParam, TypedParam, UserParams};
 
 #[cfg(feature = "fun-dsp")]
-pub use param_float_fun_dsp::SharedFloatParam;
+pub use atomic_param::SharedFloatParam;

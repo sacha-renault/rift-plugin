@@ -8,6 +8,20 @@ use crate::Tags;
 use super::ptr::ParamPtr;
 use super::traits::{Param, TypedParam};
 
+mod param_bool;
+mod param_enum;
+mod param_float;
+#[cfg(feature = "fun-dsp")]
+mod param_float_fun_dsp;
+mod param_int;
+
+pub use param_bool::BoolParam;
+pub use param_enum::{EnumParam, EnumValues};
+pub use param_float::FloatParam;
+#[cfg(feature = "fun-dsp")]
+pub use param_float_fun_dsp::SharedFloatParam;
+pub use param_int::IntParam;
+
 /// Lock-free cell holding a `T`.
 pub trait Atomic<T>: Send + Sync {
     fn new(v: T) -> Self;
