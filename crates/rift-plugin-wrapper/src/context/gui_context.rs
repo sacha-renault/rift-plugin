@@ -1,8 +1,6 @@
 use std::sync::{Arc, atomic::Ordering};
 
-use rift_plugin_gui::{
-    GuiContext, GuiParamEvent, GuiParamEventKind, HostParamChange, HostSharedHandle,
-};
+use rift_plugin_gui::{GuiContext, GuiParamEvent, HostParamChange, HostSharedHandle};
 use rift_plugin_params::{ClapId, ParamCollection};
 
 use crate::shared::{ParamContextMenu, PluginSharedState};
@@ -17,10 +15,6 @@ pub(crate) struct GuiContextImpl {
 impl GuiContext for GuiContextImpl {
     /// Queues a GUI parameter event for the audio thread.
     fn param_event(&self, event: GuiParamEvent) {
-        if let GuiParamEventKind::Value(value) = event.kind {
-            self.params.set_value(event.param_id, value);
-        }
-
         if self.states.param_events().try_post(event).is_some() {
             log::error!("Couldn't push new param event from gui");
         }
