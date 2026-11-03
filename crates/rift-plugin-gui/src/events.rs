@@ -1,10 +1,22 @@
 use clack_plugin::{
     events::{
-        event_types::{ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent},
         Pckn, UnknownEvent,
+        event_types::{ParamGestureBeginEvent, ParamGestureEndEvent, ParamValueEvent},
     },
     utils::{ClapId, Cookie},
 };
+use rift_plugin_params::Persistent;
+
+/// Publishes a value to a persistent parameter, then builds the event that tells the
+/// audio thread it changed.
+///
+/// The audio thread re-reads the parameter when it receives the event, so the write
+/// has to be visible before the event is emitted. Doing both here keeps that ordering
+/// in one place: a backend only has to forward the returned event.
+pub fn set_persistent<P: Persistent, F: FnOnce(&P)>(p: &P, set: F) -> GuiParamEvent {
+    set(p);
+    GuiParamEvent::persistent(p.id())
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum GuiParamEventKind {
@@ -14,8 +26,7 @@ pub enum GuiParamEventKind {
     GestureBegin,
     /// End of a mouse gesture interaction.
     GestureEnd,
-    /// Notify the audio thread a Persistent
-    /// has changed. There is no value associated.
+    /// Notify the audio thread that a persistent parameter changed.
     Persistent,
 }
 
@@ -51,9 +62,16 @@ impl GuiParamEvent {
         }
     }
 
-    pub fn persistent(persistent_param_id: ClapId) -> Self {
+    /// Builds the notification for a persistent parameter whose value the caller
+    /// has already published on the emitting thread.
+    ///
+    /// The event carries no value: the audio thread re-reads the parameter when it
+    /// receives it. So the write has to be visible before the event is queued,
+    /// otherwise the audio thread can wake up on the event and re-read the previous
+    /// value.
+    pub fn persistent(param_id: ClapId) -> Self {
         Self {
-            param_id: persistent_param_id,
+            param_id,
             kind: GuiParamEventKind::Persistent,
         }
     }
