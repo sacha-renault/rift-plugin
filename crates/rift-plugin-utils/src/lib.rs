@@ -1,6 +1,7 @@
 //! Small standalone utilities: bounded vectors, interpolation, channel routing,
 //! dequeue buffers, note helpers, spaces and a background task executor.
 
+pub mod array_op;
 pub mod background_thread;
 pub mod bounded_vec;
 pub mod conversion;
