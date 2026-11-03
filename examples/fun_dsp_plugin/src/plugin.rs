@@ -30,6 +30,7 @@ impl ClapPlugin for FunDspPlugin {
 
     fn create(
         params: Arc<Self::Params>,
+        _data: Arc<Self::SharedData>,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {

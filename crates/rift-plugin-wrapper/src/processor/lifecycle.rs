@@ -36,7 +36,12 @@ impl<'a, P: ClapPlugin> PluginAudioProcessor<'a, WrapperShared<P>, WrapperMainTh
     ) -> Result<Self, PluginError> {
         // Create the plugin instance & activate right away
         let init_context = InitContext::new(&main_thread.host, shared.states.clone());
-        let plugin = P::create(shared.user_params.clone(), audio_config, init_context);
+        let plugin = P::create(
+            shared.user_params.clone(),
+            shared.data.clone(),
+            audio_config,
+            init_context,
+        );
         shared.states.set_samplerate(audio_config.sample_rate);
 
         // After the plugin is created, we set latency

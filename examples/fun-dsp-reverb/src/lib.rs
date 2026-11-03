@@ -78,6 +78,7 @@ impl ClapPlugin for FunDspReverb {
 
     fn create(
         params: Arc<Self::Params>,
+        _data: Arc<Self::SharedData>,
         config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {

@@ -45,6 +45,7 @@ impl ClapPlugin for MinimalGain {
 
     fn create(
         _params: Arc<Self::Params>,
+        _data: Arc<Self::SharedData>,
         _config: PluginAudioConfiguration,
         _context: InitContext,
     ) -> Self {

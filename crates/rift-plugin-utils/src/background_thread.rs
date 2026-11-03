@@ -94,7 +94,7 @@ impl<Job, Res, Data> BackgroundExecutor<Job, Res, Data> {
     }
 
     /// Access the shared state with background thread.
-    pub fn data(&self) -> &Data {
+    pub fn states(&self) -> &Data {
         self.data.as_ref()
     }
 }

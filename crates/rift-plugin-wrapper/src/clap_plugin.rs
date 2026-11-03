@@ -72,6 +72,7 @@ pub trait ClapPlugin: Send + Sync + Sized + 'static {
     /// You may allocate memory during this call.
     fn create(
         params: Arc<Self::Params>,
+        data: Arc<Self::SharedData>,
         config: PluginAudioConfiguration,
         context: InitContext,
     ) -> Self;
