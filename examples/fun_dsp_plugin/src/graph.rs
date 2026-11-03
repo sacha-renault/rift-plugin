@@ -8,13 +8,13 @@ use crate::params::{FilterKind, FunDspParams};
 
 /// Owns the fundsp graph and rebuilds it on a background thread.
 pub struct Shared {
-    pub(crate) tasks: BackgroundExecutor<f64, Box<dyn AudioUnit>>,
+    pub(crate) tasks: BackgroundExecutor<f64, Box<dyn AudioUnit>, ()>,
     pub(crate) acc: Arc<AudioAccumulator>,
 }
 
 impl FromParams<FunDspParams> for Shared {
     fn from_params(params: Arc<FunDspParams>) -> Self {
-        let tasks = BackgroundExecutor::new(16, 16, move |samplerate: f64| {
+        let tasks = BackgroundExecutor::stateless(16, 16, move |samplerate: f64| {
             build_net(samplerate, &params)
         });
         Self {

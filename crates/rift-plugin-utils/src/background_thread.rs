@@ -1,36 +1,64 @@
-use std::thread::{self, JoinHandle};
+use std::{
+    sync::Arc,
+    thread::{self, JoinHandle},
+};
 
 use crossbeam_channel::{Receiver, Sender, TrySendError, bounded};
 
 /// Runs `Job`s on a dedicated thread and hands their results back to the caller.
 ///
 /// [`Self::post`] never allocate because channel are bounded. This is safe for RT thread.
-pub struct BackgroundExecutor<Job, Res> {
+pub struct BackgroundExecutor<Job, Res, Data> {
     jobs: Option<Sender<Job>>,
     results: Option<Receiver<Res>>,
     handle: Option<JoinHandle<()>>,
+    data: Arc<Data>,
 }
 
-impl<Job, Res> BackgroundExecutor<Job, Res> {
+pub type StatelessExecutor<Job, Res> = BackgroundExecutor<Job, Res, ()>;
+
+impl<Job, Res, Data> BackgroundExecutor<Job, Res, Data> {
     /// Spawns the worker thread.
     ///
     /// `jobs_capacity` bounds how many unprocessed jobs may queue and
     /// `results_capacity` how many results may wait to be collected;
-    pub fn new<F>(jobs_capacity: usize, results_capacity: usize, handler: F) -> Self
+    pub fn new<F>(data: Data, jobs_capacity: usize, results_capacity: usize, handler: F) -> Self
     where
-        F: FnMut(Job) -> Res + Send + 'static,
+        F: FnMut(Job, &Data) -> Res + Send + 'static,
         Job: Send + 'static,
         Res: Send + 'static,
+        Data: Send + Sync + 'static,
+    {
+        let data = Arc::new(data);
+        Self::from_data(data, jobs_capacity, results_capacity, handler)
+    }
+
+    /// Create a new BackgroundExecutor with data already being a arc
+    ///
+    /// See [`Self::new`]
+    pub fn from_data<F>(
+        data: Arc<Data>,
+        jobs_capacity: usize,
+        results_capacity: usize,
+        handler: F,
+    ) -> Self
+    where
+        F: FnMut(Job, &Data) -> Res + Send + 'static,
+        Job: Send + 'static,
+        Res: Send + 'static,
+        Data: Send + Sync + 'static,
     {
         let (jobs, jobs_rx) = bounded(jobs_capacity.max(1));
         let (results_tx, results) = bounded(results_capacity.max(1));
 
-        let handle = thread::spawn(move || run(jobs_rx, results_tx, handler));
+        let thread_data = data.clone();
+        let handle = thread::spawn(move || run(jobs_rx, results_tx, thread_data, handler));
 
         Self {
             jobs: Some(jobs),
             results: Some(results),
             handle: Some(handle),
+            data,
         }
     }
 
@@ -56,7 +84,7 @@ impl<Job, Res> BackgroundExecutor<Job, Res> {
     }
 
     /// Drains every result currently available.
-    pub fn drain(&self) -> Drain<'_, Job, Res> {
+    pub fn drain(&self) -> Drain<'_, Job, Res, Data> {
         Drain { executor: self }
     }
 
@@ -64,9 +92,27 @@ impl<Job, Res> BackgroundExecutor<Job, Res> {
     pub fn pending_results(&self) -> usize {
         self.results.as_ref().map_or(0, Receiver::len)
     }
+
+    /// Access the shared state with background thread.
+    pub fn data(&self) -> &Data {
+        self.data.as_ref()
+    }
 }
 
-impl<Job, Res> Drop for BackgroundExecutor<Job, Res> {
+impl<Job, Res> StatelessExecutor<Job, Res> {
+    /// See [`Self::new`] but with empty data.
+    pub fn stateless<F>(jobs_capacity: usize, results_capacity: usize, mut handler: F) -> Self
+    where
+        F: FnMut(Job) -> Res + Send + 'static,
+        Job: Send + 'static,
+        Res: Send + 'static,
+    {
+        let stateless_handle = move |job, _: &()| handler(job);
+        Self::new((), jobs_capacity, results_capacity, stateless_handle)
+    }
+}
+
+impl<Job, Res, Data> Drop for BackgroundExecutor<Job, Res, Data> {
     fn drop(&mut self) {
         // Close both channels so the worker cannot stay blocked, whether it is
         // waiting on a job or stuck sending a result; then join so it is fully
@@ -80,11 +126,11 @@ impl<Job, Res> Drop for BackgroundExecutor<Job, Res> {
 }
 
 /// Iterates the results ready now and any that become ready while iterating.
-pub struct Drain<'a, Job, Res> {
-    executor: &'a BackgroundExecutor<Job, Res>,
+pub struct Drain<'a, Job, Res, Data> {
+    executor: &'a BackgroundExecutor<Job, Res, Data>,
 }
 
-impl<Job, Res> Iterator for Drain<'_, Job, Res> {
+impl<Job, Res, Data> Iterator for Drain<'_, Job, Res, Data> {
     type Item = Res;
 
     fn next(&mut self) -> Option<Res> {
@@ -97,10 +143,15 @@ impl<Job, Res> Iterator for Drain<'_, Job, Res> {
     }
 }
 
-fn run<Job, Res>(jobs: Receiver<Job>, results: Sender<Res>, mut handler: impl FnMut(Job) -> Res) {
+fn run<Job, Res, Data>(
+    jobs: Receiver<Job>,
+    results: Sender<Res>,
+    data: Arc<Data>,
+    mut handler: impl FnMut(Job, &Data) -> Res,
+) {
     while let Ok(job) = jobs.recv() {
         // A send error means the executor was dropped: stop.
-        if results.send(handler(job)).is_err() {
+        if results.send(handler(job, data.as_ref())).is_err() {
             break;
         }
     }
@@ -115,8 +166,8 @@ mod tests {
     use super::*;
 
     /// Polls `exec` until `expected` results are collected or `timeout` elapses.
-    fn collect<Job, Res>(
-        exec: &BackgroundExecutor<Job, Res>,
+    fn collect<Job, Res, Data>(
+        exec: &BackgroundExecutor<Job, Res, Data>,
         expected: usize,
         timeout: Duration,
     ) -> Vec<Res> {
@@ -133,7 +184,7 @@ mod tests {
 
     #[test]
     fn runs_jobs_and_returns_results() {
-        let exec = BackgroundExecutor::new(8, 8, |j: u32| j * 2);
+        let exec = BackgroundExecutor::stateless(8, 8, |j: u32| j * 2);
         exec.post(1).unwrap();
         exec.post(2).unwrap();
 
@@ -144,7 +195,7 @@ mod tests {
 
     #[test]
     fn preserves_fifo_order() {
-        let exec = BackgroundExecutor::new(128, 128, |j: u32| j * 2);
+        let exec = BackgroundExecutor::stateless(128, 128, |j: u32| j * 2);
         for i in 0..100 {
             exec.post(i).unwrap();
         }
@@ -156,12 +207,12 @@ mod tests {
     #[test]
     fn is_send_and_sync() {
         fn assert_send_sync<T: Send + Sync>() {}
-        assert_send_sync::<BackgroundExecutor<u32, u32>>();
+        assert_send_sync::<BackgroundExecutor<u32, u32, ()>>();
     }
 
     #[test]
     fn try_recv_is_empty_at_start() {
-        let exec = BackgroundExecutor::new(4, 4, |j: u32| j);
+        let exec = BackgroundExecutor::stateless(4, 4, |j: u32| j);
         assert!(exec.try_recv().is_none());
         assert_eq!(exec.pending_results(), 0);
     }
@@ -173,7 +224,7 @@ mod tests {
         let (started_tx, started_rx) = unbounded();
         let (release_tx, release_rx) = unbounded::<()>();
 
-        let exec = BackgroundExecutor::new(1, 4, move |j: u32| {
+        let exec = BackgroundExecutor::stateless(1, 4, move |j: u32| {
             if j == 0 {
                 started_tx.send(()).unwrap();
                 release_rx.recv().unwrap();
@@ -196,7 +247,7 @@ mod tests {
 
     #[test]
     fn drain_yields_all_available() {
-        let exec = BackgroundExecutor::new(8, 8, |j: u32| j);
+        let exec = BackgroundExecutor::stateless(8, 8, |j: u32| j);
         for i in 0..4 {
             exec.post(i).unwrap();
         }
@@ -216,7 +267,7 @@ mod tests {
     fn backpressure_resumes_when_consumer_drains() {
         // Results capacity (2) far below the job count: the worker blocks once
         // full and must resume as the consumer drains.
-        let exec = BackgroundExecutor::new(16, 2, |j: u32| j);
+        let exec = BackgroundExecutor::stateless(16, 2, |j: u32| j);
         for i in 0..10 {
             exec.post(i).unwrap();
         }
@@ -229,7 +280,7 @@ mod tests {
 
     #[test]
     fn handler_may_allocate_on_the_worker() {
-        let exec = BackgroundExecutor::new(4, 4, |j: u32| vec![j; j as usize]);
+        let exec = BackgroundExecutor::stateless(4, 4, |j: u32| vec![j; j as usize]);
         exec.post(3).unwrap();
 
         let got = collect(&exec, 1, Duration::from_secs(1));
@@ -239,7 +290,7 @@ mod tests {
 
     #[test]
     fn drop_joins_the_worker() {
-        let exec = BackgroundExecutor::new(4, 4, |j: u32| j);
+        let exec = BackgroundExecutor::stateless(4, 4, |j: u32| j);
         exec.post(1).unwrap();
         drop(exec);
     }

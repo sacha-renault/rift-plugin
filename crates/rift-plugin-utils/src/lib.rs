@@ -19,7 +19,7 @@ use std::{cell::RefCell, rc::Rc};
 /// Type alias of [`Rc<RefCell<T>>`]
 pub type ConsumerCell<T> = Rc<RefCell<T>>;
 
-pub use background_thread::BackgroundExecutor;
+pub use background_thread::{BackgroundExecutor, StatelessExecutor};
 pub use bounded_vec::BoundedVec;
 pub use multi_channel::MultiChannel;
 
