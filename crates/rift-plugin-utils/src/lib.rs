@@ -14,10 +14,10 @@ pub mod spaces;
 mod graveyard;
 mod test_macros;
 
-use std::{cell::RefCell, rc::Rc};
+// Newtype
+pub type SharedConsumer<T> = Rc<RefCell<T>>;
 
-/// Type alias of [`Rc<RefCell<T>>`]
-pub type ConsumerCell<T> = Rc<RefCell<T>>;
+use std::{cell::RefCell, rc::Rc};
 
 pub use background_thread::{BackgroundExecutor, StatelessExecutor};
 pub use bounded_vec::BoundedVec;

@@ -2,13 +2,13 @@ use crate::dev_prelude::*;
 use rift_plugin_accumulator::prelude::*;
 
 pub struct RollingWindowUI<B: Bucket> {
-    inner: ConsumerCell<RollingWindow<B>>,
+    inner: SharedConsumer<RollingWindow<B>>,
 }
 
 impl<B: Bucket> RollingWindowUI<B> {
     pub fn new(
         cx: &mut Context,
-        consumer: ConsumerCell<RollingWindow<B>>,
+        consumer: SharedConsumer<RollingWindow<B>>,
         redraw: Signal<()>,
     ) -> Handle<'_, Self> {
         Self { inner: consumer }

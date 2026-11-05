@@ -1,26 +1,5 @@
-use std::{cell::RefCell, rc::Rc};
-
 use rift_plugin_types::transport::{BlockTime, ChannelsInfo};
-use rift_plugin_utils::{ConsumerCell, MultiChannel};
-
-/// Common supertrait of [`MonoConsumer`] and [`MultiConsumer`].
-///
-/// Implemented for every `'static` type, so it never needs to be implemented
-/// by hand. It only exists so shared helpers are defined once, which keeps
-/// calls unambiguous for types implementing both consumer traits.
-pub trait Consumer: 'static {
-    /// Wraps `self` in a [`ConsumerCell`], ready to be registered in a
-    /// [`ConsumerDispatcher`](crate::prelude::ConsumerDispatcher) while the UI
-    /// keeps a clone to read the results.
-    fn wraps_consumer(self) -> ConsumerCell<Self>
-    where
-        Self: Sized,
-    {
-        Rc::new(RefCell::new(self))
-    }
-}
-
-impl<T: 'static> Consumer for T {}
+use rift_plugin_utils::MultiChannel;
 
 /// A consumer that receives a single-channel audio block.
 ///
@@ -31,7 +10,7 @@ impl<T: 'static> Consumer for T {}
 /// For one independent instance per channel, wrap it in
 /// [`MultiChannel<T>`](rift_plugin_utils::MultiChannel), which implements
 /// [`MultiConsumer`].
-pub trait MonoConsumer: Consumer {
+pub trait MonoConsumer: 'static {
     /// Processes one block of PCM samples.
     ///
     /// - `block` - f32 samples for a single channel. Any length, possibly empty.
@@ -50,7 +29,7 @@ pub trait MonoConsumer: Consumer {
 ///
 /// Channels of the same block are delivered in ascending order, all with the
 /// same `block` length and `time`.
-pub trait MultiConsumer: Consumer {
+pub trait MultiConsumer: 'static {
     /// Processes one block of PCM samples for a specific channel.
     ///
     /// - `block` - f32 samples for the current channel. Any length, possibly empty.

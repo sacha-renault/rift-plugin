@@ -92,7 +92,7 @@ impl AccumulatorProxy {
     /// Registers `consumer` for every channel independently.
     ///
     /// Returns the cell the dispatcher writes into (keep it to read the results).
-    pub fn add_consumer_all<C: MultiConsumer>(&self, consumer: C) -> ConsumerCell<C> {
+    pub fn add_consumer_all<C: MultiConsumer>(&self, consumer: C) -> SharedConsumer<C> {
         self.consumers.borrow_mut().add_consumer_all(consumer)
     }
 
@@ -103,7 +103,7 @@ impl AccumulatorProxy {
         &self,
         consumer: C,
         channel: usize,
-    ) -> ConsumerCell<C> {
+    ) -> SharedConsumer<C> {
         self.consumers
             .borrow_mut()
             .add_consumer_at_channel(consumer, channel)
@@ -112,7 +112,7 @@ impl AccumulatorProxy {
     /// Registers `consumer` for the mono-averaged mix of all channels.
     ///
     /// Returns the cell the dispatcher writes into (keep it to read the results).
-    pub fn add_consumer_averaged<C: MonoConsumer>(&self, consumer: C) -> ConsumerCell<C> {
+    pub fn add_consumer_averaged<C: MonoConsumer>(&self, consumer: C) -> SharedConsumer<C> {
         self.consumers.borrow_mut().add_consumer_averaged(consumer)
     }
 }

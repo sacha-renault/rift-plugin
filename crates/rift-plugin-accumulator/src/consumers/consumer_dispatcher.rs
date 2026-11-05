@@ -1,5 +1,7 @@
+use std::{cell::RefCell, rc::Rc};
+
 use rift_plugin_types::transport::{BlockTime, ChannelsInfo};
-use rift_plugin_utils::ConsumerCell;
+use rift_plugin_utils::SharedConsumer;
 
 use crate::prelude::{MonoConsumer, MultiConsumer};
 
@@ -11,7 +13,7 @@ pub enum MonoConsumerKind {
 
 /// A consumer that only receives one channel.
 struct ChannelConsumer {
-    consumer: ConsumerCell<dyn MonoConsumer>,
+    consumer: SharedConsumer<dyn MonoConsumer>,
     channel: usize,
 }
 
@@ -48,8 +50,8 @@ pub struct ConsumerDispatcher {
     intermediate: Vec<f32>,
 
     /// Registered consumers
-    all_consumers: Vec<ConsumerCell<dyn MultiConsumer>>,
-    avg_consumers: Vec<ConsumerCell<dyn MonoConsumer>>,
+    all_consumers: Vec<SharedConsumer<dyn MultiConsumer>>,
+    avg_consumers: Vec<SharedConsumer<dyn MonoConsumer>>,
     channel_consumers: Vec<ChannelConsumer>,
 }
 
@@ -74,8 +76,8 @@ impl ConsumerDispatcher {
     /// audio callback, after all channels have been dispatched.
     ///
     /// Returns the [`ConsumerCell`] the dispatcher writes into.
-    pub fn add_consumer_averaged<C: MonoConsumer>(&mut self, consumer: C) -> ConsumerCell<C> {
-        let cell = consumer.wraps_consumer();
+    pub fn add_consumer_averaged<C: MonoConsumer>(&mut self, consumer: C) -> SharedConsumer<C> {
+        let cell = Rc::new(RefCell::new(consumer));
         self.avg_consumers.push(cell.clone());
         cell
     }
@@ -83,8 +85,8 @@ impl ConsumerDispatcher {
     /// Registers a consumer that will receive a every channel independently.
     ///
     /// Returns the [`ConsumerCell`] the dispatcher writes into.
-    pub fn add_consumer_all<C: MultiConsumer>(&mut self, consumer: C) -> ConsumerCell<C> {
-        let cell = consumer.wraps_consumer();
+    pub fn add_consumer_all<C: MultiConsumer>(&mut self, consumer: C) -> SharedConsumer<C> {
+        let cell = Rc::new(RefCell::new(consumer));
         self.all_consumers.push(cell.clone());
         cell
     }
@@ -97,8 +99,8 @@ impl ConsumerDispatcher {
         &mut self,
         consumer: C,
         channel: usize,
-    ) -> ConsumerCell<C> {
-        let cell = consumer.wraps_consumer();
+    ) -> SharedConsumer<C> {
+        let cell = Rc::new(RefCell::new(consumer));
         self.channel_consumers.push(ChannelConsumer {
             consumer: cell.clone(),
             channel,
@@ -111,7 +113,7 @@ impl ConsumerDispatcher {
         &mut self,
         consumer: C,
         kind: MonoConsumerKind,
-    ) -> ConsumerCell<C> {
+    ) -> SharedConsumer<C> {
         match kind {
             MonoConsumerKind::Averaged => self.add_consumer_averaged(consumer),
             MonoConsumerKind::Channel(channel) => self.add_consumer_at_channel(consumer, channel),
@@ -167,7 +169,7 @@ impl ConsumerDispatcher {
 
 /// Runs `f` on the consumer. Panics on debug builds and
 /// just ignore on release builds.
-fn with_consumer<T: ?Sized>(consumer: &ConsumerCell<T>, f: impl FnOnce(&mut T)) {
+fn with_consumer<T: ?Sized>(consumer: &SharedConsumer<T>, f: impl FnOnce(&mut T)) {
     match consumer.try_borrow_mut() {
         Ok(mut c) => f(&mut c),
         Err(_) => debug_assert!(false, "consumer is already borrowed during dispatch"),
