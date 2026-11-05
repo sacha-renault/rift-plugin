@@ -1,4 +1,5 @@
-use std::{cell::RefCell, collections::HashMap};
+use hashbrown::HashMap;
+use std::cell::RefCell;
 
 use crate::dev_prelude::*;
 

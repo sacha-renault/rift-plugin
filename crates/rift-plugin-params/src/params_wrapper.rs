@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 use clack_extensions::params::ParamInfo;
 use clack_plugin::utils::ClapId;

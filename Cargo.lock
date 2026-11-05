@@ -2168,6 +2168,7 @@ dependencies = [
  "clack-extensions",
  "clack-plugin",
  "fundsp",
+ "hashbrown 0.17.1",
  "log",
  "rift-plugin-types",
  "serde",
@@ -2202,6 +2203,7 @@ dependencies = [
 name = "rift-plugin-vizia"
 version = "0.1.0"
 dependencies = [
+ "hashbrown 0.17.1",
  "raw-window-handle",
  "rift-plugin-accumulator",
  "rift-plugin-derive",
