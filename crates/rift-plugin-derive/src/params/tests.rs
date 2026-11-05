@@ -277,7 +277,7 @@ fn persist_builds_through_persistent_create() {
     // Whitespace is stripped by the test helper, so `<StringParam as ...>` reads
     // as `<StringParamas ...>`.
     assert!(
-        out.contains("<StringParamas::rift_plugin::prelude::Persistent>::create("),
+        out.contains("<StringParamas::rift_plugin::prelude::PersistentParam>::create("),
         "{out}"
     );
     // The id defaults to the field ident; `name` is always the field ident.
