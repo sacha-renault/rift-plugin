@@ -68,7 +68,10 @@ impl AudioAccumulator {
             .store(start + buffer.samples() as u64, Ordering::Release);
     }
 
-    pub fn ui_thread_read(&self, consumers: &mut ConsumerDispatcher) {
+    /// Pump all pending data in the accumulator
+    ///
+    /// returns true if any data was dispatched. False otherwise.
+    pub fn ui_thread_read(&self, consumers: &mut ConsumerDispatcher) -> bool {
         let written = self.written.load(Ordering::Acquire);
         let mut read = self.read.load(Ordering::Relaxed); // only UI thread touches this
 
@@ -77,7 +80,7 @@ impl AudioAccumulator {
 
         let available = (written - read) as usize;
         if available == 0 {
-            return;
+            return false;
         }
 
         let r = (read % self.capacity as u64) as usize;
@@ -99,6 +102,8 @@ impl AudioAccumulator {
         }
 
         self.read.store(written, Ordering::Relaxed);
+
+        true
     }
 
     fn dispatch_segment(

@@ -6,18 +6,14 @@ pub struct RollingWindowUI<B: Bucket> {
 }
 
 impl<B: Bucket> RollingWindowUI<B> {
-    pub fn new(cx: &mut Context, consumer: ConsumerCell<RollingWindow<B>>) -> Handle<'_, Self> {
-        // TODO, change this
-        // rn we use redraw at every frame but this is wrong.
-        // We could have blocks of size 2048. Then, at 48000kHz it
-        // has refresh 23 times per sec. So it redraw more than required.
-        // Switch to a signal that ticks everytime the accumulator has new
-        // data.
-        let frame_signal = FrameSignal::signal(cx);
-
+    pub fn new(
+        cx: &mut Context,
+        consumer: ConsumerCell<RollingWindow<B>>,
+        redraw: Signal<()>,
+    ) -> Handle<'_, Self> {
         Self { inner: consumer }
             .build(cx, |_| {})
-            .bind(*frame_signal, |mut handle| handle.needs_redraw())
+            .bind(redraw, |mut handle| handle.needs_redraw())
             .role(Role::Canvas)
     }
 }

@@ -43,7 +43,7 @@ pub struct AtomicF64(AtomicU64);
 impl AtomicF64 {
     /// Creates a new atomic `f64`.
     #[inline]
-    pub fn new(value: f64) -> Self {
+    pub const fn new(value: f64) -> Self {
         Self(AtomicU64::new(value.to_bits()))
     }
 

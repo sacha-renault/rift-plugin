@@ -9,6 +9,7 @@ use crate::{analysers::rolling_window::RollingWindowUI, dev_prelude::*};
 
 pub struct AccumulatorProxy {
     consumers: Rc<RefCell<ConsumerDispatcher>>,
+    new_data_signal: Signal<()>,
 }
 
 impl AccumulatorProxy {
@@ -19,13 +20,20 @@ impl AccumulatorProxy {
     pub fn install(cx: &mut Context, accumulator: Arc<AudioAccumulator>) -> Self {
         let consumers = Rc::new(RefCell::new(ConsumerDispatcher::new()));
         let frame_signal = FrameSignal::signal(cx);
+        let new_data_signal = Signal::default();
 
         let pumped = consumers.clone();
         Binding::new(cx, *frame_signal, move |_| {
-            accumulator.ui_thread_read(&mut pumped.borrow_mut());
+            if accumulator.ui_thread_read(&mut pumped.borrow_mut()) {
+                // New data signal will tick any view that needs a redraw on new data.
+                new_data_signal.set(());
+            }
         });
 
-        Self { consumers }
+        Self {
+            consumers,
+            new_data_signal,
+        }
     }
 
     pub fn meter<'a>(&self, cx: &'a mut Context, channel: usize) -> Handle<'a, MeterUI> {
@@ -69,7 +77,7 @@ impl AccumulatorProxy {
             .consumers
             .borrow_mut()
             .add_mono_consumer(RollingWindow::new(seconds), kind);
-        RollingWindowUI::new(cx, consumer)
+        RollingWindowUI::new(cx, consumer, self.new_data_signal)
     }
 
     /// Registers `consumer` for every channel independently.
