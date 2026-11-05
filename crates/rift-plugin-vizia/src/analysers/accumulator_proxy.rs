@@ -7,6 +7,7 @@ use super::*;
 
 use crate::{analysers::rolling_window::RollingWindowUI, dev_prelude::*};
 
+#[derive(Clone)]
 pub struct AccumulatorProxy {
     consumers: Rc<RefCell<ConsumerDispatcher>>,
     new_data_signal: Signal<()>,
