@@ -158,6 +158,8 @@ impl<'a> Buffers<'a> {
     /// # Errors
     ///
     /// Returns [`PluginError`] if `index` is out of bounds.
+    ///
+    /// // TODO(soundness)
     pub fn try_output_aux(&mut self, index: usize) -> Result<Buffer<'_>, PluginError> {
         let start_idx = match self.main_config {
             MainAudioPort::InputOnly(_) => 0,

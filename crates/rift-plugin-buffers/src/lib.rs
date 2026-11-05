@@ -10,4 +10,4 @@ pub use buffer::Buffer;
 pub use buffers::Buffers;
 pub use event_handling::InputEvent;
 pub use event_iterator::{EventsCursor, FrameEventsIter};
-pub use frame::{Frame, SampleFrames};
+pub use frame::{Frame, BufferFrameIter};

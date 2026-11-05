@@ -97,14 +97,15 @@ pub fn benchmark<F>(
         let mut duration = Duration::ZERO;
         for _ in 0..iterations {
             let mut audio = factory(num_channels, samples);
-            let mut buffer = Buffer::from_raw(audio.get_ptrs(), samples as u32);
+            let mut buffer = unsafe { Buffer::from_raw(audio.get_ptrs(), samples as u32) };
 
             let start = Instant::now();
-            for v in buffer.iter_samples() {
+            for v in buffer.iter_frames() {
                 for sample in v {
                     process_fn(sample);
                 }
             }
+
             duration += start.elapsed();
         }
         BenchResult {
@@ -120,7 +121,7 @@ pub fn benchmark<F>(
         let mut duration = Duration::ZERO;
         for _ in 0..iterations {
             let mut audio = factory(num_channels, samples);
-            let mut buffer = Buffer::from_raw(audio.get_ptrs(), samples as u32);
+            let mut buffer = unsafe { Buffer::from_raw(audio.get_ptrs(), samples as u32) };
 
             let start = Instant::now();
             for channel in buffer.iter_channels_mut() {

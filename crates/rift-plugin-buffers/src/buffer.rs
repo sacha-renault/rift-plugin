@@ -1,6 +1,6 @@
 use clack_plugin::process::audio::{InputChannels, OutputChannels};
 
-use crate::frame::SampleFrames;
+use crate::frame::BufferFrameIter;
 
 /// Internal storage backing a [`Buffer`].
 ///
@@ -79,8 +79,12 @@ impl<'a> Buffer<'a> {
         }
     }
 
-    #[inline]
-    pub fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
+    /// # Safety
+    /// - Every pointer in `raw_data` is non-null, aligned, and valid for reads and
+    ///   writes of `frames_count` floats for `'a`.
+    /// - The pointers doesn't overlap.
+    /// - Nothing else accesses that memory while the `Buffer` exists.
+    pub unsafe fn from_raw(raw_data: &'a [*mut f32], frames_count: u32) -> Self {
         Self {
             data: BufferData::RawData {
                 raw_data,
@@ -121,11 +125,11 @@ impl<'a> Buffer<'a> {
     /// compiler a straight contiguous slice to work with.
     /// See the benchmark example for more info.
     #[allow(unused_mut)]
-    pub fn iter_samples(&'a mut self) -> SampleFrames<'a> {
+    pub fn iter_frames(&mut self) -> BufferFrameIter<'_> {
         let samples = self.samples();
         let channels = self.channels();
-        SampleFrames {
-            vec: self.raw_data(),
+        BufferFrameIter {
+            raw_data: self.raw_data(),
             position: 0,
             channels,
             samples,
@@ -150,28 +154,23 @@ impl<'a> Buffer<'a> {
     /// # Panics
     ///
     /// Panics if `N` differs from [`Buffer::channels`].
-    pub fn for_each_frame<const N: usize>(&'a mut self, mut f: impl FnMut(u32, &mut [f32; N])) {
+    pub fn for_each_frame<const N: usize>(&mut self, mut f: impl FnMut(u32, &mut [f32; N])) {
         assert_eq!(self.channels(), N);
 
-        let samples = self.samples();
-        let vec = self.raw_data();
-
-        let mut frame = [0f32; N];
-        for pos in 0..samples {
-            for (ch, s) in frame.iter_mut().enumerate() {
-                *s = unsafe { *vec[ch].add(pos) };
+        let mut temp = [0f32; N];
+        for mut frame in self.iter_frames() {
+            for (sample, tsample) in frame.iter_mut().zip(temp.iter_mut()) {
+                *tsample = *sample;
             }
 
-            f(pos as u32, &mut frame);
+            f(frame.time(), &mut temp);
 
-            for (ch, s) in frame.iter().enumerate() {
-                unsafe { *vec[ch].add(pos) = *s };
-            }
+            frame.fill(temp);
         }
     }
 
     /// [`for_each_frame`][Self::for_each_frame] with `N = 2`.
-    pub fn for_each_stereo_frame(&'a mut self, f: impl FnMut(u32, &mut [f32; 2])) {
+    pub fn for_each_stereo_frame(&mut self, f: impl FnMut(u32, &mut [f32; 2])) {
         self.for_each_frame::<2>(f)
     }
 
@@ -187,8 +186,7 @@ impl<'a> Buffer<'a> {
     /// Preferred for per-channel DSP (gain, filters, saturation) - the compiler
     /// can auto-vectorize over the contiguous slice. For inter-channel processing,
     /// see [`Buffer::iter_samples`].
-    #[allow(unused_mut)]
-    pub fn iter_channels_mut(&'a mut self) -> impl Iterator<Item = &'a mut [f32]> {
+    pub fn iter_channels_mut(&mut self) -> impl Iterator<Item = &mut [f32]> {
         let samples = self.samples();
         self.raw_data()
             .iter()
@@ -196,7 +194,7 @@ impl<'a> Buffer<'a> {
     }
 
     /// Fill the entire buffer with 0s
-    pub fn clear(&'a mut self) {
+    pub fn clear(&mut self) {
         for channel in self.iter_channels_mut() {
             channel.fill(0f32);
         }
