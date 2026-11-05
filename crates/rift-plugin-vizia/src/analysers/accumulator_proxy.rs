@@ -67,13 +67,20 @@ impl AccumulatorProxy {
         MeterUI::with_peak(cx, level, peak)
     }
 
-    pub fn meters<F>(&self, cx: &mut Context, channels: usize, modifiers: F)
+    pub fn meters<'a, F>(
+        &self,
+        cx: &'a mut Context,
+        channels: usize,
+        modifiers: F,
+    ) -> Handle<'a, HStack>
     where
         F: Fn(Handle<'_, MeterUI>),
     {
-        for channel in 0..channels {
-            modifiers(self.meter(cx, channel));
-        }
+        HStack::new(cx, |cx| {
+            for channel in 0..channels {
+                modifiers(self.meter(cx, channel));
+            }
+        })
     }
 
     pub fn rolling_window<'a, B: Bucket>(
