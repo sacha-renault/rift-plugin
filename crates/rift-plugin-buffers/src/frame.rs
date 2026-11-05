@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 /// Iterates over the buffer one frame at a time.
 ///
 /// Each frame yields all channels at a given time step. For a stereo buffer
@@ -11,9 +13,8 @@
 /// `iter_frames()` → `Frame[1, 4], Frame[2, 5], Frame[3, 6]`
 pub struct BufferFrameIter<'a> {
     pub(crate) raw_data: &'a [*mut f32],
-    pub(crate) position: usize,
+    pub(crate) frame_position: Range<usize>,
     pub(crate) channels: usize,
-    pub(crate) samples: usize,
 }
 
 impl<'a> Iterator for BufferFrameIter<'a> {
@@ -21,27 +22,36 @@ impl<'a> Iterator for BufferFrameIter<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position < self.samples {
-            let item = Some(Frame {
-                raw_data: self.raw_data,
-                frame_position: self.position,
-                channels: self.channels,
-            });
-            self.position += 1;
-            item
-        } else {
-            None
-        }
+        self.frame_position.next().map(|position| Frame {
+            raw_data: self.raw_data,
+            frame_position: position,
+            channels: self.channels,
+        })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
     }
 }
 
-impl<'a> BufferFrameIter<'a> {
-    /// Absolute sample position of the current frame.
+impl<'a> DoubleEndedIterator for BufferFrameIter<'a> {
     #[inline]
-    pub fn position(&self) -> usize {
-        self.position
+    fn next_back(&mut self) -> Option<Self::Item> {
+        self.frame_position.next_back().map(|position| Frame {
+            raw_data: self.raw_data,
+            frame_position: position,
+            channels: self.channels,
+        })
     }
 }
+
+impl<'a> ExactSizeIterator for BufferFrameIter<'a> {
+    fn len(&self) -> usize {
+        self.frame_position.len()
+    }
+}
+
+impl<'a> std::iter::FusedIterator for BufferFrameIter<'a> {}
 
 /// A single frame: one sample per channel at a given time step.
 ///
@@ -129,4 +139,16 @@ impl<'a> Iterator for FrameIter<'a> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.len(), Some(self.len()))
+    }
 }
+
+impl<'a> ExactSizeIterator for FrameIter<'a> {
+    fn len(&self) -> usize {
+        self.frame.channels - self.position
+    }
+}
+
+impl<'a> std::iter::FusedIterator for FrameIter<'a> {}

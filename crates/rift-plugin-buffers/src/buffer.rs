@@ -130,9 +130,8 @@ impl<'a> Buffer<'a> {
         let channels = self.channels();
         BufferFrameIter {
             raw_data: self.raw_data(),
-            position: 0,
+            frame_position: 0..samples,
             channels,
-            samples,
         }
     }
 
