@@ -83,7 +83,7 @@ impl<'a> Frame<'a> {
         }
     }
 
-    pub fn iter_mut<'b>(&'b mut self) -> FrameIter<'b> {
+    pub fn iter_mut(&mut self) -> FrameIter<'_> {
         FrameIter {
             position: 0,
             frame: Frame {
@@ -99,6 +99,7 @@ impl<'a> Frame<'a> {
 impl<'a> IntoIterator for Frame<'a> {
     type Item = &'a mut f32;
     type IntoIter = FrameIter<'a>;
+
     fn into_iter(self) -> FrameIter<'a> {
         FrameIter {
             position: 0,
@@ -110,6 +111,7 @@ impl<'a> IntoIterator for Frame<'a> {
 impl<'a, 'b> IntoIterator for &'b mut Frame<'a> {
     type Item = &'b mut f32;
     type IntoIter = FrameIter<'b>;
+
     fn into_iter(self) -> FrameIter<'b> {
         self.iter_mut()
     }
