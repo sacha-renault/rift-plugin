@@ -84,8 +84,7 @@ impl ClapPlugin for MinimalGain {
                     .width(Units::Stretch(8.));
 
                 HStack::new(cx, |cx| {
-                    proxy.meter(cx, 0);
-                    proxy.meter(cx, 1);
+                    proxy.meters(cx, 2, |_| {});
                 })
                 .height(Units::Percentage(80.))
                 .width(Units::Stretch(2.));
