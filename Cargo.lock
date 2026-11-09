@@ -3096,7 +3096,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 [[package]]
 name = "vizia"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "skia-safe",
  "vizia_baseview",
@@ -3117,10 +3117,11 @@ dependencies = [
 [[package]]
 name = "vizia_baseview"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "baseview 0.4.2",
  "gl",
+ "parking_lot",
  "raw-window-handle",
  "skia-safe",
  "vizia_core",
@@ -3131,7 +3132,7 @@ dependencies = [
 [[package]]
 name = "vizia_core"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "accesskit",
  "bitflags 2.13.2",
@@ -3161,12 +3162,12 @@ dependencies = [
 [[package]]
 name = "vizia_id"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 
 [[package]]
 name = "vizia_input"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "bitflags 2.13.2",
  "keyboard-types",
@@ -3176,7 +3177,7 @@ dependencies = [
 [[package]]
 name = "vizia_reactive"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "parking_lot",
  "smallvec",
@@ -3185,7 +3186,7 @@ dependencies = [
 [[package]]
 name = "vizia_storage"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "vizia_id",
 ]
@@ -3193,7 +3194,7 @@ dependencies = [
 [[package]]
 name = "vizia_style"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "bitflags 2.13.2",
  "cssparser",
@@ -3208,7 +3209,7 @@ dependencies = [
 [[package]]
 name = "vizia_window"
 version = "0.4.0"
-source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#a8e5d5655926a3c3639ac1ccdc11788f7bc5e88f"
+source = "git+https://github.com/sacha-renault/vizia?branch=update-baseview-0.4#f97155d5c30a615c356c61041355e26bc98832e8"
 dependencies = [
  "bitflags 2.13.2",
  "vizia_input",

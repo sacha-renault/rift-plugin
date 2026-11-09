@@ -9,9 +9,24 @@ use crate::atomic_param::{Atomic, AtomicParam, ParamKind};
 
 /// A fieldless enum usable as an [`EnumParam`] value.
 pub trait EnumValues: fmt::Display + Default + Sized + Copy + Send + Sync + 'static {
+    /// Return the current index.
     fn to_index(self) -> u32;
+
+    /// Try to build `Self` from an index. Can fail
+    /// if index is greater than the number of variant.
     fn from_index(index: u32) -> Option<Self>;
+
+    /// try to reconstruct the enum from the variant text.
+    fn from_name(name: &str) -> Option<Self>;
+
+    /// Total number of variant
     fn count() -> u32;
+
+    /// Static array of string slice that represent all variant names
+    fn names() -> &'static [&'static str];
+
+    /// Get the name of this variant
+    fn name(&self) -> &'static str;
 }
 
 /// Marker for [`EnumParam`], generic over the enum `E`.
@@ -131,8 +146,22 @@ mod tests {
             }
         }
 
+        fn from_name(_: &str) -> Option<Self> {
+            todo!()
+        }
+
         fn count() -> u32 {
             3
+        }
+
+        fn names() -> &'static [&'static str] {
+            const NAMES: &[&'static str] = &["A", "B", "C"];
+
+            NAMES
+        }
+
+        fn name(&self) -> &'static str {
+            todo!()
         }
     }
 

@@ -61,8 +61,27 @@ pub fn derive_enum_values(input: TokenStream) -> TokenStream {
                 }
             }
 
+            fn from_name(name: &str) -> Option<Self> {
+                #( if name.eq_ignore_ascii_case(#variant_texts) { return Some(Self::#variant_names); } )*
+                None
+            }
+
             fn count() -> u32 {
                 #count
+            }
+
+            fn names() -> &'static [&'static str] {
+                const NAMES: &[&'static str] = &[
+                    #(#variant_texts,)*
+                ];
+
+                NAMES
+            }
+
+            fn name(&self) -> &'static str {
+                match self {
+                    #(Self::#variant_names => #variant_texts, )*
+                }
             }
         }
 
