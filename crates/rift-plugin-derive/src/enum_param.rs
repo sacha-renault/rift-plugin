@@ -51,7 +51,7 @@ pub fn derive_enum_values(input: TokenStream) -> TokenStream {
     let expanded = quote! {
         impl ::rift_plugin::prelude::EnumValues for #name {
             fn to_index(self) -> u32 {
-                self as u32
+                match self { #( Self::#variant_names => #indices, )* }
             }
 
             fn from_index(index: u32) -> Option<Self> {
