@@ -158,13 +158,9 @@ impl<'a> Buffer<'a> {
 
         let mut temp = [0f32; N];
         for mut frame in self.iter_frames() {
-            for (sample, tsample) in frame.iter_mut().zip(temp.iter_mut()) {
-                *tsample = *sample;
-            }
-
+            frame.copy_to_array(&mut temp);
             f(frame.time(), &mut temp);
-
-            frame.fill(temp);
+            frame.copy_from_array(temp);
         }
     }
 

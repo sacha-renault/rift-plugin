@@ -75,11 +75,29 @@ impl<'a> Frame<'a> {
         self.frame_position as u32
     }
 
-    pub fn fill<const N: usize>(&mut self, frame: [f32; N]) {
+    pub fn copy_from_array<const N: usize>(&mut self, frame: [f32; N]) {
         debug_assert_eq!(self.channels, frame.len());
 
         for (sample, value) in self.into_iter().zip(frame) {
             *sample = value;
+        }
+    }
+
+    pub fn fill(&mut self, value: f32) {
+        for sample in self.into_iter() {
+            *sample = value;
+        }
+    }
+
+    /// This function is only visible in crate
+    /// because it requires a mutable ref (there is only
+    /// an iterator for mutable value.). TODO: add a const
+    /// iterator and make this function with &self.
+    pub(crate) fn copy_to_array<const N: usize>(&mut self, frame: &mut [f32; N]) {
+        debug_assert_eq!(self.channels, frame.len());
+
+        for (sample, value) in self.into_iter().zip(frame) {
+            *value = *sample;
         }
     }
 
