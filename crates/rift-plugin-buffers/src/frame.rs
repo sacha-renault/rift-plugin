@@ -1,4 +1,4 @@
-use std::ops::{Index, IndexMut, Range};
+use std::ops::Range;
 
 /// Iterates over the buffer one frame at a time.
 ///
