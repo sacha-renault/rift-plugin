@@ -158,9 +158,9 @@ impl<'a> Buffer<'a> {
 
         let mut temp = [0f32; N];
         for mut frame in self.iter_frames() {
-            frame.copy_to_array(&mut temp);
+            frame.copy_to_slice(&mut temp);
             f(frame.time(), &mut temp);
-            frame.copy_from_array(temp);
+            frame.copy_from_slice(&temp);
         }
     }
 

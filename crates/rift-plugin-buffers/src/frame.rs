@@ -75,11 +75,11 @@ impl<'a> Frame<'a> {
         self.frame_position as u32
     }
 
-    pub fn copy_from_array<const N: usize>(&mut self, frame: [f32; N]) {
+    pub fn copy_from_slice(&mut self, frame: &[f32]) {
         debug_assert_eq!(self.channels, frame.len());
 
         for (sample, value) in self.into_iter().zip(frame) {
-            *sample = value;
+            *sample = *value;
         }
     }
 
@@ -93,7 +93,7 @@ impl<'a> Frame<'a> {
     /// because it requires a mutable ref (there is only
     /// an iterator for mutable value.). TODO: add a const
     /// iterator and make this function with &self.
-    pub(crate) fn copy_to_array<const N: usize>(&mut self, frame: &mut [f32; N]) {
+    pub(crate) fn copy_to_slice(&mut self, frame: &mut [f32]) {
         debug_assert_eq!(self.channels, frame.len());
 
         for (sample, value) in self.into_iter().zip(frame) {
