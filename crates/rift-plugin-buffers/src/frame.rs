@@ -69,6 +69,7 @@ impl<'a> Frame<'a> {
         self.frame_position as u32
     }
 
+    /// Number of channels in this frame.
     #[inline]
     pub fn channels(&self) -> usize {
         self.raw_data.len()
@@ -77,14 +78,14 @@ impl<'a> Frame<'a> {
     pub fn copy_from_slice(&mut self, frame: &[f32]) {
         debug_assert_eq!(self.channels(), frame.len());
 
-        for (sample, value) in self.into_iter().zip(frame) {
+        for (sample, value) in self.iter_mut().zip(frame) {
             *sample = *value;
         }
     }
 
     /// Fill the entire frame with `value`.
     pub fn fill(&mut self, value: f32) {
-        for sample in self.into_iter() {
+        for sample in self.iter_mut() {
             *sample = value;
         }
     }
