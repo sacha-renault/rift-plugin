@@ -127,11 +127,9 @@ impl<'a> Buffer<'a> {
     #[allow(unused_mut)]
     pub fn iter_frames(&mut self) -> BufferFrameIter<'_> {
         let samples = self.samples();
-        let channels = self.channels();
         BufferFrameIter {
             raw_data: self.raw_data(),
             frame_position: 0..samples,
-            channels,
         }
     }
 

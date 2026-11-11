@@ -14,7 +14,6 @@ use std::ops::Range;
 pub struct BufferFrameIter<'a> {
     pub(crate) raw_data: &'a [*mut f32],
     pub(crate) frame_position: Range<usize>,
-    pub(crate) channels: usize,
 }
 
 impl<'a> Iterator for BufferFrameIter<'a> {
@@ -25,7 +24,6 @@ impl<'a> Iterator for BufferFrameIter<'a> {
         self.frame_position.next().map(|position| Frame {
             raw_data: self.raw_data,
             frame_position: position,
-            channels: self.channels,
         })
     }
 
@@ -40,7 +38,6 @@ impl<'a> DoubleEndedIterator for BufferFrameIter<'a> {
         self.frame_position.next_back().map(|position| Frame {
             raw_data: self.raw_data,
             frame_position: position,
-            channels: self.channels,
         })
     }
 }
@@ -55,7 +52,7 @@ impl<'a> std::iter::FusedIterator for BufferFrameIter<'a> {}
 
 /// A single frame: one sample per channel at a given time step.
 ///
-/// Iterating yields a mutable reference to each channel's sample,
+/// Iterating yields a reference to each channel's sample,
 /// in channel order.
 pub struct Frame<'a> {
     ///Raw data, not interleaved
@@ -63,9 +60,6 @@ pub struct Frame<'a> {
 
     /// Absolute position in the buffer.
     frame_position: usize,
-
-    /// Number of channels in the buffer
-    channels: usize,
 }
 
 impl<'a> Frame<'a> {
@@ -75,100 +69,137 @@ impl<'a> Frame<'a> {
         self.frame_position as u32
     }
 
+    #[inline]
+    pub fn channels(&self) -> usize {
+        self.raw_data.len()
+    }
+
     pub fn copy_from_slice(&mut self, frame: &[f32]) {
-        debug_assert_eq!(self.channels, frame.len());
+        debug_assert_eq!(self.channels(), frame.len());
 
         for (sample, value) in self.into_iter().zip(frame) {
             *sample = *value;
         }
     }
 
+    /// Fill the entire frame with `value`.
     pub fn fill(&mut self, value: f32) {
         for sample in self.into_iter() {
             *sample = value;
         }
     }
 
-    /// This function is only visible in crate
-    /// because it requires a mutable ref (there is only
-    /// an iterator for mutable value.). TODO: add a const
-    /// iterator and make this function with &self.
-    pub(crate) fn copy_to_slice(&mut self, frame: &mut [f32]) {
-        debug_assert_eq!(self.channels, frame.len());
+    /// Copy the frame's samples into `frame`, in channel order.
+    pub fn copy_to_slice(&self, frame: &mut [f32]) {
+        debug_assert_eq!(self.channels(), frame.len());
 
-        for (sample, value) in self.into_iter().zip(frame) {
+        for (sample, value) in self.iter().zip(frame) {
             *value = *sample;
         }
     }
 
-    pub fn iter_mut(&mut self) -> FrameIter<'_> {
+    pub fn iter_mut(&mut self) -> FrameIterMut<'_> {
+        FrameIterMut {
+            channels: self.raw_data.iter(),
+            offset: self.frame_position,
+        }
+    }
+
+    pub fn iter(&self) -> FrameIter<'_> {
         FrameIter {
-            position: 0,
-            frame: Frame {
-                // &'a [..] shrinks to &'b [..]
-                raw_data: self.raw_data,
-                frame_position: self.frame_position,
-                channels: self.channels,
-            },
+            channels: self.raw_data.iter(),
+            offset: self.frame_position,
         }
     }
 }
 
+/// Shared iterator over a frame's samples, in channel order.
+pub struct FrameIter<'a> {
+    channels: std::slice::Iter<'a, *mut f32>,
+    /// Frame position, added to each channel pointer.
+    offset: usize,
+}
+
+impl<'a> Iterator for FrameIter<'a> {
+    type Item = &'a f32;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: every channel pointer is valid for `offset` (guaranteed by
+        // the buffer that built the frame).
+        self.channels
+            .next()
+            .map(|&ptr| unsafe { &*ptr.add(self.offset) })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.channels.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for FrameIter<'a> {}
+
+impl<'a> std::iter::FusedIterator for FrameIter<'a> {}
+
+/// Mutable iterator over a frame's samples, in channel order.
+pub struct FrameIterMut<'a> {
+    channels: std::slice::Iter<'a, *mut f32>,
+    /// Frame position, added to each channel pointer.
+    offset: usize,
+}
+
+impl<'a> Iterator for FrameIterMut<'a> {
+    type Item = &'a mut f32;
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY: every channel pointer is valid for `offset`, and the frame
+        // is the only holder of this position's samples.
+        self.channels
+            .next()
+            .map(|&ptr| unsafe { &mut *ptr.add(self.offset) })
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.channels.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for FrameIterMut<'a> {}
+
+impl<'a> std::iter::FusedIterator for FrameIterMut<'a> {}
+
 impl<'a> IntoIterator for Frame<'a> {
     type Item = &'a mut f32;
+    type IntoIter = FrameIterMut<'a>;
+
+    fn into_iter(self) -> FrameIterMut<'a> {
+        FrameIterMut {
+            channels: self.raw_data.iter(),
+            offset: self.frame_position,
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a Frame<'a> {
+    type Item = &'a f32;
     type IntoIter = FrameIter<'a>;
 
-    fn into_iter(self) -> FrameIter<'a> {
+    fn into_iter(self) -> Self::IntoIter {
         FrameIter {
-            position: 0,
-            frame: self,
+            channels: self.raw_data.iter(),
+            offset: self.frame_position,
         }
     }
 }
 
 impl<'a, 'b> IntoIterator for &'b mut Frame<'a> {
     type Item = &'b mut f32;
-    type IntoIter = FrameIter<'b>;
+    type IntoIter = FrameIterMut<'b>;
 
-    fn into_iter(self) -> FrameIter<'b> {
+    fn into_iter(self) -> FrameIterMut<'b> {
         self.iter_mut()
     }
 }
-
-pub struct FrameIter<'a> {
-    /// Position in the frame iter.
-    /// Since FrameIterator yield all sample
-    /// at a given position. This is equal to the
-    /// next `channel` to yield.
-    position: usize,
-    frame: Frame<'a>,
-}
-
-impl<'a> Iterator for FrameIter<'a> {
-    type Item = &'a mut f32;
-
-    #[inline]
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.position < self.frame.channels {
-            let position = self.position;
-            self.position += 1;
-            let ptr = self.frame.raw_data[position];
-
-            unsafe { Some(&mut (*ptr.add(self.frame.frame_position))) }
-        } else {
-            None
-        }
-    }
-
-    fn size_hint(&self) -> (usize, Option<usize>) {
-        (self.len(), Some(self.len()))
-    }
-}
-
-impl<'a> ExactSizeIterator for FrameIter<'a> {
-    fn len(&self) -> usize {
-        self.frame.channels - self.position
-    }
-}
-
-impl<'a> std::iter::FusedIterator for FrameIter<'a> {}
