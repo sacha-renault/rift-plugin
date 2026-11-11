@@ -83,10 +83,11 @@ impl<'a> Frame<'a> {
         }
     }
 
-    /// Fill the entire frame with `value`.
-    pub fn fill(&mut self, value: f32) {
-        for sample in self.iter_mut() {
-            *sample = value;
+    pub fn copy_from_frame(&mut self, frame: &Frame) {
+        debug_assert_eq!(self.channels(), frame.channels());
+
+        for (sample, value) in self.iter_mut().zip(frame) {
+            *sample = *value;
         }
     }
 
@@ -96,6 +97,13 @@ impl<'a> Frame<'a> {
 
         for (sample, value) in self.iter().zip(frame) {
             *value = *sample;
+        }
+    }
+
+    /// Fill the entire frame with `value`.
+    pub fn fill(&mut self, value: f32) {
+        for sample in self.iter_mut() {
+            *sample = value;
         }
     }
 
