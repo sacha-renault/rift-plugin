@@ -1,4 +1,4 @@
-use std::ops::Range;
+use std::ops::{Index, IndexMut, Range};
 
 /// Iterates over the buffer one frame at a time.
 ///
@@ -105,6 +105,30 @@ impl<'a> Frame<'a> {
         for sample in self.iter_mut() {
             *sample = value;
         }
+    }
+
+    pub fn scale(&mut self, factor: f32) {
+        for sample in self.iter_mut() {
+            *sample *= factor;
+        }
+    }
+
+    pub fn to_array<const N: usize>(&self) -> [f32; N] {
+        let mut array = [0f32; N];
+        self.copy_to_slice(&mut array);
+        array
+    }
+
+    pub fn get(&self, channel: usize) -> Option<&f32> {
+        self.raw_data
+            .get(channel)
+            .map(|&ptr| unsafe { &*ptr.add(self.frame_position) })
+    }
+
+    pub fn get_mut(&mut self, channel: usize) -> Option<&mut f32> {
+        self.raw_data
+            .get(channel)
+            .map(|&ptr| unsafe { &mut *ptr.add(self.frame_position) })
     }
 
     pub fn iter_mut(&mut self) -> FrameIterMut<'_> {
