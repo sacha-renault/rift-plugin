@@ -4,6 +4,8 @@ CheckBox
 --------------
 */
 
+/* A recessed bezel with an LED inside, instead of a plain tick. */
+
 check-box {
     layout-type: row;
     size: auto;
@@ -17,36 +19,40 @@ check-box {
 }
 
 check-box .check-box-frame {
-    size: 18px;
+    size: 22px;
     alignment: center;
-    corner-radius: 5px;
+    corner-radius: 7px;
     background-color: var(--rift-well);
     border-width: 1px;
-    border-color: var(--rift-border);
-    transition: background-color 150ms;
+    border-color: var(--rift-border-soft);
+    shadow: var(--rift-shadow-inset);
     transition: border-color 150ms;
-    transition: shadow 150ms;
 }
 
-check-box .check-box-mark {
-    size: 14px;
-    fill: var(--rift-text);
-    opacity: 0;
-    transition: opacity 120ms;
+check-box .check-box-led {
+    size: 10px;
+    corner-radius: 3px;
+    background-color: var(--rift-border);
+    shadow: var(--rift-shadow-off);
+    transition: background-color 150ms;
+    transition: shadow 150ms;
 }
 
 check-box:hover .check-box-frame {
     border-color: var(--rift-border-strong);
 }
 
-check-box:checked .check-box-frame {
-    background-color: var(--rift-accent);
-    border-color: var(--rift-accent-soft);
-    shadow: var(--rift-shadow-accent);
+check-box:hover .check-box-led {
+    background-color: var(--rift-border-strong);
 }
 
-check-box:checked .check-box-mark {
-    opacity: 1;
+check-box:checked .check-box-frame {
+    border-color: var(--rift-border-strong);
+}
+
+check-box:checked .check-box-led {
+    background-color: var(--rift-accent-soft);
+    shadow: var(--rift-shadow-glow);
 }
 
 check-box .check-box-label {

@@ -1,8 +1,6 @@
-//! A tick box.
+//! A tick box shown as a small LED in a recessed bezel.
 
 use crate::dev_prelude::*;
-
-use vizia::icons::ICON_CHECK;
 
 /// A tick box, optionally with a label.
 pub struct CheckBox {
@@ -39,9 +37,7 @@ impl CheckBox {
         }
         .build(cx, move |cx| {
             ZStack::new(cx, |cx| {
-                Svg::new(cx, ICON_CHECK)
-                    .class("check-box-mark")
-                    .hoverable(false);
+                Element::new(cx).class("check-box-led").hoverable(false);
             })
             .class("check-box-frame")
             .hoverable(false);
