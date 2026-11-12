@@ -28,10 +28,7 @@ pub fn param_select<'a, E: EnumValues>(
     param: &EnumParam<E>,
 ) -> Handle<'a, Select> {
     let binding = ParamBinding::new(cx, param);
-    let options: Vec<String> = (0..E::count())
-        .filter_map(E::from_index)
-        .map(|variant| variant.to_string())
-        .collect();
+    let options = E::names();
     let count = options.len();
 
     let value = binding.normalized();
@@ -40,9 +37,7 @@ pub fn param_select<'a, E: EnumValues>(
     Select::new(cx, Signal::new(options), selected, true)
         .on_select(move |cx, index| {
             if index_of(value.get_untracked(), count) != index {
-                binding.begin(cx);
-                binding.set(cx, value_of(index, count));
-                binding.end(cx);
+                binding.edit(cx, value_of(index, count));
             }
         })
         .on_mouse_down(move |cx, button| {

@@ -68,6 +68,13 @@ impl ParamBinding {
         cx.notify_param_gesture_end(self.id());
     }
 
+    /// One shot edit (for non drag action)
+    pub fn edit(&self, cx: &mut impl EmitContext, normalized: f32) {
+        self.begin(cx);
+        self.set(cx, normalized);
+        self.end(cx);
+    }
+
     pub fn open_context_menu(&self, cx: &mut EventContext) {
         let scale = cx.scale_factor().max(f32::EPSILON);
         let mouse = cx.mouse();
