@@ -20,10 +20,6 @@ pub enum SelectorStyle {
 }
 
 /// A selector for an option of a short list (a waveform, a filter type...).
-///
-/// # Note:
-/// For the case of vertical segment not taking full width,
-/// see the note on `Dropdown`.
 pub struct Selector {
     value: Signal<f32>,
     count: usize,

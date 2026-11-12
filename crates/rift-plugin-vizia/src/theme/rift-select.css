@@ -1,0 +1,85 @@
+/*
+--------------
+SELECT (vizia's built-in dropdown)
+--------------
+*/
+
+select {
+    height: auto;
+    min-width: 96px;
+}
+
+select button.outline {
+    height: 26px;
+    padding-left: 10px;
+    padding-right: 6px;
+    corner-radius: 7px;
+    background-color: var(--rift-well);
+    border-width: 1px;
+    border-color: var(--rift-border-soft);
+    color: var(--rift-text);
+    fill: var(--rift-text-muted);
+    font-size: 11px;
+    font-weight: 550;
+    transition: background-color 130ms;
+    transition: border-color 130ms;
+}
+
+select button.outline:hover {
+    background-color: var(--rift-surface);
+    border-color: var(--rift-border);
+}
+
+select button.outline:active {
+    background-color: var(--rift-surface-active);
+}
+
+select button.outline svg {
+    size: 14px;
+}
+
+select popup {
+    padding: 2px;
+    gap: 2px;
+    corner-radius: 9px;
+    background-color: var(--rift-well);
+    border-width: 1px;
+    border-color: var(--rift-border-soft);
+    shadow: var(--rift-shadow);
+}
+
+select popup list-item {
+    height: 24px;
+    padding-left: 8px;
+    padding-right: 8px;
+    gap: 6px;
+    corner-radius: 7px;
+    font-size: 11px;
+    font-weight: 550;
+    color: var(--rift-text-muted);
+    background-color: transparent;
+    transition: background-color 130ms;
+    transition: color 130ms;
+}
+
+select popup list.selectable list-item:hover,
+select popup list.selectable list-item.focused {
+    color: var(--rift-text);
+    background-color: var(--rift-surface);
+}
+
+select popup list.selectable list-item:focus-visible {
+    border-width: 0px;
+    background-color: var(--rift-surface);
+}
+
+select popup list.selectable list-item:checked {
+    color: var(--rift-text);
+    background-color: var(--rift-accent);
+    shadow: var(--rift-shadow-accent);
+}
+
+select popup list-item .checkmark {
+    size: 12px;
+    fill: var(--rift-text);
+}

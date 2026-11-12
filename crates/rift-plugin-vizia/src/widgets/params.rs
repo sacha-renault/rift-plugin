@@ -19,16 +19,37 @@ pub fn param_selector<'a, E: EnumValues>(
     binding.connect(selector)
 }
 
-pub fn param_dropdown<'a, E: EnumValues>(
+/// A vizia [`Select`] showing the variants of an enum parameter.
+///
+/// `Select` isn't a [`Control`], so the parameter gesture is driven here
+/// instead of through [`ParamBinding::connect`].
+pub fn param_select<'a, E: EnumValues>(
     cx: &'a mut Context,
     param: &EnumParam<E>,
-) -> Handle<'a, PopupSelector> {
+) -> Handle<'a, Select> {
     let binding = ParamBinding::new(cx, param);
-    let options = (0..E::count())
+    let options: Vec<String> = (0..E::count())
         .filter_map(E::from_index)
-        .map(|variant| variant.to_string());
-    let dropdown = PopupSelector::new(cx, options, binding.normalized());
-    binding.connect(dropdown)
+        .map(|variant| variant.to_string())
+        .collect();
+    let count = options.len();
+
+    let value = binding.normalized();
+    let selected = value.map(move |v| Some(index_of(*v, count)));
+
+    Select::new(cx, Signal::new(options), selected, true)
+        .on_select(move |cx, index| {
+            if index_of(value.get_untracked(), count) != index {
+                binding.begin(cx);
+                binding.set(cx, value_of(index, count));
+                binding.end(cx);
+            }
+        })
+        .on_mouse_down(move |cx, button| {
+            if matches!(button, MouseButton::Right) {
+                binding.open_context_menu(cx);
+            }
+        })
 }
 
 /// An on/off switch

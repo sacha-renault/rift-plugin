@@ -6,6 +6,7 @@ pub const STYLESHEET: &str = concat!(
     include_str!("rift-dial.css"),
     include_str!("rift-fader.css"),
     include_str!("rift-panel.css"),
+    include_str!("rift-select.css"),
     include_str!("rift-selector.css"),
     include_str!("rift-toggle.css"),
     include_str!("rift-meter.css"),

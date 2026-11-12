@@ -1,11 +1,8 @@
 /*
 --------------
-SELECTOR + DROPDOWN
+SELECTOR
 --------------
 */
-
-/* Selector and dropdown share the `.segment` rules below (written as
-   `selector .segment, dropdown .segment`), so they live in the same file. */
 
 selector {
     layout-type: row;
@@ -32,8 +29,7 @@ selector .current {
     corner-radius: 7px;
 }
 
-selector .segment,
-dropdown .segment {
+selector .segment {
     size: auto;
     alignment: center;
     font-size: 11px;
@@ -52,14 +48,12 @@ selector.vertical .segment {
     width: auto; /** TODO, this doesn't really takes all width rn ...*/
 }
 
-selector .segment:hover,
-dropdown .segment:hover {
+selector .segment:hover {
     color: var(--rift-text);
     background-color: var(--rift-surface);
 }
 
-selector .segment.selected,
-dropdown .segment.selected {
+selector .segment.selected {
     color: var(--rift-text);
     background-color: var(--rift-accent);
     shadow: var(--rift-shadow-accent);
@@ -93,60 +87,3 @@ selector.stepper .current {
     color: var(--rift-text);
 }
 
-/*
---------------
-DROPDOWN
---------------
-*/
-
-dropdown {
-    size: auto;
-}
-
-dropdown .dropdown-trigger {
-    layout-type: row;
-    size: auto;
-    gap: 4px;
-    alignment: center;
-    padding-top: 6px;
-    padding-bottom: 6px;
-    padding-left: 10px;
-    padding-right: 10px;
-    corner-radius: 7px;
-    background-color: var(--rift-well);
-    border-width: 1px;
-    border-color: var(--rift-border-soft);
-    transition: background-color 130ms;
-}
-
-dropdown .dropdown-trigger:hover {
-    background-color: var(--rift-surface);
-}
-
-dropdown .dropdown-trigger .icon {
-    size: 16px;
-    alignment: center;
-    fill: var(--rift-text-muted);
-}
-
-dropdown .dropdown-trigger.open .icon {
-    transform: rotate(90deg);
-}
-
-dropdown .dropdown-trigger .current {
-    size: auto;
-    font-size: 11px;
-    font-weight: 550;
-    color: var(--rift-text);
-}
-
-dropdown popup {
-    layout-type: column;
-    size: auto;
-    gap: 2px;
-    padding: 2px;
-    corner-radius: 9px;
-    background-color: var(--rift-well);
-    border-width: 1px;
-    border-color: var(--rift-border-soft);
-}

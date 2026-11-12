@@ -9,7 +9,7 @@ use rift_plugin_gui::{
     HostParamChange, HostSharedHandle,
 };
 use rift_plugin_vizia::prelude::*;
-use rift_plugin_vizia::widgets::PopupSelector;
+
 use rift_plugin_vizia::widgets::*;
 
 const WIDTH: u32 = 1000;
@@ -154,9 +154,9 @@ impl HostWindow {
 fn build_gallery(cx: &mut Context, params: &Arc<StandaloneParams>) {
     // The theme switcher is plain UI state, not a parameter: a dropdown edits
     // a local signal and we read it to toggle a palette class on the gallery.
-    let theme = Signal::new(0.0);
-    let is_light = theme.map(|v| *v >= 0.25 && *v < 0.75);
-    let is_ocean = theme.map(|v| *v >= 0.75);
+    let theme = Signal::new(Some(0usize));
+    let is_light = theme.map(|v| *v == Some(1));
+    let is_ocean = theme.map(|v| *v == Some(2));
 
     VStack::new(cx, |cx| {
         HStack::new(cx, |cx| {
@@ -165,8 +165,12 @@ fn build_gallery(cx: &mut Context, params: &Arc<StandaloneParams>) {
                 .width(Units::Stretch(1.));
 
             Label::new(cx, "Theme".to_string()).class("gallery-hint");
-            PopupSelector::new(cx, ["Dark", "Light", "Ocean"], theme)
-                .on_change(move |_, value| theme.set(value));
+            let themes = Signal::new(vec![
+                "Dark".to_string(),
+                "Light".to_string(),
+                "Ocean".to_string(),
+            ]);
+            Select::new(cx, themes, theme, true).on_select(move |_, index| theme.set(Some(index)));
         })
         .class("gallery-bar")
         .width(Units::Stretch(1.));
@@ -225,8 +229,8 @@ fn build_gallery(cx: &mut Context, params: &Arc<StandaloneParams>) {
 
                 Panel::new(cx, "Dropdowns", |cx| {
                     VStack::new(cx, |cx| {
-                        param_dropdown(cx, &params.wave_type);
-                        param_dropdown(cx, &params.filter_kind);
+                        param_select(cx, &params.wave_type);
+                        param_select(cx, &params.filter_kind);
                     })
                     .alignment(Alignment::Left);
                 });

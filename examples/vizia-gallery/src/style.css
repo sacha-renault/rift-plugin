@@ -41,11 +41,7 @@ Widget tweaks
 --------------
 */
 
-dropdown .segment {
-    width: 1s;
-}
-
-dropdown popup {
+select {
     min-width: 150px;
 }
 
