@@ -45,11 +45,6 @@ select {
     min-width: 150px;
 }
 
-toggle.status-light .toggle-track {
-    border-width: 0px;
-    border-color: transparent;
-    background-color: transparent;
-}
 
 /*
 Alternate themes

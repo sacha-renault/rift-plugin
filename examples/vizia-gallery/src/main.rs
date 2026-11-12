@@ -208,7 +208,7 @@ fn build_gallery(cx: &mut Context, params: &Arc<StandaloneParams>) {
                 Panel::new(cx, "Toggles", |cx| {
                     VStack::new(cx, |cx| {
                         param_toggle(cx, &params.mix);
-                        param_toggle(cx, &params.gain).status_light();
+                        param_check_box(cx, &params.gain);
                         param_toggle(cx, &params.drive);
                     })
                     .alignment(Alignment::Left);

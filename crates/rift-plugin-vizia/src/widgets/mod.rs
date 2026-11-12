@@ -3,6 +3,7 @@ use crate::dev_prelude::*;
 mod button;
 mod dial;
 
+mod check_box;
 mod fader;
 mod panel;
 mod params;
@@ -12,8 +13,9 @@ mod toggle;
 pub use button::{ButtonExt, ButtonModifiers2};
 pub use dial::{Dial, DialModifiers};
 
+pub use check_box::CheckBox;
 pub use fader::{Fader, FaderModifers};
 pub use panel::Panel;
 pub use params::*;
 pub use selector::{Selector, SelectorModifiers};
-pub use toggle::{Toggle, ToggleModifers};
+pub use toggle::Toggle;

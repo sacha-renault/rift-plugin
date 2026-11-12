@@ -11,6 +11,7 @@ pub const STYLESHEET: &str = concat!(
     include_str!("rift-toggle.css"),
     include_str!("rift-meter.css"),
     include_str!("rift-wave.css"),
+    include_str!("rift-check-box.css"),
 );
 
 /// Installs the Rift theme in the application.

@@ -64,3 +64,10 @@ pub fn param_slider<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, 
     let slider = Fader::labeled(cx, binding.name(), binding.text(), binding.normalized());
     binding.connect(slider)
 }
+
+/// A tick box
+pub fn param_check_box<'a, P: Param>(cx: &'a mut Context, param: &P) -> Handle<'a, CheckBox> {
+    let binding = ParamBinding::new(cx, param);
+    let check_box = CheckBox::labeled(cx, binding.name(), binding.normalized());
+    binding.connect(check_box)
+}
