@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 clack-plugin = { workspace = true }
 rift-plugin-types = { workspace = true }
+rift-plugin-utils = { workspace = true }
 
 [features]
 internal = []

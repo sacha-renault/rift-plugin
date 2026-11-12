@@ -1,4 +1,5 @@
 use clack_plugin::process::audio::{InputChannels, OutputChannels};
+use rift_plugin_utils::array_op;
 
 use crate::frame::BufferFrameIter;
 
@@ -124,7 +125,6 @@ impl<'a> Buffer<'a> {
     /// (gain, EQ, distortion), prefer [`Buffer::iter_channels_mut`] which gives the
     /// compiler a straight contiguous slice to work with.
     /// See the benchmark example for more info.
-    #[allow(unused_mut)]
     pub fn iter_frames(&mut self) -> BufferFrameIter<'_> {
         let samples = self.samples();
         BufferFrameIter {
@@ -167,6 +167,40 @@ impl<'a> Buffer<'a> {
         self.for_each_frame::<2>(f)
     }
 
+    /// Like [`for_each_frame`][Self::for_each_frame], but `f` gets the input
+    /// and a separate output array.
+    ///
+    /// The output is written back to the buffer after each call. It is not
+    /// cleared between frames: if `f` skips a channel, that channel keeps the
+    /// output of the previous frame (zero on the first one), not the input.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `N` differs from [`Buffer::channels`].
+    pub fn for_each_io_frame<const N: usize>(
+        &mut self,
+        mut f: impl FnMut(u32, &[f32; N], &mut [f32; N]),
+    ) {
+        assert_eq!(self.channels(), N);
+
+        let mut temp_in = [0f32; N];
+        let mut temp_out = [0f32; N];
+
+        for mut frame in self.iter_frames() {
+            frame.copy_to_slice(&mut temp_in);
+
+            // TODO, think about passthrough as default ?
+            f(frame.time(), &temp_in, &mut temp_out);
+            frame.copy_from_slice(&temp_out);
+        }
+    }
+
+    /// [`for_each_io_frame`][Self::for_each_io_frame] with `N = 2`.
+    #[inline]
+    pub fn for_each_stereo_io_frame(&mut self, f: impl FnMut(u32, &[f32; 2], &mut [f32; 2])) {
+        self.for_each_io_frame::<2>(f);
+    }
+
     pub fn iter_channels(&self) -> impl Iterator<Item = &[f32]> {
         let samples = self.samples();
         self.raw_data()
@@ -186,10 +220,22 @@ impl<'a> Buffer<'a> {
             .map(move |&ptr| unsafe { std::slice::from_raw_parts_mut(ptr, samples) })
     }
 
+    /// Fill the entire buffer with `value`
+    pub fn fill(&mut self, value: f32) {
+        for channel in self.iter_channels_mut() {
+            channel.fill(value);
+        }
+    }
+
     /// Fill the entire buffer with 0s
     pub fn clear(&mut self) {
+        self.fill(0.);
+    }
+
+    /// Scale the buffer with `factor`
+    pub fn scale(&mut self, factor: f32) {
         for channel in self.iter_channels_mut() {
-            channel.fill(0f32);
+            array_op::scale(channel, factor);
         }
     }
 }

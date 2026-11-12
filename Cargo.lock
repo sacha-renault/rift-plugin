@@ -2138,6 +2138,7 @@ version = "0.1.0"
 dependencies = [
  "clack-plugin",
  "rift-plugin-types",
+ "rift-plugin-utils",
 ]
 
 [[package]]
